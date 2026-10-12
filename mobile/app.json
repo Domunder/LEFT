@@ -1,0 +1,125 @@
+{
+  "expo": {
+    "name": "LEFT",
+    "slug": "left",
+    "version": "1.0.0",
+    "owner": "domunder87s-team",
+    "extra": {
+      "eas": {
+        "projectId": "53fd28b1-1a1b-4c60-ac31-5fb7116833b5",
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "targetName": "LeftBudgetWidget",
+                  "bundleIdentifier": "com.leftmoment.app.LeftBudgetWidget",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.leftmoment.app"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "left",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#101010",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.leftmoment.app",
+      "usesAppleSignIn": true,
+      "associatedDomains": [
+        "applinks:leftmoment.com"
+      ],
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.leftmoment.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#101010",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "leftmoment.com",
+              "pathPrefix": "/j"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ],
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO"
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#101010",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ],
+      "expo-video",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "LEFT uses your camera so you can film clips for your group's shared film.",
+          "microphonePermission": "LEFT uses your microphone to record sound with your clips.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "LEFT needs access to your photos so you can save your finished film.",
+          "savePhotosPermission": "LEFT saves your finished film to your photo library.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.247341244789-t9g88ohse2djb0961no6kcm1hnr754ip"
+        }
+      ],
+      "expo-apple-authentication",
+      "./plugins/withLiveActivity"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "left",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LEFT \u2014 shared-budget group video app. Backend tooling lives here; the Expo app is in mobile/.",
+  "scripts": {
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:status": "supabase status",
+    "db:reset": "supabase db reset",
+    "db:diff": "supabase db diff",
+    "db:push": "supabase db push",
+    "db:types": "supabase gen types typescript --local > mobile/src/types/database.ts",
+    "db:check": "docker exec -i supabase_db_LEFT psql -U postgres -d postgres -q < supabase/checks/budget_invariants.sql"
+  },
+  "devDependencies": {
+    "supabase": "^2.114.0"
+  }
+}

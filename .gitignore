@@ -1,0 +1,31 @@
+# Dependencies (Supabase CLI lives here; the Expo app has its own)
+node_modules/
+
+# Expo local state (the app itself lives in mobile/)
+.expo/
+
+# Local Supabase env / secrets
+.env
+.env*.local
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# The Expo app has its own .gitignore in mobile/
+
+# Apple Sign in with Apple private key. One-time download from Apple; keep a
+# copy outside the repo. Never commit.
+AuthKey_*.p8
+*.p8
