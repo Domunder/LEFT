@@ -1,0 +1,41 @@
+---
+/** The closing call to action. The headline is the app's own (01 Landing). */
+import StoreButtons from './StoreButtons.astro';
+
+type Props = { lede?: string };
+const {
+  lede = 'Start an event in a minute, share the link, and let everyone shoot. The film is developed when the party is over.',
+} = Astro.props;
+---
+
+<section id="get" class="get">
+  <div class="glow" aria-hidden="true"></div>
+  <div class="wrap inner reveal">
+    <h2>Only one moment <em>left?</em></h2>
+    <p class="lede">{lede}</p>
+    <StoreButtons />
+  </div>
+</section>
+
+<style>
+  .get {
+    overflow: hidden;
+  }
+
+  .glow {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -40%);
+  }
+
+  .inner {
+    display: grid;
+    gap: 24px;
+    justify-items: center;
+    text-align: center;
+  }
+
+  h2 {
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+  }
+</style>

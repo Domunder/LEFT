@@ -38,21 +38,28 @@ export function mergeDateAndTime(date: Date, time: Date): Date {
   return merged;
 }
 
+// Built on first use and kept: constructing a formatter is the slow part.
+let endDateFormat: Intl.DateTimeFormat | undefined;
+let endTimeFormat: Intl.DateTimeFormat | undefined;
+let hour24: boolean | undefined;
+
 /** "Sat, 22 Aug" — the Ending Date row's value. */
 export function formatEndDate(value: Date): string {
-  return new Intl.DateTimeFormat(undefined, {
+  endDateFormat ??= new Intl.DateTimeFormat(undefined, {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
-  }).format(value);
+  });
+  return endDateFormat.format(value);
 }
 
 /** "23:00" — the Ending Time row's value, in the locale's 12/24-hour convention. */
 export function formatEndTime(value: Date): string {
-  return new Intl.DateTimeFormat(undefined, {
+  endTimeFormat ??= new Intl.DateTimeFormat(undefined, {
     hour: '2-digit',
     minute: '2-digit',
-  }).format(value);
+  });
+  return endTimeFormat.format(value);
 }
 
 /**
@@ -61,10 +68,12 @@ export function formatEndTime(value: Date): string {
  * Drives whether the time grid shows 0-23 hours or 1-12 plus an AM/PM row.
  */
 export function prefersHour24(): boolean {
+  if (hour24 !== undefined) return hour24;
   const parts = new Intl.DateTimeFormat(undefined, { hour: '2-digit' }).formatToParts(
     new Date(2020, 0, 1, 13, 0, 0)
   );
-  return !parts.some((part) => part.type === 'dayPeriod');
+  hour24 = !parts.some((part) => part.type === 'dayPeriod');
+  return hour24;
 }
 
 /**
@@ -282,4 +291,69 @@ export function countdownParts(
 /** Whether the filming window has closed. */
 export function hasEnded(endsAt: Date, now: Date = new Date()): boolean {
   return endsAt.getTime() <= now.getTime();
+}
+
+// --- 04's inline picker (rebuilt 2026-11-15) --------------------------------
+
+/** The days 04's strip offers: today, then `count - 1` more. */
+export function upcomingDays(count: number, from: Date = new Date()): Date[] {
+  const first = startOfDay(from);
+  return Array.from({ length: count }, (_, i) => {
+    const day = new Date(first);
+    day.setDate(day.getDate() + i);
+    return day;
+  });
+}
+
+/** One day on 04's wheel, with everything it shows already formatted. */
+export type DayLabel = {
+  date: Date;
+  /** "Sat" */
+  weekday: string;
+  /** "Nov" */
+  month: string;
+  /** "Saturday, 21 November" — what a screen reader says. */
+  spoken: string;
+};
+
+/**
+ * Label a run of days in one go.
+ *
+ * Constructing an `Intl.DateTimeFormat` is slow on Hermes — far slower than
+ * using one — so the three formatters are built once here rather than once per
+ * day per render, which is what made 04 slow to open.
+ */
+export function labelDays(days: Date[]): DayLabel[] {
+  const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const month = new Intl.DateTimeFormat(undefined, { month: 'short' });
+  const spoken = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+  return days.map((date) => ({
+    date,
+    weekday: weekday.format(date),
+    month: month.format(date),
+    spoken: spoken.format(date),
+  }));
+}
+
+/**
+ * How far away the ending is, in the two units that matter at that distance:
+ * "in 5 days", "in 1 day 3 h", "in 4 h 20 min", "in 12 min". Null once it has
+ * passed — the screen says that in its own words.
+ */
+export function formatTimeUntil(endsAt: Date, now: Date = new Date()): string | null {
+  const minutes = Math.floor((endsAt.getTime() - now.getTime()) / 60_000);
+  if (minutes <= 0) return null;
+
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+
+  if (days >= 2) return `in ${days} days`;
+  if (days === 1) return hours > 0 ? `in 1 day ${hours} h` : 'in 1 day';
+  if (hours > 0) return mins > 0 ? `in ${hours} h ${mins} min` : `in ${hours} h`;
+  return `in ${mins} min`;
 }

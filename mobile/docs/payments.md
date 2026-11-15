@@ -1,9 +1,10 @@
 # Payments — one-time event charges
 
-An event is free up to 100 guests on any finite roll (5–36 shots each). The
-unlimited roll, or a group of 101–200, is a one-time charge per event — one
-product, **LEFT Unlimited** — paid when the event is created, taken through the
-app store and brokered by RevenueCat. There is no subscription.
+An event is free up to 50 guests on any finite roll (5–36 shots each). The
+unlimited roll, or a group of more than 50, is a one-time charge per event —
+one of four products, by group size (final, decided 2026-11-15) — paid when
+the event is created, taken through the app store and brokered by RevenueCat.
+There is no subscription.
 
 Two decisions shape everything below, and both are easy to get wrong:
 
@@ -47,20 +48,23 @@ customer's history — it never goes near `mobile/`.
 > product list** rather than an error. An empty `getProducts()` result is almost
 > always this, not a bug in the app.
 
-## The three products
+## The four products
 
-Create it in both stores, using the **same identifier in both**.
+Create them in both stores, using the **same identifiers in both**.
 
 | Event | Price | Product ID |
 |---|---|---|
-| Up to 100 guests, roll of 5–36 | free — nothing is bought | — |
-| Unlimited roll, or 101–200 guests | CHF 5 (set per storefront) | `left_unlimited` |
+| Up to 50 guests, roll of 5–36 | free — nothing is bought | — |
+| Up to 50 guests, unlimited roll | CHF 10 (set per storefront) | `left_small` |
+| 51–100 guests, any roll | CHF 15 (set per storefront) | `left_medium` |
+| 101–150 guests, any roll | CHF 20 (set per storefront) | `left_large` |
+| 151–200 guests, any roll | CHF 25 (set per storefront) | `left_unlimited` |
 
-In **App Store Connect**, create it under In-App Purchases with type
-**Consumable**. In **Google Play Console**, create it under Products →
-In-app products (a one-time product, *not* a subscription).
+In **App Store Connect**, create them under In-App Purchases with type
+**Consumable**. In **Google Play Console**, create them under Products →
+In-app products (one-time products, *not* subscriptions).
 
-> **Do not rename the id once it has shipped.** Renaming a SKU strands every
+> **Do not rename an id once it has shipped.** Renaming a SKU strands every
 > receipt bought under it. `public.unlock_max_members()` is the authority on which
 > product ids the server accepts; `mobile/src/lib/tiers.ts` is the display mirror.
 
@@ -73,8 +77,8 @@ This table lives in two places in code, and they must be edited together:
 
 | File | What it holds |
 |---|---|
-| `mobile/src/lib/tiers.ts` | `UNLIMITED` and `FREE_MAX_MEMBERS` — what the app offers and quotes |
-| `supabase/migrations/*_baseline.sql` | `unlock_max_members()`, `free_max_members()` — what the server will honour |
+| `mobile/src/lib/tiers.ts` | `TIERS`, `tierFor()` and `FREE_MAX_MEMBERS` — what the app offers and quotes |
+| `supabase/migrations/*_price_tiers.sql` | `unlock_max_members()`, `free_max_members()` — what the server will honour |
 
 ## RevenueCat setup
 
@@ -82,7 +86,7 @@ This table lives in two places in code, and they must be edited together:
    and package name `com.leftmoment.app`.
 2. Upload the App Store Connect shared secret and the Play service-account JSON,
    so RevenueCat can validate receipts.
-3. Import the three products.
+3. Import the four products.
 4. **Attach them to no entitlement, and create no offering.** The app fetches by
    product id directly, which keeps the tier-to-SKU mapping in `lib/tiers.ts`
    rather than split across a remote dashboard.
@@ -123,7 +127,7 @@ increasing delay — the first retry is about five minutes out.
 
 ## How a purchase becomes an event
 
-1. 05.1 decides with `needsUnlimited()` whether the chosen group and roll are
+1. 05.1 decides with `tierFor()` whether the chosen group and roll are
    paid, and names the price on the button. A free event skips steps 2–4
    entirely.
 2. `Purchases.logIn(<supabase user id>)` runs before anything is bought, or the
@@ -171,12 +175,12 @@ into edge functions automatically. Do not set them by hand.
 Check the server enforcement first — it needs no store at all. In Studio:
 
 ```sql
--- Free: up to 100 guests on a finite roll.
-select public.create_event('T','party','golden',now() + interval '1 day', 100, 36);
+-- Free: up to 50 guests on a finite roll.
+select public.create_event('T','party','golden',now() + interval '1 day', 50, 36);
 
--- The unlimited roll, or more than 100 guests, with no purchase is refused.
+-- The unlimited roll, or more than 50 guests, with no purchase is refused.
 select public.create_event('T','party','golden',now() + interval '1 day', 50, null);
-select public.create_event('T','party','golden',now() + interval '1 day', 101, 24);
+select public.create_event('T','party','golden',now() + interval '1 day', 51, 24);
 -- expect: no unspent purchase covers this event   (HINT: unsettled)
 ```
 

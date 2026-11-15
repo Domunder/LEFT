@@ -7,7 +7,7 @@ capture and none should be added.**
 
 ## Where things are
 
-- `mobile/` — the Expo app (SDK 54, expo-router, TypeScript). Run commands from there.
+- `mobile/` — the Expo app (SDK 58, expo-router, TypeScript). Run commands from there.
 - `supabase/` — schema, RLS, RPCs, edge functions. Migrations are the source of truth.
 - `docs/MILESTONES.md` — what is left until launch, and the open decisions.
 - `mobile/design/` — the prototype and handoff. Visual language is final; some

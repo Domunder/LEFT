@@ -19,7 +19,6 @@
  * reason spelled out on `LengthChoiceState`.
  */
 
-import { BlurView } from 'expo-blur';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
@@ -27,6 +26,7 @@ import { Camera, Motion, Radii, ZoomPillState } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { at } from '@/lib/pair';
 import type { ZoomStop } from '@/lib/zoom';
+import { Glass } from './glass';
 
 const TIMING = {
   duration: Motion.duration,
@@ -44,7 +44,7 @@ type ZoomSelectorProps = {
 export function ZoomSelector({ stops, selected, onSelect }: ZoomSelectorProps) {
   return (
     <View style={styles.root}>
-      <BlurView intensity={Camera.zoom.blur} tint="dark" style={styles.group}>
+      <Glass radius={Radii.pill} style={styles.group}>
         {stops.map((stop) => (
           <ZoomPill
             key={stop.label}
@@ -53,7 +53,7 @@ export function ZoomSelector({ stops, selected, onSelect }: ZoomSelectorProps) {
             onPress={() => onSelect(stop)}
           />
         ))}
-      </BlurView>
+      </Glass>
     </View>
   );
 }
@@ -93,16 +93,12 @@ function ZoomPill({
 const styles = StyleSheet.create({
   root: {
     borderRadius: Radii.pill,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Camera.zoom.border,
   },
   group: {
     flexDirection: 'row',
     gap: Camera.zoom.gap,
     paddingVertical: Camera.zoom.paddingY,
     paddingHorizontal: Camera.zoom.paddingX,
-    backgroundColor: Camera.zoom.bg,
   },
   pill: {
     minWidth: Camera.zoom.pillMinWidth,

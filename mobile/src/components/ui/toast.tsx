@@ -16,7 +16,11 @@
  *    back. Only the translateY and the opacity survive.
  *  - **there is no exit.** The prototype has no `toast-out` keyframe; it drops
  *    the node. A banner that vanishes between frames reads as a glitch, so the
- *    entry is reversed over `Toast.motion.exitDuration`.
+ *    entry is reversed.
+ *  - **it moves on a spring** (`Springs.settle`), not the artboard's 320ms
+ *    curve: a second toast or a dismissal can catch it mid-flight, and a spring
+ *    turns round from wherever it is. Under reduced motion it does not travel
+ *    at all — it cross-fades over `Toast.motion.fadeMs`.
  *  - **the dismiss X is stroke 2.4 in the artboard.** Feather ships a fixed 2px
  *    path and exposes no stroke width, so the weight is approximate. The same
  *    limitation applies to the download chip on 17.
@@ -31,29 +35,24 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  Easing,
-  runOnJS,
+  ReduceMotion,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
-import { Colors, Shadows, Toast as T } from '@/constants/theme';
+import { Colors, Shadows, Springs, Toast as T } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { Glass } from './glass';
 
-const ENTER = {
-  duration: T.motion.duration,
-  easing: Easing.bezier(...T.motion.bezier).factory(),
-};
-
-const EXIT = {
-  duration: T.motion.exitDuration,
-  easing: Easing.bezier(...T.motion.bezier).factory(),
-};
+/** Reduced motion: a fade the system must not skip, or the banner would blink. */
+const FADE = { duration: T.motion.fadeMs, reduceMotion: ReduceMotion.Never };
 
 /** What a toast says. Composed by whoever raises it. */
 export type ToastContent = {
@@ -78,30 +77,32 @@ export function ToastCard({ initials, title, message, visible, onDismiss, onExit
     the host has to know when the exit has actually finished before it drops the
     node, and a layout animation gives no callback to hang that on.
   */
+  const reducedMotion = useReducedMotion();
   const progress = useSharedValue(0);
 
   useEffect(() => {
-    if (visible) {
-      progress.value = withTiming(1, ENTER);
-      return;
-    }
+    const to = visible ? 1 : 0;
+    const done = (finished?: boolean) => {
+      'worklet';
+      if (finished && to === 0) scheduleOnRN(onExited);
+    };
 
-    progress.value = withTiming(0, EXIT, (finished) => {
-      if (finished) runOnJS(onExited)();
-    });
-  }, [visible, progress, onExited]);
+    progress.value = reducedMotion
+      ? withTiming(to, FADE, done)
+      : withSpring(to, Springs.settle, done);
+  }, [visible, reducedMotion, progress, onExited]);
 
   const animated = useAnimatedStyle(() => ({
-    opacity: progress.value,
+    // Clamped: opacity must not follow a spring's last sliver past its ends.
+    opacity: Math.min(1, Math.max(0, progress.value)),
     // -14 -> 0 on entry. See the header for why the artboard's -50% is dropped.
-    transform: [{ translateY: (1 - progress.value) * T.motion.travelY }],
+    transform: [{ translateY: reducedMotion ? 0 : (1 - progress.value) * T.motion.travelY }],
   }));
 
   return (
     <Animated.View style={[styles.shadow, animated]}>
-      <View style={styles.clip}>
-        <BlurView intensity={T.blurIntensity} tint="dark" style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, styles.fill]} />
+      {/* The wrapper fades, never the glass: the system stops drawing it at low alpha. */}
+      <Glass radius={T.radius} weight="bar">
 
         <View style={styles.row}>
           <View style={styles.avatar}>
@@ -129,7 +130,7 @@ export function ToastCard({ initials, title, message, visible, onDismiss, onExit
             <Feather name="x" size={T.dismiss.iconSize} color={Colors.textMuted} />
           </Pressable>
         </View>
-      </View>
+      </Glass>
     </Animated.View>
   );
 }
@@ -143,15 +144,6 @@ const styles = StyleSheet.create({
   shadow: {
     borderRadius: T.radius,
     ...(Shadows.toast as object),
-  },
-  clip: {
-    borderRadius: T.radius,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  fill: {
-    backgroundColor: T.bg,
   },
   row: {
     flexDirection: 'row',

@@ -3,19 +3,23 @@
  *
  * primary   #f0ede8 fill, #0b0b0c text, inset top highlight + drop shadow
  * secondary transparent fill, hairline border, off-white text
- * glass     blurred rgba(255,255,255,0.11) fill, hairline border — for use over
- *           video, e.g. "Join a Group" on Landing (01)
+ * glass     flat rgba(255,255,255,0.11) fill, hairline border — the quiet
+ *           button inside a glass panel ("Join a Group" on Landing) or a sheet.
+ *           It had a blur of its own until 2026-11-15; inside a `Glass` panel
+ *           that was glass on glass, and on a solid sheet it blurred nothing.
+ *
+ * It gives under the finger on touch-down (`PressScale`) and commits on release.
  *
  * React Native has no inset box-shadow, so the design's
  * `inset 0 1px 0 rgba(255,255,255,0.8)` is drawn as a 1px overlay view.
  */
 
 import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { BlurIntensity, Colors, PillPaddingY, Radii, Shadows } from '@/constants/theme';
+import { Colors, PillPaddingY, Radii, Shadows } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { PressScale } from './press-scale';
 
 type PillButtonProps = {
   label: string;
@@ -49,39 +53,24 @@ export function PillButton({
   const contentColor = labelColor ?? (isPrimary ? Colors.onLight : Colors.text);
 
   return (
-    <Pressable
+    <PressScale
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         isPrimary && styles.primary,
         variant === 'secondary' && styles.secondary,
         isGlass && styles.glass,
         isPrimary && Shadows.pill,
-        pressed && styles.pressed,
         disabled && styles.disabled,
         style,
       ]}>
-      {/*
-        Sits behind the label — absolutely positioned so it does not join the content
-        row. It carries its own pill radius rather than relying on the parent's
-        `overflow: hidden`, which does not reliably clip a native view to rounded
-        corners on Android; without this the blur's square corners show at both ends.
-      */}
-      {isGlass && (
-        <BlurView
-          intensity={BlurIntensity.button}
-          tint="dark"
-          style={[StyleSheet.absoluteFill, styles.blurFill]}
-          pointerEvents="none"
-        />
-      )}
       {isPrimary && <View style={styles.insetHighlight} pointerEvents="none" />}
       {icon ? <Feather name={icon} size={16} color={contentColor} /> : null}
       <Text style={[Typography.button, { color: contentColor }]}>{label}</Text>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -110,12 +99,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.hairlineStrong,
   },
-  blurFill: {
-    borderRadius: Radii.pill,
-    // absoluteFill sits at the border's outer edge; without this the blur would
-    // overlap the 1px hairline and lighten it.
-    overflow: 'hidden',
-  },
   insetHighlight: {
     position: 'absolute',
     top: 0,
@@ -123,9 +106,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.8)',
-  },
-  pressed: {
-    opacity: 0.85,
   },
   disabled: {
     opacity: 0.4,

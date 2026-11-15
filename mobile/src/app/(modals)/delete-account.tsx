@@ -77,8 +77,8 @@ export default function DeleteAccountScreen() {
   }, [router, toast]);
 
   return (
-    // Dismissing by scrim is left enabled: backing out must be the easy path.
-    <Sheet onDismiss={busy ? () => {} : undefined}>
+    // Dismissing by scrim or by dragging is left enabled: backing out must be the easy path.
+    <Sheet locked={busy}>
       <View style={styles.body}>
         <Display size="xs" style={styles.headline}>
           Delete your <Em>account?</Em>

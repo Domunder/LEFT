@@ -29,7 +29,7 @@
 import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Share, StyleSheet, View } from 'react-native';
+import { Platform, Share, StyleSheet, View, type ViewInstance } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { captureRef } from 'react-native-view-shot';
 
@@ -74,7 +74,7 @@ export default function InviteScreen() {
 
   // Captured rather than the whole screen, so a saved QR is the code on its white
   // card — not a crop of a near-black page that no scanner will read.
-  const cardRef = useRef<View>(null);
+  const cardRef = useRef<ViewInstance>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -132,7 +132,7 @@ export default function InviteScreen() {
       }
 
       const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
-      await MediaLibrary.saveToLibraryAsync(uri);
+      await MediaLibrary.Asset.create(uri);
       setSave({ kind: 'done', message: 'Saved to your photos.' });
     } catch {
       setSave({ kind: 'failed', message: "Couldn't save the code." });
@@ -150,7 +150,7 @@ export default function InviteScreen() {
         <View style={styles.headerSpacer} />
         <CircleIconButton
           icon="x"
-          accessibilityLabel={fromCamera ? 'Close, back to the camera' : 'Close, back to your films'}
+          accessibilityLabel={fromCamera ? 'Close, back to the camera' : 'Close, back to your moments'}
           onPress={() =>
             fromCamera && router.canGoBack() ? router.back() : router.replace('/(library)/films')
           }

@@ -1,22 +1,21 @@
 /**
- * Frosted glass surface — the Landing bottom panel, join/invite sheets, and any
- * translucent card over video.
+ * A large glass surface with a shadow — the Landing bottom panel, the join
+ * sheet, the "Keep your films" card.
  *
- * Design: background rgba(20,18,16,0.4), backdrop-filter blur(40px) saturate(160%),
- * 1px hairline border, 28px radius, 0 32px 64px rgba(0,0,0,0.5) shadow.
+ * The material is `Glass` (glass.tsx): Liquid Glass on iOS 26+, a blur
+ * elsewhere, solid under "Reduce Transparency". It was a `BlurView` of its own
+ * until 2026-11-15. Controls inside it keep flat fills — never glass on glass.
  *
- * BlurView cannot itself carry the shadow (it clips), so the shadow lives on an
- * outer wrapper and the blur is clipped inside it.
+ * The material clips, so the shadow lives on an outer wrapper.
  */
 
-import { BlurView } from 'expo-blur';
 import type { PropsWithChildren } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { BlurIntensity, Colors, Radii, Shadows } from '@/constants/theme';
+import { Radii, Shadows } from '@/constants/theme';
+import { Glass } from './glass';
 
 type GlassPanelProps = PropsWithChildren<{
-  intensity?: number;
   radius?: number;
   style?: StyleProp<ViewStyle>;
   /** Inner padding. Default matches the Landing panel (32/24/28). */
@@ -25,19 +24,15 @@ type GlassPanelProps = PropsWithChildren<{
 
 export function GlassPanel({
   children,
-  intensity = BlurIntensity.panel,
   radius = Radii.sheet,
   style,
   contentStyle,
 }: GlassPanelProps) {
   return (
     <View style={[styles.shadow, { borderRadius: radius }, style]}>
-      <BlurView
-        intensity={intensity}
-        tint="dark"
-        style={[styles.blur, { borderRadius: radius }]}>
+      <Glass radius={radius} weight="bar">
         <View style={[styles.content, contentStyle]}>{children}</View>
-      </BlurView>
+      </Glass>
     </View>
   );
 }
@@ -45,12 +40,6 @@ export function GlassPanel({
 const styles = StyleSheet.create({
   shadow: {
     ...(Shadows.panel as object),
-  },
-  blur: {
-    overflow: 'hidden',
-    backgroundColor: Colors.glass,
-    borderWidth: 1,
-    borderColor: Colors.hairline,
   },
   content: {
     paddingTop: 32,

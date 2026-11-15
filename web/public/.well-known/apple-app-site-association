@@ -1,0 +1,15 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["REPLACE_WITH_APPLE_TEAM_ID.com.leftmoment.app"],
+        "components": [
+          {
+            "/": "/j/*",
+            "comment": "Invite links open the app on the guest name screen"
+          }
+        ]
+      }
+    ]
+  }
+}

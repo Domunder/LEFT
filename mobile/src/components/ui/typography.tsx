@@ -11,7 +11,7 @@ import { Typography } from '@/constants/typography';
 
 type BaseProps = TextProps & { color?: string };
 
-type DisplaySize = 'xxl' | 'xl' | 'lg' | 'md' | 'sm' | 'xs' | 'xxs' | 'xxxs' | 'card';
+type DisplaySize = 'xxl' | 'xl' | 'lg' | 'md' | 'sm' | 'xs' | 'xxs' | 'xxxs' | 'card' | 'poster';
 
 const displayStyles: Record<DisplaySize, TextStyle> = {
   xxl: Typography.displayXxl,
@@ -23,6 +23,7 @@ const displayStyles: Record<DisplaySize, TextStyle> = {
   xxs: Typography.displayXxs,
   xxxs: Typography.displayXxxs,
   card: Typography.displayCard,
+  poster: Typography.displayPoster,
 };
 
 /**

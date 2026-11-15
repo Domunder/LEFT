@@ -129,7 +129,7 @@ export async function forgetUser(): Promise<void> {
  * not approved yet, or the paid-apps agreement is not active, far more often than
  * it means a typo.
  *
- * **The free tier never reaches here.** 05.1 checks `needsUnlimited()` before it
+ * **The free tier never reaches here.** 05.1 checks `tierFor()` before it
  * charges anything, so every tier arriving is one somebody is buying — which is
  * why this throws on a missing product rather than returning null.
  */

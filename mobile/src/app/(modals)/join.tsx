@@ -27,14 +27,16 @@
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackgroundVideo } from '@/components/ui/background-video';
 import { GlassPanel } from '@/components/ui/glass-panel';
+import { PressScale } from '@/components/ui/press-scale';
 import { QrScanner } from '@/components/ui/qr-scanner';
+import { SheetDrag } from '@/components/ui/sheet-drag';
 import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
-import { Colors, JoinSheet, Radii, VideoOverlay } from '@/constants/theme';
+import { Colors, JoinSheet, Press, Radii, SheetMotion, VideoOverlay } from '@/constants/theme';
 
 /**
  * Scanning needs a real camera. There is none in a browser — same guard 09 uses
@@ -77,80 +79,90 @@ export default function JoinScreen() {
       <BackgroundVideo opacity={VideoOverlay.videoOpacity} />
       <View style={styles.scrim} pointerEvents="none" />
 
-      <GlassPanel
-        style={styles.panel}
-        contentStyle={[
-          styles.panelContent,
-          { paddingBottom: insets.bottom + JoinSheet.paddingBottom },
-        ]}>
-        <View style={styles.handle} />
+      {/*
+        The panel is a sheet the hand can move: it follows the finger and a
+        flick down closes it (`SheetDrag`). It is drawn `overdraw` past the
+        screen edge so pulling it up shows no gap underneath.
+      */}
+      <SheetDrag onDismiss={() => router.back()} style={styles.drag}>
+        <GlassPanel
+          style={styles.panel}
+          contentStyle={[
+            styles.panelContent,
+            { paddingBottom: insets.bottom + JoinSheet.paddingBottom + SheetMotion.overdraw },
+          ]}>
+          <View style={styles.handle} />
 
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Display size="xs">
-              <Em>Join</Em> a group.
-            </Display>
-            <Body small style={styles.subcopy}>
-              Get access from whoever created the film.
-            </Body>
+          <View style={styles.header}>
+            <View style={styles.headerText}>
+              <Display size="xs">
+                <Em>Join</Em> a group.
+              </Display>
+              <Body small style={styles.subcopy}>
+                Get access from whoever created the film.
+              </Body>
+            </View>
+
+            <PressScale
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={() => router.back()}
+              scale={Press.iconScale}
+              hitSlop={(44 - JoinSheet.closeSize) / 2}
+              style={styles.close}>
+              <Feather name="x" size={16} color={Colors.textMuted} />
+            </PressScale>
           </View>
 
-          <Pressable
+          <PressScale
             accessibilityRole="button"
-            accessibilityLabel="Close"
-            onPress={() => router.back()}
-            style={({ pressed }) => [styles.close, pressed && styles.pressed]}>
-            <Feather name="x" size={16} color={Colors.textMuted} />
-          </Pressable>
-        </View>
-
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Scan a QR code"
-          accessibilityState={{ disabled: !CAN_SCAN }}
-          disabled={!CAN_SCAN}
-          onPress={() => setScanning(true)}
-          style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
-          <View style={styles.ring}>
-            <Feather name="grid" size={JoinSheet.card.glyphSize} color={Colors.iconGlass} />
-          </View>
-          <Body color={Colors.text} style={styles.cardTitle}>
-            Scan QR Code
-          </Body>
-          <Body small color={Colors.textDim} style={styles.centered}>
-            {CAN_SCAN
-              ? 'Ask the creator to show their QR code\nand scan it with your camera.'
-              : 'Scanning needs the LEFT app on a phone.\nTap the invite link instead.'}
-          </Body>
-        </Pressable>
-
-        <View style={styles.divider}>
-          <View style={styles.rule} />
-          <Label small color={Colors.textGhost}>
-            or
-          </Label>
-          <View style={styles.rule} />
-        </View>
-
-        {/*
-          Inert by design — the guest cannot act on this here. It explains the
-          other way in, which happens outside the app entirely: the link arrives
-          in a message and +native-intent.ts routes the tap.
-        */}
-        <View style={styles.linkRow}>
-          <View style={styles.tile}>
-            <Feather name="link" size={JoinSheet.linkRow.iconSize} color={Colors.iconGlass} />
-          </View>
-          <View style={styles.linkText}>
-            <Body color={Colors.textMuted} style={styles.linkTitle}>
-              Shared Link
+            accessibilityLabel="Scan a QR code"
+            accessibilityState={{ disabled: !CAN_SCAN }}
+            disabled={!CAN_SCAN}
+            onPress={() => setScanning(true)}
+            scale={Press.cardScale}
+            style={styles.card}>
+            <View style={styles.ring}>
+              <Feather name="grid" size={JoinSheet.card.glyphSize} color={Colors.iconGlass} />
+            </View>
+            <Body color={Colors.text} style={styles.cardTitle}>
+              Scan QR Code
             </Body>
-            <Caption color={Colors.textGhost}>
-              The creator can share a direct link from inside their app. Tap it to join instantly.
-            </Caption>
+            <Body small color={Colors.textDim} style={styles.centered}>
+              {CAN_SCAN
+                ? 'Ask the creator to show their QR code\nand scan it with your camera.'
+                : 'Scanning needs the LEFT app on a phone.\nTap the invite link instead.'}
+            </Body>
+          </PressScale>
+
+          <View style={styles.divider}>
+            <View style={styles.rule} />
+            <Label small color={Colors.textGhost}>
+              or
+            </Label>
+            <View style={styles.rule} />
           </View>
-        </View>
-      </GlassPanel>
+
+          {/*
+            Inert by design — the guest cannot act on this here. It explains the
+            other way in, which happens outside the app entirely: the link arrives
+            in a message and +native-intent.ts routes the tap.
+          */}
+          <View style={styles.linkRow}>
+            <View style={styles.tile}>
+              <Feather name="link" size={JoinSheet.linkRow.iconSize} color={Colors.iconGlass} />
+            </View>
+            <View style={styles.linkText}>
+              <Body color={Colors.textMuted} style={styles.linkTitle}>
+                Shared Link
+              </Body>
+              <Caption color={Colors.textGhost}>
+                The creator can share a direct link from inside their app. Tap it to join instantly.
+              </Caption>
+            </View>
+          </View>
+        </GlassPanel>
+      </SheetDrag>
     </View>
   );
 }
@@ -162,8 +174,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
   },
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: JoinSheet.scrim,
+  },
+  drag: {
+    marginBottom: -SheetMotion.overdraw,
   },
   panel: {
     // Pinned flush to the bottom, so only the top corners are rounded.
@@ -269,8 +284,5 @@ const styles = StyleSheet.create({
   },
   linkTitle: {
     marginBottom: JoinSheet.linkRow.titleGap,
-  },
-  pressed: {
-    opacity: 0.7,
   },
 });

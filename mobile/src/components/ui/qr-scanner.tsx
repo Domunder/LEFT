@@ -102,7 +102,7 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: Colors.bg,
   },
   prompt: {
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
   },
   reticleLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     alignItems: 'center',
     justifyContent: 'center',
   },

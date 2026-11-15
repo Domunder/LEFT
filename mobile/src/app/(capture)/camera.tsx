@@ -14,12 +14,18 @@
  *    phone with one lens has no stops, and pinch does the zooming.
  *  - The flash lights the LED before the exposure and asks the camera for its
  *    own flash on top (`fire`). On the front camera the viewfinder goes white.
- *  - Bottom-left shows the last photo taken and opens "Your shots" — a guest
- *    may look at their own frames.
+ *  - **The chrome floats on the picture, as glass** (2026-11-15). Flash, the
+ *    roll counter and flip sit along the viewfinder's top edge; "Your shots",
+ *    zoom and invite along its bottom edge. All of it is `Glass` — there is a
+ *    picture behind every piece. Outside the frame only the shutter is left,
+ *    on the plain page, where glass would have nothing to show.
+ *  - Bottom-left of the viewfinder shows the last photo taken and opens "Your
+ *    shots" — a guest may look at their own frames.
  *  - Bottom-right opens the invite (09: QR and link), for every member — a
  *    party grows while it is running, and whoever stands next to a newcomer
- *    should be able to let them in. Frames still uploading count beside it.
- *  - The counter is the largest thing in the header and shows only what
+ *    should be able to let them in. Frames still uploading count beside the
+ *    shutter.
+ *  - The counter is the largest type on the screen and shows only what
  *    `useCameraSession` gives it — the server's count minus frames still owed.
  *  - The shutter answers on touch-down and fires on release. The viewfinder
  *    blinks shut on the same frame. No sound: a party is loud enough.
@@ -38,13 +44,12 @@
 'use no memo';
 
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useNetworkState } from 'expo-network';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   ReduceMotion,
@@ -66,14 +71,16 @@ import {
 import { CircleIconButton } from '@/components/ui/circle-back-button';
 import { EventCountdown } from '@/components/ui/event-countdown';
 import { FilmCamera, type FilmCameraRef } from '@/components/ui/film-camera';
+import { Glass, GlassButton } from '@/components/ui/glass';
 import { PillButton } from '@/components/ui/pill-button';
+import { PressScale } from '@/components/ui/press-scale';
 import { RollCounter } from '@/components/ui/roll-counter';
 import { Screen } from '@/components/ui/screen';
 import { ShutterButton } from '@/components/ui/shutter-button';
 import { Spinner } from '@/components/ui/spinner';
 import { Body, Display, Em, Label } from '@/components/ui/typography';
 import { ZoomSelector } from '@/components/ui/zoom-selector';
-import { Camera as T } from '@/constants/theme';
+import { Camera as T, Glass as GlassTokens, Radii } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { useCameraSession } from '@/hooks/use-camera-session';
 import type { FilmLook } from '@/lib/events';
@@ -189,7 +196,18 @@ export default function CameraScreen() {
           <EventCountdown endsAt={event.ends_at} />
         </View>
         <View style={styles.stateActions}>
-          <PillButton label="Back to your films" variant="secondary" onPress={leave} />
+          {/* The album's "developing" state: the count so far, and the host's "develop now". */}
+          <PillButton
+            label="See how the film is doing"
+            icon="arrow-right"
+            onPress={() =>
+              router.replace({
+                pathname: '/(library)/album/[id]',
+                params: { id: event.id },
+              })
+            }
+          />
+          <PillButton label="Back to your moments" variant="secondary" onPress={leave} />
         </View>
       </StateScreen>
     );
@@ -296,7 +314,7 @@ function StateScreen({
   return (
     <Screen>
       <View style={styles.stateHeader}>
-        <CircleIconButton icon="x" accessibilityLabel="Back to your films" onPress={onClose} />
+        <CircleIconButton glass icon="x" accessibilityLabel="Back to your moments" onPress={onClose} />
       </View>
       <View style={styles.stateBody}>
         {eyebrow ? <Label>{eyebrow}</Label> : null}
@@ -628,14 +646,13 @@ function Viewfinder({
     <Screen padded={false}>
       <View style={styles.header}>
         <View style={styles.headerSide}>
-          <CircleIconButton icon="x" accessibilityLabel="Back to your films" onPress={onClose} />
+          <CircleIconButton glass icon="x" accessibilityLabel="Back to your moments" onPress={onClose} />
         </View>
 
         <View style={styles.headerCenter}>
           <Label small numberOfLines={1}>
             {eventName}
           </Label>
-          <RollCounter shotsLeft={shotsLeft} />
         </View>
 
         <View style={[styles.headerSide, styles.headerRight]}>
@@ -675,64 +692,87 @@ function Viewfinder({
               pointerEvents="none"
             />
 
+            {/*
+              The chrome, over the picture and over the shutter's blackout: plain
+              views above the canvas, each on `Glass`. No blend modes here — on
+              iOS they paint over the preview. `box-none`, so the gaps between
+              the controls still belong to the pinch.
+            */}
+            <View style={[styles.overlayRow, styles.overlayTop]} pointerEvents="box-none">
+              <GlassButton
+                icon={flash ? 'zap' : 'zap-off'}
+                color={at(T.controls.flashColor, flash)}
+                accessibilityLabel={flash ? 'Flash on' : 'Flash off'}
+                onPress={() => setFlash((on) => !on)}
+              />
+              <Glass radius={Radii.pill} style={styles.counter}>
+                <RollCounter shotsLeft={shotsLeft} />
+              </Glass>
+              <GlassButton icon="refresh-cw" accessibilityLabel="Switch camera" onPress={flip} />
+            </View>
+
             {note ? (
               <View style={styles.note} accessibilityLiveRegion="polite">
                 <Feather name={note.icon} size={T.note.iconSize} color={T.note.color} />
                 <Text style={styles.noteText}>{note.text}</Text>
               </View>
             ) : null}
+
+            <View style={[styles.overlayRow, styles.overlayBottom]} pointerEvents="box-none">
+              <PressScale
+                accessibilityRole="button"
+                accessibilityLabel="Your shots"
+                accessibilityHint="Shows the photos you have taken"
+                hitSlop={8}
+                scale={GlassTokens.pressScale}
+                onPress={onOpenShots}>
+                <Glass radius={T.shots.radius} interactive style={styles.tile}>
+                  {lastShot ? (
+                    <Image
+                      source={{ uri: lastShot }}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      transition={T.shots.fadeMs}
+                    />
+                  ) : (
+                    <Feather name="image" size={T.shots.iconSize} color={T.shots.iconColor} />
+                  )}
+                </Glass>
+              </PressScale>
+
+              {stops.length > 0 ? (
+                <ZoomSelector
+                  stops={stops}
+                  selected={selected}
+                  onSelect={(stop) => {
+                    zoom.value = stop.zoom;
+                    setSelected(stop.label);
+                  }}
+                />
+              ) : null}
+
+              <PressScale
+                accessibilityRole="button"
+                accessibilityLabel="Invite"
+                accessibilityHint="Shows the QR code and the link to this event"
+                hitSlop={8}
+                scale={GlassTokens.pressScale}
+                onPress={onOpenInvite}>
+                <Glass radius={T.shots.radius} interactive style={styles.tile}>
+                  <MaterialCommunityIcons
+                    name="qrcode"
+                    size={T.invite.iconSize}
+                    color={T.shots.iconColor}
+                  />
+                </Glass>
+              </PressScale>
+            </View>
           </View>
         </GestureDetector>
       </View>
 
-      <View style={styles.controls}>
-        <IconControl
-          icon={flash ? 'zap' : 'zap-off'}
-          size={T.controls.flashIconSize}
-          color={at(T.controls.flashColor, flash)}
-          label={flash ? 'Flash on' : 'Flash off'}
-          onPress={() => setFlash((on) => !on)}
-        />
-        {stops.length > 0 ? (
-          <ZoomSelector
-            stops={stops}
-            selected={selected}
-            onSelect={(stop) => {
-              zoom.value = stop.zoom;
-              setSelected(stop.label);
-            }}
-          />
-        ) : null}
-        <IconControl
-          icon="refresh-cw"
-          size={T.controls.flipIconSize}
-          color={T.controls.flipColor}
-          label="Switch camera"
-          onPress={flip}
-        />
-      </View>
-
       <View style={styles.bottom}>
-        <View style={styles.bottomSide}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Your shots"
-            accessibilityHint="Shows the photos you have taken"
-            hitSlop={8}
-            onPress={onOpenShots}
-            style={({ pressed }) => [styles.shots, pressed && styles.iconControlPressed]}>
-            {lastShot ? (
-              <Image
-                source={{ uri: lastShot }}
-                style={StyleSheet.absoluteFill}
-                contentFit="cover"
-                transition={T.shots.fadeMs}
-              />
-            ) : (
-              <Feather name="image" size={T.shots.iconSize} color={T.shots.iconColor} />
-            )}
-          </Pressable>
-        </View>
+        <View style={styles.bottomSide} />
 
         <ShutterButton onFire={fire} disabled={!ready} />
 
@@ -747,47 +787,9 @@ function Viewfinder({
               <Text style={styles.queueText}>{pending}</Text>
             </View>
           ) : null}
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Invite"
-            accessibilityHint="Shows the QR code and the link to this event"
-            hitSlop={8}
-            onPress={onOpenInvite}
-            style={({ pressed }) => [styles.shots, pressed && styles.iconControlPressed]}>
-            <MaterialCommunityIcons
-              name="qrcode"
-              size={T.invite.iconSize}
-              color={T.shots.iconColor}
-            />
-          </Pressable>
         </View>
       </View>
     </Screen>
-  );
-}
-
-/** Flash and flip — a bare icon on a 44pt target, dimming on press-in. */
-function IconControl({
-  icon,
-  size,
-  color,
-  label,
-  onPress,
-}: {
-  icon: React.ComponentProps<typeof Feather>['name'];
-  size: number;
-  color: string;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      style={({ pressed }) => [styles.iconControl, pressed && styles.iconControlPressed]}>
-      <Feather name={icon} size={size} color={color} />
-    </Pressable>
   );
 }
 
@@ -827,7 +829,6 @@ const styles = StyleSheet.create({
   headerCenter: {
     flex: 1,
     alignItems: 'center',
-    gap: T.header.nameGap,
   },
   // Centres the 3:4 frame in whatever height the header and controls leave.
   viewfinderArea: {
@@ -844,23 +845,39 @@ const styles = StyleSheet.create({
   screenFlash: {
     backgroundColor: T.flash.screenColor,
   },
-  shots: {
+  // Flash · counter · flip along the top edge, shots · zoom · invite along the bottom.
+  overlayRow: {
+    position: 'absolute',
+    left: T.overlay.inset,
+    right: T.overlay.inset,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  overlayTop: {
+    top: T.overlay.inset,
+  },
+  overlayBottom: {
+    bottom: T.overlay.inset,
+  },
+  counter: {
+    paddingHorizontal: T.overlay.counterPaddingX,
+    paddingVertical: T.overlay.counterPaddingY,
+  },
+  // "Your shots" and invite. The glass draws the edge; a photo covers it.
+  tile: {
     width: T.shots.size,
     height: T.shots.size,
-    borderRadius: T.shots.radius,
-    borderWidth: 1,
-    borderColor: T.shots.border,
-    backgroundColor: T.shots.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   blackout: {
     backgroundColor: T.blackout.color,
   },
   note: {
     position: 'absolute',
-    bottom: T.note.inset,
+    // Clear of the bottom row of chrome.
+    bottom: T.overlay.inset + T.shots.size + T.overlay.noteGap,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
@@ -875,23 +892,6 @@ const styles = StyleSheet.create({
   noteText: {
     ...Typography.metaMd,
     color: T.note.color,
-  },
-  controls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: T.controls.paddingX,
-    paddingTop: T.controls.paddingTop,
-    paddingBottom: T.controls.paddingBottom,
-  },
-  iconControl: {
-    width: T.controls.buttonSize,
-    height: T.controls.buttonSize,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconControlPressed: {
-    opacity: 0.5,
   },
   bottom: {
     flexDirection: 'row',
@@ -908,7 +908,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: T.invite.queueGap,
   },
   queue: {
     flexDirection: 'row',

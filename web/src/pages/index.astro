@@ -1,0 +1,656 @@
+---
+import { Picture } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Phone from '../components/Phone.astro';
+import StoreButtons from '../components/StoreButtons.astro';
+import Pricing from '../components/Pricing.astro';
+import Faq from '../components/Faq.astro';
+import GetApp from '../components/GetApp.astro';
+import { HOME_FAQ, LOOKS, SITE, TIERS } from '../site';
+
+import weddingDance from '../assets/photos/wedding-dance.jpg';
+import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
+import weddingFriends from '../assets/photos/wedding-friends.jpg';
+import weddingLaugh from '../assets/photos/wedding-laugh.jpg';
+import partyFlash from '../assets/photos/party-flash.jpg';
+import partyWine from '../assets/photos/party-wine.jpg';
+import birthdayCandle from '../assets/photos/birthday-candle.jpg';
+import dinnerCandle from '../assets/photos/dinner-candle.jpg';
+import tripTrunk from '../assets/photos/trip-trunk.jpg';
+import tripVan from '../assets/photos/trip-van.jpg';
+
+const title = 'LEFT — The disposable camera app for weddings, parties and trips';
+const description =
+  'Guests join by link or QR code and get a limited roll of photos. Nothing is visible until the event ends — then the whole group’s film is developed together.';
+
+const strip = [
+  { src: partyFlash, alt: 'A group of friends squeezed together at a party, lit by a camera flash' },
+  { src: weddingFriends, alt: 'A bride raising her bouquet while dancing with friends' },
+  { src: dinnerCandle, alt: 'Friends sharing a long dinner by candlelight' },
+  { src: weddingCrowd, alt: 'Wedding guests waving sparklers around the couple at night' },
+  { src: partyWine, alt: 'Friends pouring wine and laughing at a house party' },
+  { src: birthdayCandle, alt: 'People gathered around a table with a single lit candle' },
+  { src: tripTrunk, alt: 'Two friends sitting in the open boot of a small car on a road trip' },
+];
+
+const steps = [
+  {
+    screen: 'join',
+    photo: weddingCrowd,
+    label: 'LEFT invite screen: a guest types their name to join Mia and Jonas’s wedding, no account needed',
+    title: 'Join with a link',
+    text: 'Share a link or put the QR code on the tables. Guests type a name and they’re in. No sign-up, no password.',
+  },
+  {
+    screen: 'camera',
+    photo: weddingDance,
+    label: 'LEFT camera screen showing a wedding dance floor and a counter that reads 17 left',
+    title: 'Shoot your roll',
+    text: 'Everyone gets the same short roll — 5 to 36 photos, or unlimited. When you only have a few left, you start to choose.',
+  },
+  {
+    screen: 'developing',
+    photo: weddingDance,
+    label: 'LEFT developing screen with a countdown of one day and four hours until the film is developed',
+    title: 'Developed together',
+    text: 'Nobody sees the album until the event ends. Then the film is developed and every photo appears for everyone at once.',
+  },
+] as const;
+
+const cases = [
+  { href: '/use-cases/#parties', src: partyFlash, title: 'Parties', alt: 'Friends posing close together at a party' },
+  { href: '/use-cases/#trips', src: tripVan, title: 'Trips', alt: 'A white camper van on a country road at sunset' },
+  { href: '/use-cases/#birthdays', src: birthdayCandle, title: 'Birthdays', alt: 'A birthday table lit by one candle' },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE.name,
+    url: SITE.url,
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'LEFT',
+    description,
+    url: SITE.url,
+    applicationCategory: 'PhotographyApplication',
+    operatingSystem: 'iOS, Android',
+    offers: {
+      '@type': 'AggregateOffer',
+      priceCurrency: 'CHF',
+      lowPrice: 0,
+      highPrice: TIERS[TIERS.length - 1].price,
+      offerCount: TIERS.length,
+    },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: HOME_FAQ.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <section class="hero">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">A disposable camera for events</p>
+        <h1>One roll each. <em>Developed together.</em></h1>
+        <p class="lede">
+          LEFT turns every guest’s phone into a disposable camera. A few shots each, one film look, and nothing
+          to see until the party is over — then the whole group’s photos appear at once.
+        </p>
+        <StoreButtons />
+        <p class="hint">Free for up to 50 guests. No account for guests.</p>
+      </div>
+      <div class="hero-visual">
+        <div class="print print-a" aria-hidden="true">
+          <Picture src={weddingLaugh} alt="" formats={['avif', 'webp']} widths={[240, 480]} sizes="220px" class="look-golden" loading="eager" />
+        </div>
+        <div class="print print-b" aria-hidden="true">
+          <Picture src={partyFlash} alt="" formats={['avif', 'webp']} widths={[240, 480]} sizes="220px" class="look-golden" loading="eager" />
+        </div>
+        <Phone
+          screen="camera"
+          eager
+          label="The LEFT camera on a phone: a wedding dance floor in the viewfinder and a counter that reads 17 left"
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="strip-section" aria-label="Photos from parties, weddings and trips">
+    <div class="track">
+      {
+        [0, 1].map((copy) => (
+          <ul aria-hidden={copy === 1 ? 'true' : undefined}>
+            {strip.map((photo, index) => (
+              <li style={`--tilt:${(index % 2 ? 1 : -1) * (1.2 + (index % 3))}deg`}>
+                <Picture
+                  src={photo.src}
+                  alt={copy === 0 ? photo.alt : ''}
+                  formats={['avif', 'webp']}
+                  widths={[320, 640]}
+                  sizes="300px"
+                  width={640}
+                  height={480}
+                  fit="cover"
+                  class="look-golden"
+                />
+              </li>
+            ))}
+          </ul>
+        ))
+      }
+    </div>
+  </section>
+
+  <section id="how" class="how">
+    <div class="wrap">
+      <div class="section-head center reveal">
+        <p class="eyebrow">How it works</p>
+        <h2>Three steps. <em>No instructions needed.</em></h2>
+      </div>
+      <ol class="steps">
+        {
+          steps.map((step, index) => (
+            <li class="reveal">
+              <Phone screen={step.screen} photo={step.photo} label={step.label} />
+              <p class="num" aria-hidden="true">
+                {index + 1}
+              </p>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section id="looks" class="looks">
+    <div class="wrap looks-grid">
+      <div class="looks-copy reveal">
+        <p class="eyebrow">The film</p>
+        <h2>One look <em>for the whole night.</em></h2>
+        <p class="lede">
+          The host loads one film for the event. You see it in the viewfinder while you shoot, and it’s in every
+          photo — so two hundred phones make one album that belongs together.
+        </p>
+        <ul class="look-list">
+          {
+            LOOKS.map((look) => (
+              <li>
+                <Picture
+                  src={weddingLaugh}
+                  alt={`The same wedding photo in the ${look.name} look`}
+                  formats={['avif', 'webp']}
+                  widths={[280, 560]}
+                  sizes="(min-width: 900px) 250px, 44vw"
+                  width={560}
+                  height={700}
+                  fit="cover"
+                  class={`look-${look.id}`}
+                />
+                <h3>{look.name}</h3>
+                <p>{look.blurb}</p>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+      <div class="looks-phone reveal">
+        <Phone
+          screen="looks"
+          photo={weddingLaugh}
+          label="LEFT film picker with four looks: Golden, Chrome, Faded and Mono"
+        />
+      </div>
+    </div>
+  </section>
+
+  <section class="album">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="wrap album-grid">
+      <div class="album-phones reveal">
+        <Phone
+          screen="moments"
+          class="tilt-left"
+          label="LEFT Your Moments screen: a stack of prints from Mia and Jonas’s wedding, developed, 412 photos"
+        />
+        <Phone
+          screen="album"
+          class="tilt-right"
+          label="LEFT album screen: a grid of 412 photos taken by 38 guests"
+        />
+      </div>
+      <div class="album-copy reveal">
+        <p class="eyebrow">The reveal</p>
+        <h2>The morning after, <em>the whole night comes back.</em></h2>
+        <p class="lede">
+          The dance floor you missed. The table you never sat at. What your grandmother thought was worth one of
+          her twelve shots. Every guest’s roll lands in one shared album — to keep, save and send around.
+        </p>
+        <ul class="points">
+          <li>Everyone who joined gets the full album</li>
+          <li>Save photos to your phone and share them</li>
+          <li>The host can remove any photo, guests their own</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="use-cases" class="cases">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">Use cases</p>
+        <h2>Made for days <em>you don’t get twice.</em></h2>
+      </div>
+      <div class="case-grid reveal">
+        <a class="case big" href="/wedding/">
+          <Picture
+            src={weddingCrowd}
+            alt="Wedding guests waving sparklers around the newlyweds at night"
+            formats={['avif', 'webp']}
+            widths={[480, 800, 1200]}
+            sizes="(min-width: 900px) 660px, 100vw"
+            class="look-golden"
+          />
+          <span>
+            <b>Weddings</b>
+            <small>Your day through every guest’s eyes →</small>
+          </span>
+        </a>
+        {
+          cases.map((item) => (
+            <a class="case" href={item.href}>
+              <Picture
+                src={item.src}
+                alt={item.alt}
+                formats={['avif', 'webp']}
+                widths={[320, 640]}
+                sizes="(min-width: 900px) 320px, 100vw"
+                width={640}
+                height={480}
+                fit="cover"
+                class="look-golden"
+              />
+              <span>
+                <b>{item.title}</b>
+              </span>
+            </a>
+          ))
+        }
+      </div>
+      <p class="more reveal">
+        <a class="text-link" href="/use-cases/">See all use cases →</a>
+      </p>
+    </div>
+  </section>
+
+  <Pricing highlight="free" />
+  <Faq items={HOME_FAQ} />
+  <GetApp />
+</Base>
+
+<style>
+  /* Hero */
+  .hero {
+    padding-top: clamp(120px, 16vw, 176px);
+    padding-bottom: clamp(48px, 8vw, 96px);
+    overflow: hidden;
+  }
+
+  .hero .glow {
+    right: -18%;
+    top: -6%;
+  }
+
+  .hero-grid {
+    display: grid;
+    gap: 56px;
+    align-items: center;
+  }
+
+  .hero-copy {
+    display: grid;
+    gap: 22px;
+    justify-items: start;
+  }
+
+  .hint {
+    color: var(--ink-55);
+    font-size: 0.875rem;
+  }
+
+  .hero-visual {
+    position: relative;
+    display: grid;
+    justify-items: center;
+  }
+
+  .hero-visual :global(.phone) {
+    position: relative;
+    max-width: min(300px, 68vw);
+  }
+
+  .print {
+    position: absolute;
+    width: min(200px, 40vw);
+    padding: 8px 8px 30px;
+    background: var(--ink);
+    border-radius: 6px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  }
+
+  .print :global(img) {
+    aspect-ratio: 4 / 5;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 2px;
+  }
+
+  .print-a {
+    left: calc(50% - min(280px, 46vw));
+    top: 12%;
+    transform: rotate(-9deg);
+  }
+
+  .print-b {
+    right: calc(50% - min(280px, 46vw));
+    bottom: 10%;
+    transform: rotate(8deg);
+  }
+
+  @media (min-width: 900px) {
+    .hero-grid {
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 40px;
+    }
+  }
+
+  /* Photo strip */
+  .strip-section {
+    padding-block: 24px 40px;
+    overflow: hidden;
+  }
+
+  .track {
+    display: flex;
+    width: max-content;
+    animation: drift 70s linear infinite;
+  }
+
+  .track ul {
+    display: flex;
+    gap: 22px;
+    list-style: none;
+    margin: 0;
+    padding: 20px 11px;
+  }
+
+  .track li {
+    flex: none;
+    width: clamp(220px, 26vw, 300px);
+    padding: 8px 8px 28px;
+    background: var(--ink);
+    border-radius: 6px;
+    transform: rotate(var(--tilt));
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  .track :global(img) {
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 2px;
+  }
+
+  @keyframes drift {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  /* How it works */
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 64px;
+  }
+
+  .steps li {
+    display: grid;
+    justify-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .steps :global(.phone) {
+    max-width: 250px;
+    margin-bottom: 22px;
+  }
+
+  .num {
+    font-family: var(--numeral);
+    font-size: 1.6rem;
+    color: var(--amber);
+    line-height: 1;
+  }
+
+  .steps li > p:last-child {
+    color: var(--ink-70);
+    max-width: 32ch;
+  }
+
+  @media (min-width: 820px) {
+    .steps {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+  }
+
+  /* Looks */
+  .looks-grid {
+    display: grid;
+    gap: 56px;
+    align-items: center;
+  }
+
+  .looks-copy {
+    display: grid;
+    gap: 20px;
+  }
+
+  .look-list {
+    list-style: none;
+    margin: 20px 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px 14px;
+  }
+
+  .look-list :global(img) {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: 18px;
+    margin-bottom: 12px;
+  }
+
+  .look-list p {
+    color: var(--ink-70);
+    font-size: 0.9rem;
+  }
+
+  .looks-phone {
+    display: grid;
+    justify-items: center;
+  }
+
+  @media (min-width: 900px) {
+    .looks-grid {
+      grid-template-columns: 1.5fr 0.7fr;
+    }
+    .look-list {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  /* Album */
+  .album {
+    overflow: hidden;
+  }
+
+  .album .glow {
+    left: -20%;
+    top: 10%;
+  }
+
+  .album-grid {
+    display: grid;
+    gap: 56px;
+    align-items: center;
+  }
+
+  .album-phones {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .album-phones :global(.phone) {
+    max-width: min(240px, 44vw);
+  }
+
+  .album-phones :global(.tilt-left) {
+    transform: rotate(-5deg) translateX(6%);
+  }
+
+  .album-phones :global(.tilt-right) {
+    transform: rotate(4deg) translate(-6%, 8%);
+  }
+
+  .album-copy {
+    display: grid;
+    gap: 20px;
+  }
+
+  .points {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+    color: var(--ink-70);
+  }
+
+  .points li {
+    padding-left: 26px;
+    position: relative;
+  }
+
+  .points li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.62em;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+
+  @media (min-width: 900px) {
+    .album-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  /* Use cases */
+  .case-grid {
+    display: grid;
+    gap: 14px;
+  }
+
+  .case {
+    position: relative;
+    display: block;
+    border-radius: var(--radius);
+    overflow: hidden;
+    text-decoration: none;
+    aspect-ratio: 4 / 3;
+    background: var(--card);
+  }
+
+  .case :global(picture),
+  .case :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.9s var(--ease);
+  }
+
+  .case:hover :global(img) {
+    transform: scale(1.04);
+  }
+
+  .case span {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 70px 24px 22px;
+    background: linear-gradient(transparent, rgba(6, 6, 8, 0.88));
+    display: grid;
+    gap: 4px;
+  }
+
+  .case b {
+    font-family: var(--serif);
+    font-weight: 340;
+    font-size: 1.7rem;
+    line-height: 1.1;
+  }
+
+  .case.big :global(img) {
+    object-position: 50% 78%;
+  }
+
+  .case.big b {
+    font-size: clamp(2rem, 4vw, 2.8rem);
+  }
+
+  .case small {
+    color: var(--ink-70);
+    font-size: 0.95rem;
+  }
+
+  .more {
+    margin-top: 32px;
+  }
+
+  @media (min-width: 900px) {
+    .case-grid {
+      grid-template-columns: 2fr 1fr;
+      grid-template-rows: repeat(3, 1fr);
+    }
+    .case {
+      aspect-ratio: auto;
+      min-height: 190px;
+    }
+    .case.big {
+      grid-row: 1 / span 3;
+    }
+  }
+</style>

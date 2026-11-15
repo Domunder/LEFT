@@ -12,17 +12,19 @@ Einwegkamera-App für Events umgebaut (Vorbild: ONCE, aber deutlich günstiger).
 | Look | Host wählt **einen Film/Look pro Event** (ersetzt Screen 03 „Format“). Wird beim Auslösen aufs Gerät eingebrannt. |
 | Entwicklung | Fotos sind bis Event-Ende für niemanden ausser dem Fotografen sichtbar; danach für alle. |
 | Gäste | Kein Konto — Link/QR → Name → drin (anonyme Supabase-Session, existiert bereits). |
-| Preis | **Gratis bis 100 Gäste und 36er-Rolle. Ein einziger SKU „LEFT Unlimited“** (Richtwert 5 CHF, einmalig pro Event) schaltet die ∞-Rolle und Events bis 200 Gäste frei. |
+| Preis | **Vier Stufen, final (15.11.2026):** gratis bis 50 Gäste mit endlicher Rolle; ∞-Rolle bis 50 Gäste 10 CHF (`left_small`); bis 100 Gäste 15 CHF (`left_medium`); bis 150 Gäste 20 CHF (`left_large`); bis 200 Gäste 25 CHF (`left_unlimited`). Consumables, ein Kauf = ein Event, der Host zahlt beim Erstellen. Fair-Use-Deckel für ∞: 150 Fotos pro Gast; harte Obergrenze 200 Gäste. |
+| Aufbewahrung | **6 Monate** nach Event-Ende (15.11.2026, vorher 12). Der Lösch-Job dafür existiert noch nicht (M6). |
+| Event starten | Bleibt: der Host tippt „Start the Event“, erst dann gehen die Kameras auf (15.11.2026). |
+| Web-Album | Vorerst keines (15.11.2026). Für den Fotobuch-Verkauf in Phase 2 wieder prüfen. |
 | Datenbank | Keine Bestandsdaten → Schema wird neu aufgesetzt (ein sauberer Baseline-Migrationsstand). |
 | Design | Bestehende Designsprache bleibt; neue Screens nach Apple-Design-Prinzipien (`apple-design`-Skill). |
 
-## Offen — bitte entscheiden
+## Offen
 
-### 1. Details zum SKU (Vorschlag, bitte bestätigen)
+- **Domain:** `leftmoment.com` ist noch nicht gekauft — ohne sie sind Einladungen
+  ausserhalb des Dev-Schemas tot.
 
-- Preis 5 CHF; Produkt-ID `left_unlimited` (Consumable, ein Kauf = ein Event).
-- Fair-Use-Deckel für ∞: 150 Fotos pro Gast. Harte Obergrenze 200 Gäste.
-- Aufbewahrung 12 Monate, länger sobald etwas gekauft wurde.
+## Kosten pro Event (Referenz zur Preisentscheidung)
 
 Zum Vergleich ONCE: bis 5 Gäste gratis, 10 → 2 CHF, 25 → 4, 50 → 14, 100 → 25,
 150 → 40, 200 → 60, unbegrenzt → 90 CHF; unbegrenzte Fotos +9 CHF.
@@ -42,21 +44,12 @@ Zum Vergleich ONCE: bis 5 Gäste gratis, 10 → 2 CHF, 25 → 4, 50 → 14, 100 
 - Speicher ist praktisch gratis; **teuer wäre nur Egress auf Supabase** (30 Gäste,
   die je das ganze Album in voller Auflösung laden ≈ 24 GB ≈ 2 $). Deshalb:
   Thumbnails im Grid und Originale über R2 (kein Egress) — beides sowieso nötig.
-- Bei 10 000 Events/Jahr (Ø 1 GB) wächst der Speicher um ~10 TB/Jahr ≈ 150 $/Monat
-  nach einem Jahr, plus Supabase Pro 25 $/Monat. Mit 12 Monaten Aufbewahrung
-  bleibt das gedeckelt.
+- Bei 10 000 Events/Jahr (Ø 1 GB) kommen ~10 TB/Jahr dazu. Mit 6 Monaten
+  Aufbewahrung bleibt der Bestand bei ~5 TB gedeckelt ≈ 75 $/Monat auf R2, plus
+  Supabase Pro 25 $/Monat.
 - Ein Fotobuch bringt realistisch 10–20 CHF Marge. **~10–15 verkaufte Bücher pro
   Monat decken die Infrastruktur von ~800 Events pro Monat** — das entspricht
   einer Kaufquote von unter 2 % der Events.
-
-### 2. Weitere offene Punkte
-
-- **„Event starten“ durch den Host behalten?** Heute: Host tippt Start, dann gehen
-  alle Kameras auf. Alternative: Event ist ab Erstellung offen (weniger Reibung
-  für Reisen). Empfehlung: behalten für M1, in der Beta testen.
-- **Web-Album:** Sollen entwickelte Alben auch ohne App per Link ansehbar sein?
-  Für den MVP nicht nötig, für Fotobuch-Verkauf in Phase 2 sehr wertvoll.
-- **Domain:** `leftmoment.com` existiert noch nicht — ohne sie sind Einladungen tot.
 
 ## M0 · Video-Rückbau (erledigt)
 
@@ -78,15 +71,15 @@ Zum Vergleich ONCE: bis 5 Gäste gratis, 10 → 2 CHF, 25 → 4, 50 → 14, 100 
   `develop_expired_events` (pg_cron, jede Minute).
 - Reveal per RLS für Zeilen **und** Dateien, wirksam exakt ab `ends_at`.
   Uploads nur für tatsächlich beanspruchte Frames. Host kann Fotos löschen.
-- Ein SKU `left_unlimited`; gratis bis 100 Gäste und 36er-Rolle.
+- Ein SKU `left_unlimited`; gratis bis 100 Gäste und 36er-Rolle. *(Überholt: seit 15.11.2026 vier Stufen, Migration `20261115010000_price_tiers.sql`.)*
 - Client: Typen neu generiert, `lib/photos.ts`, `lib/storage.ts`, `lib/roll.ts`,
   `lib/tiers.ts`; Onboarding 03 = Film/Look (4 Looks), 05.1 = Gruppe + Rolle.
 - **Geprüft:** per SQL gegen einen lokalen Stack (Rolle leer, Wiederholung
   idempotent, Fremde sehen vor dem Ende 0 Fotos/Dateien und danach alle,
   Kauf wird genau einmal verbraucht, Direkt-Schreibzugriffe abgelehnt).
   Typecheck und Lint sauber.
-- **Nicht geprüft:** die neuen Screens auf einem Gerät; Edge Functions gegen
-  RevenueCat; Konto-Löschung end-to-end.
+- **Nicht geprüft:** Edge Functions gegen RevenueCat; Konto-Löschung
+  end-to-end. (Die Screens liefen am 15.11.2026 auf dem Gerät.)
 - **Für dich:** einmal `npm run db:reset` im Root, damit dein lokaler Stack das
   neue Schema hat.
 
@@ -95,7 +88,12 @@ Golden, Chrome, Faded, Mono; Events dauern höchstens 31 Tage; nach Event-Ende k
 weiterhin beitreten, um das Album zu sehen; ein belichtetes Bild wird nie
 zurückerstattet.
 
-## M2 · Kamera (gebaut, auf dem Gerät noch nicht geprüft)
+## M2 · Kamera (gebaut, am 15.11.2026 vom Nutzer auf dem iPhone geprüft)
+
+Die Runden unten sind die Entstehungsgeschichte; „nicht bestätigt“ in älteren
+Runden ist durch den Gerätetest überholt. Was der Test nicht nachweislich
+abgedeckt hat, steht am Ende des Abschnitts.
+
 
 - **Look-Pipeline:** ein Skia-Shader (`lib/look-shader.ts`), vier Rezepte in
   `constants/looks.ts`. Derselbe Shader zeichnet die Karten auf 03 (über
@@ -128,7 +126,7 @@ zurückerstattet.
 - **`react-native-worklets` 0.8.3** statt Expos 0.5.1 (VisionCamera braucht es),
   von `expo install` ausgenommen. Erster EAS-Build scheiterte mit 0.7.4 an
   `'React/RCTMessageThread.h' file not found`; behoben durch 0.8.3 plus
-  `plugins/with-worklets-headers.js` – noch nicht durch einen Build bestätigt.
+  `plugins/with-worklets-headers.js`. (Überholt durch SDK 58: Worklets 0.13.)
 - **Zoom:** Stopps aus den Linsenwechselpunkten des Geräts, beschriftet relativ
   zur Weitwinkellinse (zeigt den echten Tele-Faktor).
 - **Blitz:** jetzt der echte Kamerablitz (`flashMode: 'on'`); Frontkamera:
@@ -137,7 +135,7 @@ zurückerstattet.
 - **Build läuft, Kamera öffnet (15.11.2026).** Zoom-Stopps auf dem Gerät: 0.5×, 1×, 5×.
 - **Absturz nach einiger Zeit im Sucher:** vermutlich Speicher (zu grosse
   Vorschau-Frames, jeder wird kopiert). Gegenmassnahme: kleinere Frames, 30 fps.
-  Ursache nicht bewiesen, Fix nicht auf dem Gerät bestätigt.
+  (Ursache war eine andere, siehe Runde 7.)
 - **Looks neu abgestimmt:** nur noch Farbschema (gedämpft, sauber), kein Korn im
   Sucher, kaum Korn/Vignette im Foto. Entschieden nach Referenzbildern des Nutzers.
 - **Runde 6 (15.11.2026):** Frontkamera stand auf dem Kopf → Frames werden nativ
@@ -145,8 +143,7 @@ zurückerstattet.
   jetzt zuerst (dann Claim, dann Upload) und zeigt nur entwickelte Bilder.
   Blitz: LED wird vor der Aufnahme als Lampe eingeschaltet, zusätzlich zum
   Kamerablitz. Absturz: Frame-Worklet kann keine Exception mehr nach aussen
-  werfen, React Compiler für `camera.tsx` aus. **Absturzursache weiter unbekannt,
-  nichts davon auf dem Gerät bestätigt.**
+  werfen, React Compiler für `camera.tsx` aus. (Absturzursache: Runde 7.)
 - **Runde 7 (15.11.2026) – Absturzursache gefunden:** Der Absturzbericht zeigt
   `EXC_BREAKPOINT` auf der Kamera-Queue in Skias GPU-Cache
   (`makeNonTextureImage` in `SkiaCamera`). RN Skia hat einen GPU-Kontext pro
@@ -158,39 +155,122 @@ zurückerstattet.
   nicht erneut feuert → jetzt `onConfigured` + laufende Session. Blitz: LED als
   Lampe mit Rückmeldung, Kamerablitz nur als Ersatz; `[camera] fire` /
   `[camera] torch` loggen jeden Schritt. Fotos folgen jetzt der Gerätelage
-  (quer gehalten = Querformat). **Nur JS, kein neuer Build nötig. Nichts davon
-  auf dem Gerät bestätigt.**
-- **Auf dem Gerät prüfen (Runde 7):** Speicheranzeige im Sucher über 1–2 Minuten
-  (muss flach bleiben), Flüssigkeit der Vorschau, Frontkamera aufrecht und
-  gespiegelt, Auslöser nach Kamerawechsel, Blitz (Logs `[camera] fire` /
-  `[camera] torch`), Querformat-Foto. Bekanntes Restrisiko: Skia wird auf dem
-  Kamera-Thread noch für die Pixelkopie aufgerufen (kein GPU-Zugriff).
+  (quer gehalten = Querformat).
 - **Letztes Foto** als Kachel unten links (`lib/my-shots.ts`), Tipp öffnet „Your shots“.
 - **Follow-up:** `GrainOverlay` kachelt auf grossen Flächen nicht (auch Landing).
 - **03:** Beide Kartenreihen passen ohne Scrollen auf ein iPhone 16.
 - **Geprüft:** Typecheck und Lint sauber; `claim_shot` lehnt bei nicht
   gestartetem Event mit `event_closed` ab (gegen den lokalen Stack).
-- **Nicht geprüft – die VisionCamera-Fassung ist nie gebaut oder gelaufen:**
-  iOS-Build mit den neuen nativen Modulen, Live-Shader und seine Flüssigkeit,
-  Zoom-Stopps und ihre Beschriftung, Blitz, Ausrichtung und Grösse der Fotos,
-  Kachel mit letztem Foto, „Your shots“, 03 ohne Scrollen, Upload in den Bucket,
-  Verhalten nach App-Kill und im Funkloch.
-- **Für dich:** neuer Dev-Build nötig (`react-native-vision-camera` + Skia- und
-  Worklets-Plugin, Nitro, `react-native-worklets` 0.8.3).
+- **Auf dem Gerät geprüft (Nutzer, 15.11.2026):** Build auf SDK 58, Kamera,
+  Live-Look im Sucher, Auslösen, „Your shots“, Upload — laut Nutzer hat alles
+  funktioniert.
+- **Vom Test nicht nachweislich abgedeckt (gezielt nachprüfen):**
+  Speicheranzeige über 1–2 Minuten im Sucher (muss flach bleiben); ob der
+  Blitz die LED wirklich zündet (Logs `[camera] fire` / `[camera] torch`);
+  Querformat-Foto; Verhalten nach App-Kill und im Funkloch; Android insgesamt.
 - **Offen:** Look-Rezepte an echten Partyfotos abstimmen; Beispielbild evtl.
   ersetzen; `developPhoto()` blockiert den JS-Thread kurz (bei Serienaufnahmen
   ggf. in eine Worklet-Runtime verlegen).
 
-## M3 · Entwickeln & Album
+## Upgrade auf Expo SDK 58 (15.11.2026, auf dem Gerät geprüft)
 
-- „Entwickelt sich“-Zustand: Countdown, Anzahl Fotos, nichts sichtbar.
-- **Der Reveal** — der eine choreografierte Moment der App.
-- Album: Grid mit Thumbnails (`expo-image`), Vollbild-Viewer mit Swipe, Pinch und
-  Drag-to-dismiss (interruptible, 1:1, Velocity-Handoff), Fotograf-Badge.
-- Speichern (einzeln/alle) und Teilen; Host-Moderation; „Film jetzt entwickeln“
-  für den Host (`endEvent()`).
-- Gast-Upgrade `(auth)/keep` nach dem Reveal wieder anbinden.
-- Film-Karten in der Bibliothek mit echtem Cover; Platzhalter-Komponente löschen.
+- Auf Wunsch von SDK 54 direkt auf **SDK 58**: RN 0.88, React 19.3, TypeScript 6,
+  Reanimated 4.7, Worklets 0.13 (Pin auf 0.8.3 entfernt), Gesture Handler 3,
+  Skia 2.14, expo-router 58 (ohne React Navigation). Neu: `expo-glass-effect`.
+- Angepasst: Router-Importe, asynchrone Datei-Operationen in der Upload-Queue,
+  neue `expo-media-library`-API (QR speichern auf 09), Ref-Typen, ESLint-Regeln
+  (drei React-Compiler-Regeln aus, siehe `eslint.config.js`).
+- **Geprüft:** Typecheck, Lint, `expo-doctor` (20/20), iOS-Bundle-Export.
+- **Auf dem Gerät geprüft (Nutzer, 15.11.2026):** nativer iOS-Build mit
+  VisionCamera 5.2.4, Worklets 0.13 und RN 0.88 baut und läuft.
+  `plugins/with-worklets-headers.js` bleibt drin (ob es noch nötig ist, wurde
+  nicht getestet). Android ist nicht gebaut.
+
+## M3 · Entwickeln & Album (gebaut, am 15.11.2026 auf dem Gerät geprüft)
+
+- **Glas:** `components/ui/glass.tsx` — Liquid Glass (iOS 26+), sonst Blur, bei
+  „Transparenz reduzieren" deckend. `GlassButton` reagiert beim Antippen.
+- **Viewer:** `components/ui/photo-viewer.tsx`, einer für „Your shots" und das
+  Album: öffnet aus der Kachel und kehrt zur Kachel des aktuellen Fotos zurück,
+  Wischen, Pinch, Doppeltipp, nach unten wegziehen, Federn mit
+  Geschwindigkeitsübergabe, Gummiband an den Rändern, Überblendung bei
+  „Bewegung reduzieren".
+- **Kamera-Kachel:** öffnet weiterhin zuerst das Grid „Your shots"; ein Foto
+  öffnet daraus den Viewer (so entschieden).
+- **Album** `(library)/album/[id]`: vor dem Ende Countdown, Anzahl Fotos,
+  nichts sichtbar, „Film jetzt entwickeln" für den Host (mit Rückfrage);
+  danach Grid, Viewer mit Fotograf, Speichern (einzeln/alle), Teilen,
+  Löschen (Host oder eigenes Foto). Zustände: Laden, Fehler mit „Try again",
+  leer.
+- **Reveal:** „Entwicklerbad" (so entschieden) — einmal pro Film und Gerät, die
+  Abzüge kommen gestaffelt aus dem Dunkel, Haptik am Anfang und am Ende.
+- **Your Films:** Karussell (so entschieden) mit einem Poster pro Film und
+  echtem Cover (eigenes letztes Foto, nach dem Entwickeln das erste des
+  Albums), Glas-Kapseln für Status und Personen, unscharfer Hintergrund aus
+  dem vorderen Film.
+- **`(auth)/keep`:** erscheint, wenn ein Gast ein entwickeltes Album verlässt.
+- Platzhalter-Komponente und `film-card.tsx` gelöscht.
+- **Geprüft:** Typecheck, Lint, iOS-Bundle-Export.
+- **Auf dem Gerät geprüft (Nutzer, 15.11.2026):** Viewer, Reveal, Karussell,
+  Glas, Album — laut Nutzer hat alles funktioniert.
+- **Vom Test nicht nachweislich abgedeckt:** Liquid Glass auf iOS 26 (hängt
+  vom iOS des Testgeräts ab); Löschen gegen die RLS als Host und als Gast;
+  Verhalten offline; „Reduce Motion“ / „Reduce Transparency“.
+- **Bekannte Lücken:** Teilen geht nur auf iOS (RN-`Share` kann auf Android
+  keine Datei senden); „offline" hat keinen eigenen Zustand, nur die
+  Fehlermeldung; der Viewer nutzt die in Gesture Handler 3 veraltete
+  Builder-API (wie die Kamera).
+
+### Nachtrag 2026-11-15 (auf dem Gerät geprüft; offen: sehr harter Schwung am Rad auf 04)
+
+- **Your Moments:** Bibliothek heisst „Your Moments"; jeder Moment ist ein
+  Bilderstapel (vorne das Titelbild, dahinter zwei gefächerte Fotos). Nicht
+  entwickelt: abgedunkelte Stockfotos mit „Sample". Am Ende des Karussells und
+  im leeren Zustand: Stapel „Start your moment" mit Plus und „Join a group".
+- **04 Event-Ende:** Schnellwahl-Pills, darunter eine Glas-Karte mit
+  Zusammenfassung, Tagesstreifen und Zeit-Rad; keine Popover mehr.
+- **Glas:** `GlassPanel` (Landing, Join, „Keep your films"), runde Glas-Buttons,
+  Zoom-Auswahl, Toast und der Schliessen-Button der Kamera nutzen jetzt `Glass`.
+  Der Rest der Liste unten ist seit dem 15.11.2026 ebenfalls umgesetzt.
+- **CI:** iOS-Dev-Build über GitHub Actions (`.github/workflows/ios-dev-build.yml`,
+  Tag `ios-build-*`), ohne EAS-Kontingent.
+
+### Glas & Bewegung in den übrigen Screens (umgesetzt 15.11.2026, auf dem Gerät nicht geprüft)
+
+Vom Nutzer komplett freigegeben. Nur JS — **kein neuer nativer Build nötig**.
+
+- [x] **13 Kamera:** Blitz, Zähler und Kamerawechsel schweben als `Glass` am
+  oberen Rand des Suchers, „Your shots“, Zoom-Leiste und Einladung am unteren.
+  **Layout-Änderung:** die Leiste unter dem Sucher entfällt, ausserhalb des
+  Bildes bleibt nur der Auslöser (dort wäre Glas ohne Bild dahinter). Der
+  Hinweis (offline / Foto nicht gespeichert) sitzt über der unteren Reihe.
+  **Offen:** ob Glas über dem Skia-Canvas sauber zeichnet, konnte nicht auf dem
+  Gerät geprüft werden — das ist das Erste, was anzuschauen ist.
+- [x] **`PillButton` / `CircleIconButton`:** geben beim Antippen federnd nach
+  (`PressScale`, `Press`-Tokens) statt beim Loslassen abzudunkeln; ebenso
+  `AuthButton`, `ShareButton` und die Kacheln auf 08. Runde Buttons haben jetzt
+  44 pt Trefferfläche.
+- [x] **01 Landing, 08 Join, Sheets:** `GlassPanel` zeichnet auf `Glass`; die
+  `glass`-Variante von `PillButton` ist jetzt eine flache Füllung (ihr eigener
+  Blur war Glas auf Glas bzw. lag auf einem deckenden Sheet). 08 und das
+  Konto-löschen-Sheet sind ziehbar (`SheetDrag`): folgen dem Finger, Gummiband
+  nach oben, Loslassen übergibt die Geschwindigkeit; sie fahren beim Öffnen
+  federnd hoch.
+- [x] **18 Toast:** `Glass` und Feder (`Springs.settle`) statt fester Kurve.
+- [x] **Popover (04):** entfällt — 04 hat seit dem Umbau keinen Popover mehr,
+  und es gibt in der App keinen anderen.
+- [x] **10 Gruppe:** Chips von Gästen, die beitreten, während der Host
+  zuschaut, federn herein; wer beim Öffnen schon da war, ist einfach da.
+  **09 hat keine Chips** (nur QR und Link) — dort gibt es nichts zu animieren.
+  Die QR-Karte bleibt deckend.
+- [x] **20 Einstellungen, 11/12, Onboarding:** kein Glas, nur die Press-Feder.
+- **„Bewegung reduzieren“:** Toast und Chips blenden über statt zu fahren bzw.
+  zu wachsen; Sheets fahren nicht, die Route blendet.
+- **Nicht umgesetzt / bewusst gelassen:** der Schliessen-Button im Kopf der
+  Kamera und in ihren Zustands-Screens ist weiterhin `glass`, obwohl dort kein
+  Bild dahinter liegt (vom Nutzer so getestet; in M6 entscheiden).
+- **Geprüft:** Typecheck und Lint sauber. **Nicht geprüft:** alles Sichtbare
+  dieser Runde.
 
 ## M4 · Benachrichtigungen
 
@@ -199,15 +279,65 @@ zurückerstattet.
 
 ## M5 · Web & Einladungen
 
-- `leftmoment.com`: Landingpage, `/j/{CODE}` → Store-Weiterleitung,
-  `apple-app-site-association` und `assetlinks.json` für Universal/App Links.
-- Terms/Privacy öffentlich hosten.
-- Optional: Web-Album (siehe offene Punkte).
+Stand 2026-11-15: **gebaut in `web/`, nicht deployt** (Domain fehlt). Astro,
+statisch, für Cloudflare Pages; nur Englisch. Details und Befehle:
+`web/README.md`.
+
+**Fertig (lokal gebaut und im Browser geprüft, Desktop und Mobile):**
+
+- `/` Home (Hero, So funktioniert es, Looks, Album, Anlässe, Preise, FAQ),
+  `/use-cases/` (Hochzeit zuerst, dann Party, Reise, Geburtstag, weitere) und
+  `/wedding/` als eigene Hochzeitsseite; alle gegenseitig verlinkt.
+- App-Mocks als HTML/CSS aus den Design-Tokens (Kamera mit „17 left“,
+  Look-Auswahl, Your Moments, Album, Beitritt, Entwickeln) — keine Screenshots.
+- 11 Stockfotos von Unsplash plus die 6 Samples der App; Quelle und Lizenz in
+  `web/CREDITS.md`.
+- SEO: eigene Titles/Descriptions, Canonicals, Open Graph/Twitter-Karten,
+  JSON-LD (`SoftwareApplication`, `FAQPage`, `BreadcrumbList`), Sitemap,
+  `robots.txt`, AVIF/WebP mit Breite/Höhe und Lazy Loading. Lighthouse mobil
+  (lokal): Home 92 / 100 / 100 / 100, Use cases 96 / 100 / 100 / 100, Wedding
+  95 / 100 / 100 / 100 (Performance / Accessibility / Best Practices / SEO).
+- `/j/{CODE}`: eine statische Seite für alle Codes (Rewrite in
+  `public/_redirects`), zeigt den Code, „Open in LEFT“ (`left://j/CODE`) und
+  die Store-Buttons; lokal mit `wrangler pages dev` geprüft.
+- `apple-app-site-association` und `assetlinks.json` für `com.leftmoment.app`,
+  Pfad `/j/*`, als JSON ausgeliefert (`public/_headers`).
+- `/terms/` und `/privacy/` als Platzhalter (`noindex`, nicht in der Sitemap).
+
+**Wartet auf die Domain:**
+
+- Cloudflare-Pages-Projekt anlegen (Root `web`, `npm run build`, Output `dist`)
+  und `leftmoment.com` aufschalten; danach die drei Prüfungen aus
+  `web/README.md` (Association-Dateien erreichbar, Link öffnet die App).
+
+**Wartet auf Store-Eintrag und Konten:**
+
+- Store-Links in `web/src/site.ts` — bis dahin steht auf den Buttons „Coming
+  soon“ und `/j/{CODE}` leitet nicht in den Store weiter (Logik ist gebaut,
+  mangels Links ungetestet).
+- Apple Team-ID in `apple-app-site-association`, SHA-256-Fingerprint des
+  Android-Signaturschlüssels in `assetlinks.json` (beide als `REPLACE_WITH_…`
+  markiert).
+
+**Wartet auf M6:** die geprüften Rechtstexte für `/terms/` und `/privacy/`.
+
+**Offen / nicht gebaut:**
+
+- Der Invite-Code überlebt die Store-Installation nicht; die Seite bittet den
+  Gast, den Link danach nochmals zu tippen. Ein Deferred Deep Link wäre ein
+  eigener Schritt.
+- Deutsch (`/de/` mit `hreflang`) — bewusst weggelassen, später ergänzbar.
+- Die Fotos zeigen erkennbare Fremde (Unsplash-Lizenz, keine Model-Releases) —
+  durch eigene ersetzen, sobald es echte Events gibt.
+- Web-Album: vorerst nicht (entschieden 15.11.2026).
 
 ## M6 · Launch-Reife
 
 - Rechtstexte auf Fotos umschreiben und prüfen lassen (Bilder von Personen,
   DSG/DSGVO, Aufbewahrung, Löschung); alle `[KLAMMER]`-Werte füllen.
+- **Aufbewahrung 6 Monate umsetzen:** Lösch-Job (Zeilen + Dateien) für Events,
+  die länger als 6 Monate entwickelt sind — existiert noch nicht; die
+  Rechtstexte nennen die Frist bereits.
 - Supabase-Produktion: anonyme Anmeldung + CAPTCHA + Rate-Limit, `pg_cron`,
   Storage/R2, Backups.
 - Google-iOS-URL-Scheme prüfen, Apple Sign-in, EAS-Builds iOS/Android.

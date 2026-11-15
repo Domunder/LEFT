@@ -1,0 +1,96 @@
+---
+import type { Faq } from '../site';
+
+type Props = { items: Faq[]; id?: string };
+const { items, id = 'faq' } = Astro.props;
+---
+
+<section id={id} class="faq">
+  <div class="wrap cols">
+    <div class="section-head reveal">
+      <p class="eyebrow">FAQ</p>
+      <h2>Questions, <em>answered.</em></h2>
+    </div>
+    <div class="list reveal">
+      {
+        items.map((item) => (
+          <details>
+            <summary>
+              <h3>{item.q}</h3>
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M10 4v12M4 10h12" />
+              </svg>
+            </summary>
+            <p>{item.a}</p>
+          </details>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .cols {
+    display: grid;
+    gap: 24px;
+  }
+
+  @media (min-width: 900px) {
+    .cols {
+      grid-template-columns: 0.8fr 1.2fr;
+      gap: 64px;
+    }
+    .section-head {
+      position: sticky;
+      top: 120px;
+      align-self: start;
+    }
+  }
+
+  details {
+    border-top: 1px solid var(--line);
+  }
+
+  details:last-child {
+    border-bottom: 1px solid var(--line);
+  }
+
+  summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding-block: 22px;
+    cursor: pointer;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary h3 {
+    font-size: 1.25rem;
+  }
+
+  summary svg {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--ink-55);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    transition: transform 0.35s var(--ease);
+  }
+
+  details[open] summary svg {
+    transform: rotate(45deg);
+  }
+
+  details p {
+    color: var(--ink-70);
+    padding-bottom: 24px;
+    max-width: 60ch;
+  }
+</style>

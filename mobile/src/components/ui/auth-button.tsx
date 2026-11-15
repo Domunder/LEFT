@@ -15,11 +15,12 @@
  */
 
 import { AntDesign } from '@expo/vector-icons';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 
 import { AuthButton as Token, Colors, Radii } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { PressScale } from './press-scale';
 
 type AuthButtonProps = {
   label: string;
@@ -40,17 +41,12 @@ export function AuthButton({
   style,
 }: AuthButtonProps) {
   return (
-    <Pressable
+    <PressScale
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || busy, busy }}
       disabled={disabled || busy}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.base,
-        pressed && styles.pressed,
-        disabled && styles.disabled,
-        style,
-      ]}>
+      style={[styles.base, disabled && styles.disabled, style]}>
       {/*
         Fixed-size slot so swapping the icon for the spinner does not reflow the
         label — the row would otherwise twitch the moment the sheet opens.
@@ -63,7 +59,7 @@ export function AuthButton({
         )}
       </View>
       <Text style={styles.label}>{label}</Text>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -88,9 +84,6 @@ const styles = StyleSheet.create({
   label: {
     ...Typography.authButton,
     color: Colors.onLight,
-  },
-  pressed: {
-    opacity: 0.85,
   },
   disabled: {
     opacity: 0.4,

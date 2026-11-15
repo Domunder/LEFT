@@ -1,0 +1,380 @@
+---
+import { Picture } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import GetApp from '../components/GetApp.astro';
+import { SITE } from '../site';
+
+import weddingLaugh from '../assets/photos/wedding-laugh.jpg';
+import partyFlash from '../assets/photos/party-flash.jpg';
+import partyWine from '../assets/photos/party-wine.jpg';
+import birthdayCandle from '../assets/photos/birthday-candle.jpg';
+import dinnerCandle from '../assets/photos/dinner-candle.jpg';
+import tripTrunk from '../assets/photos/trip-trunk.jpg';
+import tripVan from '../assets/photos/trip-van.jpg';
+
+const title = 'Use cases — LEFT for weddings, parties, trips and birthdays';
+const description =
+  'How people use LEFT, the disposable camera app: weddings, house parties, group trips, birthdays, graduations and team events. One roll per guest, developed together.';
+
+const rows = [
+  {
+    id: 'parties',
+    eyebrow: 'Parties',
+    heading: ['The night,', 'as it actually was.'],
+    text: 'Nobody poses for a disposable camera. Give everyone ten or sixteen shots and you get the kitchen at 2 a.m., the bad dancing, the friend asleep on the coats — not forty copies of the same group photo.',
+    roll: 'Try a roll of 10 or 16',
+    look: 'golden',
+    photos: [
+      { src: partyFlash, alt: 'A group of friends crowded into the frame at a party, lit by flash' },
+      { src: partyWine, alt: 'Friends pouring wine and laughing under purple party lights' },
+    ],
+  },
+  {
+    id: 'trips',
+    eyebrow: 'Trips',
+    heading: ['One film', 'for the whole trip.'],
+    text: 'Set the film to develop on the day you get home. A week in the mountains or a long weekend by the sea becomes one album from everybody’s point of view — and something to open together on the train back.',
+    roll: 'Try a roll of 24 or 36',
+    look: 'chrome',
+    photos: [
+      { src: tripTrunk, alt: 'Two friends sitting in the open boot of a car at the side of a mountain road' },
+      { src: tripVan, alt: 'A white camper van driving down a country road at sunset' },
+    ],
+  },
+  {
+    id: 'birthdays',
+    eyebrow: 'Birthdays & dinners',
+    heading: ['A table full of people,', 'and proof of it.'],
+    text: 'Thirtieth, sixtieth, or just a long dinner that got out of hand. Put the QR code next to the cake. The person being celebrated gets the best present the next morning: the evening, seen by everyone who came.',
+    roll: 'Try a roll of 5 or 10',
+    look: 'faded',
+    photos: [
+      { src: birthdayCandle, alt: 'People gathered around a birthday table with one lit candle' },
+      { src: dinnerCandle, alt: 'Friends having dinner by candlelight at a long table' },
+    ],
+  },
+] as const;
+
+const more = [
+  {
+    title: 'Graduations',
+    text: 'The last day with the whole class in one place. Everyone shoots, everyone gets the album.',
+  },
+  {
+    title: 'Company events',
+    text: 'Offsites and summer parties without a shared drive nobody opens. Up to 200 people per event.',
+  },
+  {
+    title: 'Anything else',
+    text: 'Bachelor weekends, festivals, family reunions, a move-out party. If people gather, it works.',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'LEFT', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: 'Use cases', item: SITE.url + '/use-cases/' },
+    ],
+  },
+];
+---
+
+<Base title={title} description={description} jsonLd={jsonLd} ogImage="/og-use-cases.jpg">
+  <section class="hero">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="wrap head">
+      <p class="eyebrow">Use cases</p>
+      <h1>For the days <em>you want back.</em></h1>
+      <p class="lede">
+        LEFT works wherever people come together and one person with a phone can’t catch it all. Here is how
+        hosts use it — starting with the biggest day of all.
+      </p>
+      <nav class="jump" aria-label="On this page">
+        <a href="#weddings">Weddings</a>
+        <a href="#parties">Parties</a>
+        <a href="#trips">Trips</a>
+        <a href="#birthdays">Birthdays</a>
+        <a href="#more">More</a>
+      </nav>
+    </div>
+  </section>
+
+  <section id="weddings" class="wedding">
+    <div class="wrap">
+      <a class="feature reveal" href="/wedding/">
+        <Picture
+          src={weddingLaugh}
+          alt="A bride and groom laughing together among their wedding guests"
+          formats={['avif', 'webp']}
+          widths={[480, 800, 1200]}
+          sizes="(min-width: 900px) 640px, 100vw"
+          loading="eager"
+          fetchpriority="high"
+          class="look-golden"
+        />
+        <div class="feature-copy">
+          <p class="eyebrow">Weddings</p>
+          <h2>Your day, <em>through every guest’s eyes.</em></h2>
+          <p>
+            The photographer follows the two of you. Your guests see everything else. Put a QR code on every
+            table and wake up the next morning to hundreds of photos you didn’t know were taken.
+          </p>
+          <ul>
+            <li><b>No sign-up for guests.</b> Scan, type a name, shoot.</li>
+            <li><b>One look for the whole album.</b> Golden, Chrome, Faded or Mono.</li>
+            <li><b>Up to 200 guests,</b> from CHF 15 for a wedding of a hundred.</li>
+          </ul>
+          <span class="pill pill-primary">LEFT for weddings →</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  {
+    rows.map((row, index) => (
+      <section id={row.id} class:list={['row', { flip: index % 2 === 1 }]}>
+        <div class="wrap row-grid">
+          <div class="row-photos reveal">
+            {row.photos.map((photo, photoIndex) => (
+              <div class:list={['shot', photoIndex === 0 ? 'shot-a' : 'shot-b']}>
+                <Picture
+                  src={photo.src}
+                  alt={photo.alt}
+                  formats={['avif', 'webp']}
+                  widths={[320, 640, 900]}
+                  sizes="(min-width: 900px) 380px, 70vw"
+                  width={900}
+                  height={1125}
+                  fit="cover"
+                  class={`look-${row.look}`}
+                />
+              </div>
+            ))}
+          </div>
+          <div class="row-copy reveal">
+            <p class="eyebrow">{row.eyebrow}</p>
+            <h2>
+              {row.heading[0]} <em>{row.heading[1]}</em>
+            </h2>
+            <p class="lede">{row.text}</p>
+            <p class="roll">{row.roll}</p>
+          </div>
+        </div>
+      </section>
+    ))
+  }
+
+  <section id="more" class="more">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">And more</p>
+        <h2>Wherever people <em>get together.</em></h2>
+      </div>
+      <ul class="cards reveal">
+        {
+          more.map((item) => (
+            <li>
+              <h3>{item.title}</h3>
+              <p>{item.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="back reveal">
+        <a class="text-link" href="/#how">See how LEFT works →</a>
+        <a class="text-link" href="/#pricing">Pricing →</a>
+      </p>
+    </div>
+  </section>
+
+  <GetApp lede="Whatever you’re planning: create the event, share the link, and let everyone shoot." />
+</Base>
+
+<style>
+  .hero {
+    padding-top: clamp(130px, 17vw, 190px);
+    padding-bottom: 40px;
+    overflow: hidden;
+  }
+
+  .hero .glow {
+    left: 30%;
+    top: -50%;
+  }
+
+  .head {
+    display: grid;
+    gap: 22px;
+  }
+
+  .jump {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .jump a {
+    padding: 11px 18px;
+    border-radius: 999px;
+    border: 1px solid var(--ink-30);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: border-color 0.25s var(--ease);
+  }
+
+  .jump a:hover {
+    border-color: var(--ink);
+  }
+
+  .wedding {
+    padding-top: 32px;
+  }
+
+  .feature {
+    display: grid;
+    border-radius: var(--radius);
+    overflow: hidden;
+    text-decoration: none;
+    background: var(--card);
+    border: 1px solid var(--line);
+  }
+
+  .feature :global(picture),
+  .feature :global(img) {
+    width: 100%;
+    height: 100%;
+    min-height: 300px;
+    object-fit: cover;
+  }
+
+  .feature-copy {
+    padding: clamp(26px, 4vw, 52px);
+    display: grid;
+    gap: 16px;
+    justify-items: start;
+    align-content: center;
+  }
+
+  .feature-copy > p:not(.eyebrow) {
+    color: var(--ink-70);
+  }
+
+  .feature-copy ul {
+    list-style: none;
+    margin: 4px 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+    color: var(--ink-70);
+    font-size: 0.95rem;
+  }
+
+  .feature-copy b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  @media (min-width: 900px) {
+    .feature {
+      grid-template-columns: 1.1fr 0.9fr;
+      min-height: 560px;
+    }
+  }
+
+  .row-grid {
+    display: grid;
+    gap: 48px;
+    align-items: center;
+  }
+
+  .row-photos {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    max-width: 520px;
+    width: 100%;
+    margin-inline: auto;
+  }
+
+  .shot {
+    position: absolute;
+    width: 62%;
+    padding: 2% 2% 7%;
+    background: var(--ink);
+    border-radius: 6px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  }
+
+  .shot :global(img) {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: 2px;
+  }
+
+  .shot-a {
+    left: 2%;
+    top: 0;
+    transform: rotate(-5deg);
+  }
+
+  .shot-b {
+    right: 2%;
+    bottom: 0;
+    transform: rotate(4deg);
+  }
+
+  .row-copy {
+    display: grid;
+    gap: 20px;
+  }
+
+  .roll {
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+
+  @media (min-width: 900px) {
+    .row-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 72px;
+    }
+    .flip .row-photos {
+      order: 2;
+    }
+  }
+
+  .cards {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+
+  .cards li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 28px 26px;
+    display: grid;
+    gap: 10px;
+  }
+
+  .cards p {
+    color: var(--ink-70);
+  }
+
+  .back {
+    margin-top: 36px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 28px;
+  }
+</style>

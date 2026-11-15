@@ -47,6 +47,25 @@ export function statusLabel(event: Event, now: Date = new Date()): string {
   }
 }
 
+/** Where a film is in its life, as the library draws it. */
+export type FilmPhase = 'setup' | 'live' | 'developed';
+
+/** By status *or by the clock*, the same way `isDeveloped()` decides the reveal. */
+export function filmPhase(event: Event, now: Date = new Date()): FilmPhase {
+  if (event.status === 'setup') return 'setup';
+  return isDeveloped(event, now) ? 'developed' : 'live';
+}
+
+/**
+ * The poster's status capsule: the countdown while the film is live, and what
+ * is in the album once it is developed.
+ */
+export function posterStatus(event: Event, photoCount: number, now: Date = new Date()): string {
+  const label = statusLabel(event, now);
+  if (filmPhase(event, now) !== 'developed') return label;
+  return `${label} · ${photoCount} ${photoCount === 1 ? 'photo' : 'photos'}`;
+}
+
 /** Whether this card's badge counts down, and so needs a ticking clock. */
 export function isTicking(event: Event, now: Date = new Date()): boolean {
   return event.status === 'live' && !hasEnded(new Date(event.ends_at), now);

@@ -1,0 +1,712 @@
+---
+/**
+ * A phone showing one LEFT screen, rebuilt in HTML/CSS from the app's tokens.
+ *
+ * Everything inside is sized in `--u` (one design point of a 390pt-wide
+ * screen, via container query units), so the mock scales as one picture.
+ * The screens are illustrations: decorative for assistive tech, described by
+ * the `label` on the figure.
+ */
+import { Image } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import weddingDance from '../assets/photos/wedding-dance.jpg';
+import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
+import weddingFriends from '../assets/photos/wedding-friends.jpg';
+import weddingLaugh from '../assets/photos/wedding-laugh.jpg';
+import weddingMono from '../assets/photos/wedding-mono.jpg';
+import partyFlash from '../assets/photos/party-flash.jpg';
+import partyWine from '../assets/photos/party-wine.jpg';
+import birthdayCandle from '../assets/photos/birthday-candle.jpg';
+import dinnerCandle from '../assets/photos/dinner-candle.jpg';
+import tripVan from '../assets/photos/trip-van.jpg';
+import tripTrunk from '../assets/photos/trip-trunk.jpg';
+import sample2 from '../assets/photos/sample-2.jpg';
+import { LOOKS } from '../site';
+
+type Props = {
+  screen: 'camera' | 'looks' | 'moments' | 'album' | 'join' | 'developing';
+  label: string;
+  /** The picture in the viewfinder / on the front print. */
+  photo?: ImageMetadata;
+  title?: string;
+  shotsLeft?: number;
+  eager?: boolean;
+  class?: string;
+};
+
+const {
+  screen,
+  label,
+  photo = weddingDance,
+  title = 'Mia & Jonas',
+  shotsLeft = 17,
+  eager = false,
+  class: className,
+} = Astro.props;
+
+const loading = eager ? 'eager' : 'lazy';
+const grid = [
+  weddingLaugh,
+  weddingDance,
+  partyFlash,
+  weddingFriends,
+  dinnerCandle,
+  weddingCrowd,
+  birthdayCandle,
+  weddingMono,
+  partyWine,
+  tripTrunk,
+  sample2,
+  tripVan,
+  weddingDance,
+  weddingLaugh,
+  partyFlash,
+];
+---
+
+<figure class:list={['phone', className]} role="img" aria-label={label}>
+  <div class="screen" aria-hidden="true">
+    {
+      screen === 'camera' && (
+        <div class="s camera">
+          <div class="top">
+            <span class="round glass-chip">
+              <svg viewBox="0 0 20 20"><path d="M5 5l10 10M15 5L5 15" /></svg>
+            </span>
+            <span class="event">{title}</span>
+            <span class="round glass-chip">
+              <svg viewBox="0 0 20 20"><path d="M11 2L4 11h5l-1 7 7-9h-5z" /></svg>
+            </span>
+          </div>
+          <div class="finder">
+            <Image
+              src={photo}
+              alt=""
+              width={640}
+              height={853}
+              fit="cover"
+              quality={62}
+              loading={loading}
+              fetchpriority={eager ? 'high' : 'auto'}
+              class="look-golden"
+            />
+            <div class="zoom glass-chip">
+              <span>.5</span>
+              <span class="on">1×</span>
+              <span>3</span>
+            </div>
+          </div>
+          <p class="counter">
+            <b>{shotsLeft}</b> left
+          </p>
+          <div class="controls">
+            <span class="tile">
+              <Image src={weddingLaugh} alt="" width={120} height={120} fit="cover" quality={55} loading={loading} class="look-golden" />
+            </span>
+            <span class="shutter"><i /></span>
+            <span class="tile glass-chip">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z" />
+              </svg>
+            </span>
+          </div>
+        </div>
+      )
+    }
+
+    {
+      screen === 'looks' && (
+        <div class="s looks">
+          <div class="top">
+            <span class="round glass-chip">
+              <svg viewBox="0 0 20 20"><path d="M12 4l-6 6 6 6" /></svg>
+            </span>
+            <span class="dots">
+              <i /><i class="on" /><i /><i />
+            </span>
+            <span class="round" />
+          </div>
+          <p class="headline">
+            Pick your <em>film.</em>
+          </p>
+          <div class="cards">
+            {LOOKS.map((look, index) => (
+              <div class:list={['card', { on: index === 0 }]}>
+                <Image src={photo} alt="" width={320} height={400} fit="cover" quality={58} loading={loading} class={`look-${look.id}`} />
+                <b>{look.name}</b>
+                <span>{look.blurb}</span>
+              </div>
+            ))}
+          </div>
+          <span class="cta">Continue</span>
+        </div>
+      )
+    }
+
+    {
+      screen === 'moments' && (
+        <div class="s moments">
+          <div class="top">
+            <p class="headline">
+              Your <em>Moments</em>
+            </p>
+            <span class="round glass-chip">
+              <svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="2.6" /><circle cx="10" cy="10" r="6.6" stroke-dasharray="2.2 2.4" /></svg>
+            </span>
+          </div>
+          <div class="stack">
+            <span class="print back-2">
+              <Image src={weddingCrowd} alt="" width={400} height={520} fit="cover" quality={55} loading={loading} class="look-golden" />
+            </span>
+            <span class="print back-1">
+              <Image src={weddingLaugh} alt="" width={400} height={520} fit="cover" quality={55} loading={loading} class="look-golden" />
+            </span>
+            <span class="print front">
+              <Image src={photo} alt="" width={520} height={680} fit="cover" quality={60} loading={loading} class="look-golden" />
+              <span class="caption">
+                <b>{title}</b>
+                <small>Developed · 412 photos</small>
+              </span>
+            </span>
+          </div>
+          <span class="dots center-dots">
+            <i class="on" /><i /><i />
+          </span>
+        </div>
+      )
+    }
+
+    {
+      screen === 'album' && (
+        <div class="s album">
+          <div class="top">
+            <span class="round glass-chip">
+              <svg viewBox="0 0 20 20"><path d="M12 4l-6 6 6 6" /></svg>
+            </span>
+            <span class="round glass-chip">
+              <svg viewBox="0 0 20 20"><path d="M10 13V3M6 7l4-4 4 4M4 13v4h12v-4" /></svg>
+            </span>
+          </div>
+          <p class="headline">{title}</p>
+          <p class="meta">412 photos · 38 guests · Golden</p>
+          <div class="grid">
+            {grid.map((image) => (
+              <Image src={image} alt="" width={200} height={200} fit="cover" quality={50} loading={loading} class="look-golden" />
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    {
+      screen === 'join' && (
+        <div class="s join">
+          <Image src={photo} alt="" width={520} height={1100} fit="cover" quality={45} loading={loading} class="bg look-golden" />
+          <div class="sheet glass-chip">
+            <span class="eyebrow-s">You’re invited</span>
+            <p class="headline">
+              {title}’s <em>wedding</em>
+            </p>
+            <span class="field">
+              <small>Your name</small>
+              Lena
+            </span>
+            <span class="cta">Join the film</span>
+            <span class="fine">No account needed.</span>
+          </div>
+        </div>
+      )
+    }
+
+    {
+      screen === 'developing' && (
+        <div class="s developing">
+          <div class="top">
+            <span class="round glass-chip">
+              <svg viewBox="0 0 20 20"><path d="M12 4l-6 6 6 6" /></svg>
+            </span>
+          </div>
+          <span class="eyebrow-s">{title}</span>
+          <p class="headline">
+            Your film is <em>developing.</em>
+          </p>
+          <p class="clock">
+            <b>1</b><small>day</small><b>04</b><small>hours</small>
+          </p>
+          <div class="strip">
+            <i /><i /><i /><i /><i />
+          </div>
+          <p class="meta">
+            412 photos so far.<br />They appear together when the film is developed.
+          </p>
+        </div>
+      )
+    }
+  </div>
+</figure>
+
+<style>
+  .phone {
+    margin: 0;
+    width: 100%;
+    max-width: 300px;
+    aspect-ratio: 390 / 844;
+    padding: 2.6%;
+    border-radius: 15% / 7%;
+    background: linear-gradient(160deg, #2c2a28, #131212 40%, #1f1d1c);
+    box-shadow:
+      0 0 0 1px rgba(240, 237, 232, 0.14),
+      0 40px 80px -20px rgba(0, 0, 0, 0.8),
+      0 0 120px -30px rgba(240, 190, 140, 0.22);
+  }
+
+  /* Off-screen phones skip layout; the frame fixes the size, so nothing shifts. */
+  .screen {
+    content-visibility: auto;
+    container-type: inline-size;
+    width: 100%;
+    height: 100%;
+    border-radius: 13% / 6%;
+    overflow: hidden;
+    background: #101010;
+    position: relative;
+  }
+
+  .s {
+    --u: calc(100cqw / 390);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: calc(var(--u) * 58) calc(var(--u) * 20) calc(var(--u) * 30);
+    color: #f0ede8;
+    font-family: var(--sans);
+    font-size: calc(var(--u) * 14);
+    line-height: 1.35;
+  }
+
+  .s :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .s svg {
+    width: calc(var(--u) * 18);
+    height: calc(var(--u) * 18);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: calc(var(--u) * 38);
+    flex: none;
+  }
+
+  .round {
+    width: calc(var(--u) * 38);
+    height: calc(var(--u) * 38);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+  }
+
+  .glass-chip {
+    background: rgba(240, 237, 232, 0.1);
+    box-shadow: inset 0 0 0 1px rgba(240, 237, 232, 0.14);
+  }
+
+  .headline {
+    font-family: var(--serif);
+    font-weight: 340;
+    font-size: calc(var(--u) * 32);
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+  }
+
+  .eyebrow-s {
+    font-size: calc(var(--u) * 11);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(240, 237, 232, 0.55);
+  }
+
+  .meta {
+    color: rgba(240, 237, 232, 0.55);
+    font-size: calc(var(--u) * 13);
+  }
+
+  .cta {
+    display: grid;
+    place-items: center;
+    height: calc(var(--u) * 54);
+    border-radius: 999px;
+    background: #f0ede8;
+    color: #0b0b0c;
+    font-weight: 600;
+    font-size: calc(var(--u) * 15);
+    flex: none;
+  }
+
+  .dots {
+    display: flex;
+    gap: calc(var(--u) * 6);
+  }
+
+  .dots i {
+    width: calc(var(--u) * 6);
+    height: calc(var(--u) * 6);
+    border-radius: 999px;
+    background: rgba(240, 237, 232, 0.25);
+  }
+
+  .dots i.on {
+    width: calc(var(--u) * 24);
+    background: #f0ede8;
+  }
+
+  /* 13 Camera */
+  .camera {
+    background: #000;
+    padding-inline: 0;
+  }
+
+  .camera .top {
+    padding-inline: calc(var(--u) * 20);
+  }
+
+  .event {
+    font-size: calc(var(--u) * 13);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .finder {
+    position: relative;
+    margin-top: calc(var(--u) * 14);
+    aspect-ratio: 3 / 4;
+    border-radius: calc(var(--u) * 26);
+    overflow: hidden;
+    flex: none;
+  }
+
+  .zoom {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--u) * 14);
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 4);
+    padding: calc(var(--u) * 4);
+    border-radius: 999px;
+    background: rgba(20, 18, 16, 0.55);
+    font-size: calc(var(--u) * 11);
+    font-weight: 600;
+  }
+
+  .zoom span {
+    width: calc(var(--u) * 30);
+    height: calc(var(--u) * 30);
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+  }
+
+  .zoom .on {
+    background: rgba(240, 237, 232, 0.18);
+    color: rgba(240, 190, 130, 1);
+  }
+
+  .counter {
+    text-align: center;
+    margin-top: calc(var(--u) * 14);
+    font-size: calc(var(--u) * 13);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(240, 237, 232, 0.6);
+  }
+
+  .counter b {
+    font-family: var(--numeral);
+    font-weight: 400;
+    font-size: calc(var(--u) * 38);
+    letter-spacing: 0;
+    color: #f0ede8;
+    margin-right: calc(var(--u) * 4);
+    vertical-align: -0.08em;
+  }
+
+  .controls {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: calc(var(--u) * 34);
+  }
+
+  .tile {
+    width: calc(var(--u) * 50);
+    height: calc(var(--u) * 50);
+    border-radius: calc(var(--u) * 14);
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+  }
+
+  .tile svg {
+    fill: currentColor;
+    stroke: none;
+    width: calc(var(--u) * 22);
+    height: calc(var(--u) * 22);
+  }
+
+  .shutter {
+    width: calc(var(--u) * 78);
+    height: calc(var(--u) * 78);
+    border-radius: 50%;
+    border: calc(var(--u) * 3) solid #f0ede8;
+    padding: calc(var(--u) * 5);
+  }
+
+  .shutter i {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #f0ede8;
+  }
+
+  /* 03 Film (look) */
+  .looks .headline {
+    margin-top: calc(var(--u) * 22);
+  }
+
+  .cards {
+    margin-top: calc(var(--u) * 22);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: calc(var(--u) * 12);
+    flex: 1;
+    align-content: start;
+  }
+
+  .card {
+    display: grid;
+    gap: calc(var(--u) * 2);
+    opacity: 0.62;
+  }
+
+  .card.on {
+    opacity: 1;
+  }
+
+  .card :global(img) {
+    aspect-ratio: 4 / 5;
+    height: auto;
+    border-radius: calc(var(--u) * 16);
+    margin-bottom: calc(var(--u) * 6);
+  }
+
+  .card.on :global(img) {
+    outline: calc(var(--u) * 2) solid #f0ede8;
+    outline-offset: calc(var(--u) * 2);
+  }
+
+  .card b {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: calc(var(--u) * 17);
+  }
+
+  .card span {
+    font-size: calc(var(--u) * 10.5);
+    color: rgba(240, 237, 232, 0.55);
+  }
+
+  /* 15/16 Your Moments */
+  .moments {
+    background: radial-gradient(120% 60% at 50% 55%, rgba(240, 190, 140, 0.16), transparent 70%), #101010;
+  }
+
+  .stack {
+    position: relative;
+    flex: 1;
+    margin: calc(var(--u) * 46) calc(var(--u) * 44) calc(var(--u) * 40);
+  }
+
+  .print {
+    position: absolute;
+    inset: 0;
+    border-radius: calc(var(--u) * 22);
+    overflow: hidden;
+    box-shadow: 0 calc(var(--u) * 16) calc(var(--u) * 40) rgba(0, 0, 0, 0.55);
+  }
+
+  .back-2 {
+    transform: rotate(-10deg) translate(-13%, 2%) scale(0.94);
+    opacity: 0.75;
+  }
+
+  .back-1 {
+    transform: rotate(8deg) translate(13%, 1%) scale(0.96);
+    opacity: 0.9;
+  }
+
+  .caption {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: calc(var(--u) * 60) calc(var(--u) * 20) calc(var(--u) * 20);
+    background: linear-gradient(transparent, rgba(6, 6, 8, 0.85));
+    display: grid;
+    gap: calc(var(--u) * 2);
+  }
+
+  .caption b {
+    font-family: var(--serif);
+    font-weight: 340;
+    font-size: calc(var(--u) * 28);
+    line-height: 1.1;
+  }
+
+  .caption small {
+    font-size: calc(var(--u) * 12);
+    color: rgba(240, 237, 232, 0.7);
+  }
+
+  .center-dots {
+    align-self: center;
+  }
+
+  /* album/[id] */
+  .album {
+    padding-inline: 0;
+    padding-bottom: 0;
+  }
+
+  .album .top,
+  .album .headline,
+  .album .meta {
+    margin-inline: calc(var(--u) * 20);
+  }
+
+  .album .headline {
+    margin-top: calc(var(--u) * 18);
+  }
+
+  .album .meta {
+    margin-top: calc(var(--u) * 6);
+  }
+
+  .grid {
+    margin-top: calc(var(--u) * 20);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: calc(var(--u) * 2);
+  }
+
+  .grid :global(img) {
+    aspect-ratio: 1;
+  }
+
+  /* 11 Guest name */
+  .join {
+    padding: 0;
+    justify-content: flex-end;
+  }
+
+  .join :global(.bg) {
+    position: absolute;
+    inset: 0;
+    opacity: 0.7;
+  }
+
+  .sheet {
+    position: relative;
+    margin: calc(var(--u) * 14);
+    padding: calc(var(--u) * 26) calc(var(--u) * 22) calc(var(--u) * 22);
+    border-radius: calc(var(--u) * 30);
+    background: rgba(16, 15, 14, 0.82);
+    display: grid;
+    gap: calc(var(--u) * 14);
+  }
+
+  .field {
+    display: grid;
+    gap: calc(var(--u) * 4);
+    padding: calc(var(--u) * 12) calc(var(--u) * 16);
+    border-radius: calc(var(--u) * 14);
+    background: rgba(240, 237, 232, 0.08);
+    font-size: calc(var(--u) * 16);
+  }
+
+  .field small {
+    font-size: calc(var(--u) * 10);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(240, 237, 232, 0.5);
+  }
+
+  .fine {
+    text-align: center;
+    font-size: calc(var(--u) * 12);
+    color: rgba(240, 237, 232, 0.55);
+  }
+
+  /* album/[id], not developed yet */
+  .developing {
+    background: radial-gradient(110% 50% at 50% 46%, rgba(240, 190, 140, 0.14), transparent 70%), #101010;
+  }
+
+  .developing .eyebrow-s {
+    margin-top: calc(var(--u) * 40);
+  }
+
+  .developing .headline {
+    margin-top: calc(var(--u) * 10);
+  }
+
+  .clock {
+    margin-top: calc(var(--u) * 44);
+    display: flex;
+    align-items: baseline;
+    gap: calc(var(--u) * 8);
+  }
+
+  .clock b {
+    font-family: var(--numeral);
+    font-weight: 400;
+    font-size: calc(var(--u) * 76);
+    line-height: 1;
+  }
+
+  .clock small {
+    font-size: calc(var(--u) * 13);
+    color: rgba(240, 237, 232, 0.55);
+    margin-right: calc(var(--u) * 10);
+  }
+
+  .strip {
+    margin: calc(var(--u) * 44) calc(var(--u) * -20) calc(var(--u) * 28);
+    padding-block: calc(var(--u) * 14);
+    display: flex;
+    gap: calc(var(--u) * 8);
+    justify-content: center;
+    background: #060606;
+    border-block: calc(var(--u) * 7) dashed rgba(240, 237, 232, 0.1);
+  }
+
+  .strip i {
+    flex: none;
+    width: calc(var(--u) * 84);
+    aspect-ratio: 3 / 4;
+    border-radius: calc(var(--u) * 6);
+    background: linear-gradient(150deg, #2a211a, #15110e);
+  }
+</style>

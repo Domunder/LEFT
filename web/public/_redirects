@@ -1,0 +1,3 @@
+# Cloudflare Pages. Every invite code is served by the one static invite page;
+# the code is read from the path in the browser (src/pages/j/index.astro).
+/j/*  /j/  200
