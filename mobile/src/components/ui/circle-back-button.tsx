@@ -15,11 +15,11 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { BlurIntensity, Colors } from '@/constants/theme';
+import { Colors } from '@/constants/theme';
+import { Glass } from './glass';
 
 const SIZE = 38;
 const ICON_SIZE = 16;
@@ -79,12 +79,9 @@ export function CircleIconButton({
         disabled && styles.disabled,
       ]}>
       {resolved === 'glass' ? (
-        <BlurView
-          intensity={BlurIntensity.button}
-          tint="dark"
-          style={[styles.fill, dimensions, styles.glass]}>
+        <Glass radius={size / 2} style={[styles.fill, dimensions]}>
           {content}
-        </BlurView>
+        </Glass>
       ) : (
         <View style={[styles.fill, dimensions, fills[resolved]]}>{content}</View>
       )}

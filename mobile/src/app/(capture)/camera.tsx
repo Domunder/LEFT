@@ -199,7 +199,7 @@ export default function CameraScreen() {
               })
             }
           />
-          <PillButton label="Back to your films" variant="secondary" onPress={leave} />
+          <PillButton label="Back to your moments" variant="secondary" onPress={leave} />
         </View>
       </StateScreen>
     );
@@ -306,7 +306,7 @@ function StateScreen({
   return (
     <Screen>
       <View style={styles.stateHeader}>
-        <CircleIconButton icon="x" accessibilityLabel="Back to your films" onPress={onClose} />
+        <CircleIconButton glass icon="x" accessibilityLabel="Back to your moments" onPress={onClose} />
       </View>
       <View style={styles.stateBody}>
         {eyebrow ? <Label>{eyebrow}</Label> : null}
@@ -638,7 +638,7 @@ function Viewfinder({
     <Screen padded={false}>
       <View style={styles.header}>
         <View style={styles.headerSide}>
-          <CircleIconButton icon="x" accessibilityLabel="Back to your films" onPress={onClose} />
+          <CircleIconButton glass icon="x" accessibilityLabel="Back to your moments" onPress={onClose} />
         </View>
 
         <View style={styles.headerCenter}>

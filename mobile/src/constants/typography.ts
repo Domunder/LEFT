@@ -79,6 +79,19 @@ export const Typography = {
     letterSpacing: -0.3,
   } as TextStyle,
 
+  /** 04 — the chosen ending, written large: "Sat, 21 Nov · 23:00". */
+  endAnswer: {
+    fontFamily: FontFamily.numeric,
+    fontSize: 34,
+    letterSpacing: -0.4,
+  } as TextStyle,
+
+  /** 04's day strip — the numeral in a day cell. */
+  dayNumeral: {
+    fontFamily: FontFamily.numeric,
+    fontSize: 22,
+  } as TextStyle,
+
   /** Body copy, 14px / 1.6. */
   body: {
     fontFamily: FontFamily.regular,

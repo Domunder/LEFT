@@ -150,7 +150,7 @@ export default function InviteScreen() {
         <View style={styles.headerSpacer} />
         <CircleIconButton
           icon="x"
-          accessibilityLabel={fromCamera ? 'Close, back to the camera' : 'Close, back to your films'}
+          accessibilityLabel={fromCamera ? 'Close, back to the camera' : 'Close, back to your moments'}
           onPress={() =>
             fromCamera && router.canGoBack() ? router.back() : router.replace('/(library)/films')
           }

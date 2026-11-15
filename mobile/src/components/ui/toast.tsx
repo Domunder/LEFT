@@ -31,7 +31,6 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -44,6 +43,7 @@ import Animated, {
 
 import { Colors, Shadows, Toast as T } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { Glass } from './glass';
 
 const ENTER = {
   duration: T.motion.duration,
@@ -99,9 +99,8 @@ export function ToastCard({ initials, title, message, visible, onDismiss, onExit
 
   return (
     <Animated.View style={[styles.shadow, animated]}>
-      <View style={styles.clip}>
-        <BlurView intensity={T.blurIntensity} tint="dark" style={StyleSheet.absoluteFill} />
-        <View style={[StyleSheet.absoluteFill, styles.fill]} />
+      {/* The wrapper fades, never the glass: the system stops drawing it at low alpha. */}
+      <Glass radius={T.radius} weight="bar">
 
         <View style={styles.row}>
           <View style={styles.avatar}>
@@ -129,7 +128,7 @@ export function ToastCard({ initials, title, message, visible, onDismiss, onExit
             <Feather name="x" size={T.dismiss.iconSize} color={Colors.textMuted} />
           </Pressable>
         </View>
-      </View>
+      </Glass>
     </Animated.View>
   );
 }
@@ -143,15 +142,6 @@ const styles = StyleSheet.create({
   shadow: {
     borderRadius: T.radius,
     ...(Shadows.toast as object),
-  },
-  clip: {
-    borderRadius: T.radius,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: T.border,
-  },
-  fill: {
-    backgroundColor: T.bg,
   },
   row: {
     flexDirection: 'row',

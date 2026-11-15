@@ -1,42 +1,45 @@
 /**
- * 15/16 · Your Films
+ * 15/16 · Your Moments
  *
- * One screen, two states — the artboard's "empty" and "populated" library are not
- * separate routes, they are the same screen with and without events.
- *
- * This is the app's home screen for a returning user: the root layout replaces
- * onto it when a session already exists, and a sign-in on Landing lands here
- * whenever the account already has an event. So a film here is the way back into
+ * The app's home screen for a returning user: the root layout replaces onto it
+ * when a session already exists, and a sign-in on Landing lands here whenever
+ * the account already has an event. So a moment here is the way back into
  * whatever that event is currently doing, not just a link to a finished album —
  * see lib/film-status.ts for the routing table.
  *
- * **The populated state is a carousel, not the artboard's list** (redesigned
- * 2026-11-15, the user's call): one tall poster per film with a real photo as
- * its cover, swiped sideways, the neighbours peeking in and receding. It is a
- * native horizontal scroll, so tracking, momentum, rubber-banding and
- * interruption are the system's. Behind it the film in front is blurred into
+ * **It is a carousel of photo stacks, not the artboard's list** (redesigned
+ * 2026-11-15, the user's call): each moment is a stack of prints, the front
+ * one carrying its title, two more fanned out behind it. A developed moment
+ * shows its album; one that is not shows dimmed sample pictures, tagged
+ * "Sample". The carousel always ends in one more stack that starts a new
+ * moment — with no moments yet it is the only one, which replaces the
+ * artboard's centred empty state.
+ *
+ * It is a native horizontal scroll, so tracking, momentum, rubber-banding and
+ * interruption are the system's. Behind it the stack in front is blurred into
  * the backdrop, so the screen is lit by its own content.
  *
  * Other deviations from the artboard, all flagged in CLAUDE.md:
+ *  - the title is "Your Moments" (was "Your Films")
  *  - the header carries a third control, Join, between the gear and the plus
- *  - a film reads three phases (not started / live with a countdown / developed)
- *    where the artboard draws two
+ *  - a moment reads three phases (not started / live with a countdown /
+ *    developed) where the artboard draws two
  *  - a guest sees the "Keep your films" prompt, which the artboard does not draw
  *
  * It sets its own horizontal padding, so `<Screen>` cannot supply it.
  */
 
 import type { Session } from '@supabase/supabase-js';
-import { Image } from 'expo-image';
+import { Image, type ImageSource } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
-  Extrapolation,
   interpolate,
   useAnimatedReaction,
   useAnimatedScrollHandler,
   useAnimatedStyle,
+  useDerivedValue,
   useReducedMotion,
   useSharedValue,
   type SharedValue,
@@ -44,18 +47,18 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { CircleIconButton } from '@/components/ui/circle-back-button';
-import { FilmEmpty } from '@/components/ui/film-empty';
-import { FilmPoster } from '@/components/ui/film-poster';
+import { FilmPoster, NewMomentCard } from '@/components/ui/film-poster';
 import { GlassButton } from '@/components/ui/glass';
 import { KeepYourFilm } from '@/components/ui/keep-your-film';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
 import { Body, Display } from '@/components/ui/typography';
+import { samplesFor } from '@/constants/samples';
 import { Colors, Films, Glass } from '@/constants/theme';
 import { getSession, isAnonymous } from '@/lib/auth';
 import { loadCovers, type FilmCover } from '@/lib/covers';
-import { listMyEventSummaries, type EventSummary } from '@/lib/events';
+import { isDeveloped, listMyEventSummaries, type EventSummary } from '@/lib/events';
 import { destinationFor, filmPhase, posterStatus, tickIntervalMs } from '@/lib/film-status';
 import { tintFor } from '@/lib/film-tint';
 import { dismissPrompt, isPromptDismissed } from '@/lib/prompt-dismissal';
@@ -65,6 +68,13 @@ const C = Films.carousel;
 /** One shared identity for "no events", so a non-ready render is stable. */
 const EMPTY: EventSummary[] = [];
 const NO_COVERS = new Map<string, FilmCover>();
+
+/** What the carousel scrolls: every moment, then the stack that starts a new one. */
+type Item = { kind: 'moment'; event: EventSummary } | { kind: 'new' };
+
+const NEW_ITEM: Item = { kind: 'new' };
+/** Seeds the new-moment stack's samples and tint, the way an event id does. */
+const NEW_SEED = 'new-moment';
 
 type LoadState =
   | { kind: 'loading' }
@@ -201,19 +211,38 @@ export default function FilmsScreen() {
     setCarouselHeight(event.nativeEvent.layout.height);
   }, []);
 
-  const frontIndex = Math.min(Math.max(active, 0), events.length - 1);
-  const front = events[frontIndex];
-  const frontCover = front ? covers.get(front.id)?.uri : undefined;
-  const populated = events.length > 0;
+  const items = useMemo<Item[]>(
+    () => [...events.map((event): Item => ({ kind: 'moment', event })), NEW_ITEM],
+    [events]
+  );
+
+  /** A moment's stack: its album once developed, samples until then. */
+  const stackFor = useCallback(
+    (event: EventSummary): { photos: ImageSource[]; sample: boolean } => {
+      if (!isDeveloped(event, now)) return { photos: samplesFor(event.id), sample: true };
+      return {
+        photos: (covers.get(event.id)?.uris ?? []).map((uri) => ({ uri })),
+        sample: false,
+      };
+    },
+    [covers, now]
+  );
+
+  const ready = state.kind === 'ready';
+  const frontIndex = Math.min(Math.max(active, 0), items.length - 1);
+  const front = items[frontIndex];
+  const frontSeed = front.kind === 'moment' ? front.event.id : NEW_SEED;
+  const frontPhoto =
+    front.kind === 'moment' ? stackFor(front.event).photos[0] : samplesFor(NEW_SEED)[0];
 
   return (
     <Screen transparent padded={false}>
-      {front ? (
+      {ready ? (
         <View style={styles.backdrop} pointerEvents="none">
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: tintFor(front.id)[0] }]} />
-          {frontCover ? (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: tintFor(frontSeed)[0] }]} />
+          {frontPhoto ? (
             <Image
-              source={{ uri: frontCover }}
+              source={frontPhoto}
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               blurRadius={Films.backdrop.blurRadius}
@@ -225,43 +254,15 @@ export default function FilmsScreen() {
       ) : null}
 
       <View style={styles.header}>
-        <Display size="md">Your Films</Display>
+        <Display size="md">Your Moments</Display>
 
         <View style={styles.headerButtons}>
-          {/*
-            Over the blurred backdrop the chrome is glass; on the empty state,
-            where there is only the ambient glow behind it, it stays the
-            artboard's quiet outline — glass needs something to refract.
-          */}
-          {populated ? (
-            <>
-              <GlassButton
-                icon="settings"
-                accessibilityLabel="Settings"
-                onPress={() => router.push('/settings')}
-              />
-              <GlassButton icon="users" accessibilityLabel="Join a group" onPress={joinEvent} />
-            </>
-          ) : (
-            <>
-              <CircleIconButton
-                icon="settings"
-                variant="outline"
-                size={Glass.buttonSize}
-                iconSize={Films.header.gearIconSize}
-                accessibilityLabel="Settings"
-                onPress={() => router.push('/settings')}
-              />
-              <CircleIconButton
-                icon="users"
-                variant="outline"
-                size={Glass.buttonSize}
-                iconSize={Films.header.gearIconSize}
-                accessibilityLabel="Join a group"
-                onPress={joinEvent}
-              />
-            </>
-          )}
+          <GlassButton
+            icon="settings"
+            accessibilityLabel="Settings"
+            onPress={() => router.push('/settings')}
+          />
+          <GlassButton icon="users" accessibilityLabel="Join a group" onPress={joinEvent} />
           {/* Creating is the primary action here: the one light control. */}
           <CircleIconButton
             icon="plus"
@@ -269,7 +270,7 @@ export default function FilmsScreen() {
             size={Glass.buttonSize}
             iconSize={Films.header.plusIconSize}
             iconColor={Colors.onLight}
-            accessibilityLabel="Start a memory"
+            accessibilityLabel="Start a moment"
             onPress={startNewEvent}
           />
         </View>
@@ -277,7 +278,8 @@ export default function FilmsScreen() {
 
       {/*
         Loading, load-failed and genuinely-empty are three different sentences:
-        flashing "No films yet." at someone who has ten reads as data loss.
+        showing only the "start a moment" stack to someone who has ten reads as
+        data loss.
       */}
       {state.kind === 'loading' ? (
         <View style={styles.centered}>
@@ -286,7 +288,7 @@ export default function FilmsScreen() {
       ) : state.kind === 'error' ? (
         <View style={styles.centered}>
           <Body small color={Colors.textDim} style={styles.errorCopy}>
-            Couldn&rsquo;t load your films.{'\n'}Check your connection and try again.
+            Couldn&rsquo;t load your moments.{'\n'}Check your connection and try again.
           </Body>
           <PillButton
             label="Try again"
@@ -298,15 +300,6 @@ export default function FilmsScreen() {
             style={styles.retry}
           />
         </View>
-      ) : !populated ? (
-        <>
-          {showsPrompt ? (
-            <View style={styles.prompt}>
-              <KeepYourFilm onLinked={handleLinked} onDismiss={handleDismiss} />
-            </View>
-          ) : null}
-          <FilmEmpty onStart={startNewEvent} onJoin={joinEvent} />
-        </>
       ) : (
         <>
           {showsPrompt ? (
@@ -319,8 +312,8 @@ export default function FilmsScreen() {
             {carouselHeight > 0 ? (
               <Animated.FlatList
                 horizontal
-                data={events}
-                keyExtractor={(event) => event.id}
+                data={items}
+                keyExtractor={(item) => (item.kind === 'moment' ? item.event.id : NEW_SEED)}
                 showsHorizontalScrollIndicator={false}
                 snapToInterval={step}
                 decelerationRate="fast"
@@ -330,41 +323,59 @@ export default function FilmsScreen() {
                 contentContainerStyle={styles.carouselContent}
                 ItemSeparatorComponent={Separator}
                 getItemLayout={(_, index) => ({ length: step, offset: step * index, index })}
-                renderItem={({ item, index }) => {
-                  const cover = covers.get(item.id);
-                  const phase = filmPhase(item, now);
-                  return (
-                    <CarouselItem
-                      index={index}
-                      step={step}
-                      scrollX={scrollX}
-                      still={reducedMotion}
-                      width={posterWidth}
-                      height={carouselHeight - C.paddingTop}>
-                      <FilmPoster
-                        title={item.name}
-                        status={posterStatus(item, cover?.photoCount ?? 0, now)}
-                        phase={phase}
-                        members={item.memberCount}
-                        coverUri={cover?.uri}
-                        tint={tintFor(item.id)}
-                        onPress={() => router.push(destinationFor(item, user?.id))}
-                        // A live film opens its camera; the capsule is the way to
-                        // its count, its countdown and the host's "develop now".
-                        onPressStatus={
-                          phase === 'live'
-                            ? () =>
-                                router.push({
-                                  pathname: '/(library)/album/[id]',
-                                  params: { id: item.id },
-                                })
-                            : undefined
-                        }
-                        style={styles.poster}
-                      />
-                    </CarouselItem>
-                  );
-                }}
+                renderItem={({ item, index }) => (
+                  <CarouselItem
+                    index={index}
+                    step={step}
+                    scrollX={scrollX}
+                    still={reducedMotion}
+                    width={posterWidth}
+                    height={carouselHeight - C.paddingTop}>
+                    {(spread) => {
+                      if (item.kind === 'new') {
+                        return (
+                          <NewMomentCard
+                            photos={samplesFor(NEW_SEED)}
+                            tint={tintFor(NEW_SEED)}
+                            spread={spread}
+                            onStart={startNewEvent}
+                            onJoin={joinEvent}
+                            style={styles.poster}
+                          />
+                        );
+                      }
+
+                      const { event } = item;
+                      const phase = filmPhase(event, now);
+                      const stack = stackFor(event);
+                      return (
+                        <FilmPoster
+                          title={event.name}
+                          status={posterStatus(event, covers.get(event.id)?.photoCount ?? 0, now)}
+                          phase={phase}
+                          members={event.memberCount}
+                          photos={stack.photos}
+                          sample={stack.sample}
+                          tint={tintFor(event.id)}
+                          spread={spread}
+                          onPress={() => router.push(destinationFor(event, user?.id))}
+                          // A live moment opens its camera; the capsule is the way to
+                          // its count, its countdown and the host's "develop now".
+                          onPressStatus={
+                            phase === 'live'
+                              ? () =>
+                                  router.push({
+                                    pathname: '/(library)/album/[id]',
+                                    params: { id: event.id },
+                                  })
+                              : undefined
+                          }
+                          style={styles.poster}
+                        />
+                      );
+                    }}
+                  </CarouselItem>
+                )}
               />
             ) : null}
           </View>
@@ -373,11 +384,15 @@ export default function FilmsScreen() {
             style={styles.dots}
             accessible
             accessibilityRole="text"
-            accessibilityLabel={`Film ${frontIndex + 1} of ${events.length}`}>
-            {events.length > 1
-              ? events.map((event, index) => (
+            accessibilityLabel={
+              front.kind === 'new'
+                ? 'Start a moment'
+                : `Moment ${frontIndex + 1} of ${events.length}`
+            }>
+            {items.length > 1
+              ? items.map((item, index) => (
                   <View
-                    key={event.id}
+                    key={item.kind === 'moment' ? item.event.id : NEW_SEED}
                     style={[styles.dot, index === frontIndex && styles.dotActive]}
                   />
                 ))
@@ -397,39 +412,31 @@ type CarouselItemProps = {
   index: number;
   step: number;
   scrollX: SharedValue<number>;
-  /** Reduced motion: every poster stays at full size. */
+  /** Reduced motion: every stack stays at full size, fanned out. */
   still: boolean;
   width: number;
   height: number;
-  children: React.ReactNode;
+  /** Handed how far the stack's fan is open: 1 in front, less beside it. */
+  children: (spread: SharedValue<number>) => React.ReactNode;
 };
 
-/** A poster that recedes as it leaves the centre — continuously, with the finger. */
+/** A stack that recedes and squares up as it leaves the centre — with the finger. */
 function CarouselItem({ index, step, scrollX, still, width, height, children }: CarouselItemProps) {
-  const style = useAnimatedStyle(() => {
-    if (still) return { opacity: 1, transform: [{ scale: 1 }] };
-    const range = [(index - 1) * step, index * step, (index + 1) * step];
-    return {
-      opacity: interpolate(
-        scrollX.value,
-        range,
-        [C.neighbourOpacity, 1, C.neighbourOpacity],
-        Extrapolation.CLAMP
-      ),
-      transform: [
-        {
-          scale: interpolate(
-            scrollX.value,
-            range,
-            [C.neighbourScale, 1, C.neighbourScale],
-            Extrapolation.CLAMP
-          ),
-        },
-      ],
-    };
-  });
+  /** 0 in front, 1 a whole page away. */
+  const distance = useDerivedValue(() =>
+    still ? 0 : Math.min(Math.abs(scrollX.value / step - index), 1)
+  );
 
-  return <Animated.View style={[{ width, height }, style]}>{children}</Animated.View>;
+  const spread = useDerivedValue(() =>
+    interpolate(distance.value, [0, 1], [1, Films.stack.restSpread])
+  );
+
+  const style = useAnimatedStyle(() => ({
+    opacity: interpolate(distance.value, [0, 1], [1, C.neighbourOpacity]),
+    transform: [{ scale: interpolate(distance.value, [0, 1], [1, C.neighbourScale]) }],
+  }));
+
+  return <Animated.View style={[{ width, height }, style]}>{children(spread)}</Animated.View>;
 }
 
 const styles = StyleSheet.create({

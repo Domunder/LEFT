@@ -243,6 +243,39 @@ export const EndRow = {
 } as const;
 
 /**
+ * 04 · Event End, rebuilt 2026-11-15. Top to bottom: the question, the answer
+ * written large, and the two
+ * wheels (days, sideways; time, upright). Nothing behind a popover.
+ */
+export const Ending = {
+  /** Back button -> headline -> answer -> card -> CTA. */
+  headerGap: 28,
+  headlineGap: 22,
+  answerGap: 22,
+  ctaGap: 20,
+  /** The answer: the chosen moment, and how far away it is. */
+  answer: {
+    gap: 6,
+    /** The line under it once the moment lies in the past. */
+    pastColor: 'rgba(255,170,150,0.9)',
+  },
+  /** The rule between the two wheels — there is no surface around them. */
+  hairline: 'rgba(255,255,255,0.08)',
+  /** One day on the sideways wheel: weekday, numeral, month. */
+  day: {
+    width: 56,
+    height: 78,
+    gap: 4,
+    radius: 16,
+    /** How many days the wheel offers — two months covers any real event. */
+    count: 60,
+    /** Opacity and scale under the band, one day out, and at the card's edge. */
+    fade: [1, 0.5, 0] as const,
+    scale: [1, 0.86, 0.7] as const,
+  },
+} as const;
+
+/**
  * The month grid behind 04's Ending Date pill.
  *
  * Drawn in-app rather than by the platform picker, so its geometry is ours. Cells
@@ -1257,32 +1290,18 @@ export const Films = {
     plusIconSize: 18,
   },
 
-  /** 15 · the centred empty state. */
-  empty: {
-    paddingX: 40,
-    tileSize: 64,
-    tileIconSize: 26,
-    /** Tile -> headline. */
-    tileGap: 22,
-    /** Headline -> subcopy. */
+  /**
+   * The "start a moment" card — the last stack in the carousel, and the only
+   * one when there are no moments yet (replaces 15's centred empty state).
+   */
+  fresh: {
+    padding: 24,
+    plusSize: 68,
+    plusIconSize: 28,
+    /** Plus -> headline -> subcopy -> the join capsule. */
+    plusGap: 22,
     headlineGap: 8,
-    /** Subcopy -> CTA. */
-    subcopyGap: 28,
-    /**
-     * The CTA is auto-width (`padding: 15px 26px`), not the full-width
-     * `PillButton` every other screen uses — the same call `EndRow.pill` and
-     * 05.1's duration legend made rather than bending a full-width primitive.
-     */
-    ctaPaddingY: 15,
-    ctaPaddingX: 26,
-    ctaGap: 8,
-    ctaIconSize: 15,
-    /** `rgba(240,237,232,0.95)` — a touch softer than the flat `Colors.text`. */
-    ctaBg: 'rgba(240,237,232,0.95)',
-    /** CTA -> the "Or join a group" link beneath it. Not in the artboard. */
-    joinGap: 18,
-    /** The link is one short line of text, so it needs the target padded out. */
-    joinHitSlop: 12,
+    joinGap: 22,
   },
 
   /** The guest's "Keep your films" panel, above the carousel. */
@@ -1293,26 +1312,47 @@ export const Films = {
   },
 
   /**
-   * 16 · the carousel — one poster per film, swiped sideways.
+   * 16 · the carousel — one stack of photos per moment, swiped sideways.
    *
    * Replaces the artboard's vertical list of cards (redesigned 2026-11-15). It
    * is a native horizontal scroll, so tracking, momentum, rubber-banding and
    * interruption are the system's own.
    */
   carousel: {
-    /** Poster inset from the screen edge — what lets the neighbours peek in. */
-    sideInset: 34,
-    gap: 12,
-    paddingTop: 8,
-    /** How far a poster one page away recedes. */
-    neighbourScale: 0.92,
-    neighbourOpacity: 0.55,
+    /** Stack inset from the screen edge — room for its fan and the neighbours. */
+    sideInset: 46,
+    /** Wide enough that one stack's fan never lands on the next one's front. */
+    gap: 34,
+    /** Room above the stack for the photos that lift out behind it. */
+    paddingTop: 20,
+    /** How far a stack one page away recedes. */
+    neighbourScale: 0.9,
+    neighbourOpacity: 0.6,
     /** Carousel -> page dots -> the bottom of the screen. */
     dotsGap: 18,
     dotsBottom: 14,
     dotSize: 6,
     dotGap: 7,
     dotActiveWidth: 18,
+  },
+
+  /**
+   * The photos fanned out behind a stack's front picture, nearest first. Each
+   * is the front's size, turned and shifted so an edge shows left or right.
+   * `spread` scales all of it: 1 for the stack in front, `restSpread` for the
+   * ones beside it, so the fan opens as a stack arrives at the centre.
+   */
+  stack: {
+    behind: [
+      { rotate: -6, shiftX: -18, lift: -6, scale: 0.95 },
+      { rotate: 5, shiftX: 18, lift: -12, scale: 0.93 },
+    ] as const,
+    restSpread: 0.35,
+    /** Depth: the photos behind are darker than the one in front. */
+    behindDim: 'rgba(8,8,10,0.38)',
+    /** Sample pictures are dimmed again, so they never read as the group's own. */
+    sampleDim: 'rgba(8,8,10,0.34)',
+    sampleTag: { inset: 14, height: 22, paddingX: 9, bg: 'rgba(8,8,10,0.5)' },
   },
 
   /** 16 · one film's poster. */

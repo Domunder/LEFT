@@ -1,13 +1,14 @@
 /**
- * The cover photo on each film in the library, and how many photos it holds.
+ * The photos on each moment's stack in the library, and how many it holds.
  *
- * What a cover may show follows the reveal, and RLS enforces it rather than
- * this file: before an event is developed the query can only return the
- * caller's own frames, so a live film is covered by *your* latest shot; once
- * developed it is the album's first photo.
+ * A developed moment shows the album's first few photos. One that is not
+ * developed shows none of its own — the library draws dimmed sample pictures
+ * there instead (decided 2026-11-15; `constants/samples.ts`) — so only its
+ * count is read. RLS decides what the count covers: the caller's own frames
+ * before the reveal, everyone's after.
  *
- * One small query per event (newest or oldest row, plus an exact count) and
- * one signing request for all of them. A library is a handful of events.
+ * One small query per event and one signing request for all of them. A library
+ * is a handful of events.
  */
 
 import { isDeveloped, type Event } from './events';
@@ -16,52 +17,60 @@ import { getSupabase } from './supabase';
 import { localShots } from './upload-queue';
 
 export type FilmCover = {
-  /** Undefined when there is no photo to show yet — the card falls back to its tint. */
-  uri?: string;
+  /** The album's first photos, front first. Empty until the moment is developed. */
+  uris: string[];
   /** Photos the caller can see: their own before the reveal, everyone's after. */
   photoCount: number;
 };
 
-async function coverRow(event: Event): Promise<{ thumbPath?: string; count: number }> {
+/** How many photos a stack shows: the one in front and two behind it. */
+const STACK_SIZE = 3;
+
+async function coverRow(event: Event): Promise<{ thumbPaths: string[]; count: number }> {
   const developed = isDeveloped(event);
   const { data, count, error } = await getSupabase()
     .from('photos')
     .select('thumb_path', { count: 'exact' })
     .eq('event_id', event.id)
     .eq('status', 'uploaded')
-    // The album opens on its first photo; a live film shows your latest.
-    .order('taken_at', { ascending: developed })
-    .limit(1);
+    // The stack opens the way the album does: on its first photos.
+    .order('taken_at', { ascending: true })
+    .limit(developed ? STACK_SIZE : 1);
   if (error) throw error;
-  return { thumbPath: data?.[0]?.thumb_path ?? undefined, count: count ?? 0 };
+
+  const thumbPaths = developed
+    ? (data ?? []).flatMap((row) => (row.thumb_path ? [row.thumb_path] : []))
+    : [];
+  return { thumbPaths, count: count ?? 0 };
 }
 
-/** A cover per event id. Never throws: a film without a cover still has a card. */
+/** A cover per event id. Never throws: a moment without photos still has a stack. */
 export async function loadCovers(events: Event[]): Promise<Map<string, FilmCover>> {
   const covers = new Map<string, FilmCover>();
 
   const rows = await Promise.all(
-    events.map((event) => coverRow(event).catch(() => ({ thumbPath: undefined, count: 0 })))
+    events.map((event) => coverRow(event).catch(() => ({ thumbPaths: [] as string[], count: 0 })))
   );
 
   let urls = new Map<string, string>();
   try {
-    urls = await signedUrls(rows.flatMap((row) => (row.thumbPath ? [row.thumbPath] : [])));
+    urls = await signedUrls(rows.flatMap((row) => row.thumbPaths));
   } catch {
-    // Offline: frames still on the phone can cover their film.
+    // Offline: the stacks fall back to their tint.
   }
 
   events.forEach((event, i) => {
-    const { thumbPath, count } = rows[i];
+    const { thumbPaths, count } = rows[i];
 
-    // A frame still in the upload queue is newer than anything on the server.
-    const queued = isDeveloped(event)
-      ? []
-      : localShots(event.id).sort((a, b) => b.takenAt.localeCompare(a.takenAt));
+    // Frames still in the upload queue are not on the server yet, but they count.
+    const queued = isDeveloped(event) ? 0 : localShots(event.id).length;
 
     covers.set(event.id, {
-      uri: queued[0]?.thumbUri ?? (thumbPath ? urls.get(thumbPath) : undefined),
-      photoCount: count + queued.length,
+      uris: thumbPaths.flatMap((path) => {
+        const url = urls.get(path);
+        return url ? [url] : [];
+      }),
+      photoCount: count + queued,
     });
   });
 

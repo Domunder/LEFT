@@ -21,7 +21,7 @@
  */
 
 import * as Haptics from 'expo-haptics';
-import { useMemo, useRef } from 'react';
+import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -35,11 +35,13 @@ import {
 import Animated, {
   Extrapolation,
   interpolate,
+  useAnimatedReaction,
   useAnimatedRef,
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 import { Colors, Wheel as WheelToken } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
@@ -63,6 +65,19 @@ function copyCount(length: number): number {
   const wanted = Math.ceil(LOOP_TARGET_ROWS / length);
   return Math.max(3, wanted % 2 === 0 ? wanted + 1 : wanted);
 }
+
+/**
+ * Only the rows near the band are mounted.
+ *
+ * A looping column is some 170 rows long and each row carries an animated
+ * style; mounting all of them, twice, is what made 04 slow to open. Rows more
+ * than two away from the centre are all but invisible anyway, so the column
+ * keeps a window of `WINDOW_HALF` rows either side of where it last looked and
+ * moves it once the scroll has travelled `WINDOW_SHIFT` rows. The rows are
+ * placed absolutely, so the scroll content keeps its full height throughout.
+ */
+const WINDOW_HALF = 16;
+const WINDOW_SHIFT = 6;
 
 export type WheelItem = {
   /** Stable identity for the row. */
@@ -110,8 +125,47 @@ export function Wheel({
     [items, copies]
   );
 
-  const initialOffset = (middleStart + index) * WheelToken.itemHeight;
+  const initialRow = middleStart + index;
+  const initialOffset = initialRow * WheelToken.itemHeight;
   const offset = useSharedValue(initialOffset);
+
+  /*
+    The rows the windows are centred on. Usually one; two for the moment a
+    looping column jumps back to its middle copy, when the rows it is leaving
+    and the rows it is landing on both have to exist.
+  */
+  const [anchors, setAnchors] = useState<number[]>([initialRow]);
+  const anchorRow = useSharedValue(initialRow);
+
+  useAnimatedReaction(
+    () => Math.round(offset.value / WheelToken.itemHeight),
+    (row) => {
+      if (Math.abs(row - anchorRow.value) < WINDOW_SHIFT) return;
+      anchorRow.value = row;
+      scheduleOnRN(setAnchors, [row]);
+    }
+  );
+
+  const mounted = useMemo(() => {
+    const positions = new Set<number>();
+    for (const anchor of anchors) {
+      const from = Math.max(anchor - WINDOW_HALF, 0);
+      const to = Math.min(anchor + WINDOW_HALF, rows.length - 1);
+      for (let i = from; i <= to; i += 1) positions.add(i);
+    }
+    return [...positions].sort((a, b) => a - b);
+  }, [anchors, rows.length]);
+
+  /** A jump waiting for its landing rows to be mounted. */
+  const pendingJump = useRef<number | null>(null);
+
+  useLayoutEffect(() => {
+    const target = pendingJump.current;
+    if (target === null) return;
+    pendingJump.current = null;
+    offset.value = target;
+    scrollRef.current?.scrollTo({ y: target, animated: false });
+  }, [anchors, offset, scrollRef]);
   // The last index we reported, so the haptic fires once per row crossed rather
   // than on every scroll frame that rounds to the same row.
   const lastReported = useRef(index);
@@ -141,15 +195,18 @@ export function Wheel({
    * Put the settled row back on the middle copy, without animating.
    *
    * Every copy is identical, so the jump is invisible: the row under the band
-   * reads the same before and after. `offset` is written by hand too, because the
-   * scroll event that would update it lands a frame later, and for that frame the
-   * curve would be drawn against the copy we just left.
+   * reads the same before and after. `offset` is written by hand too (in the
+   * layout effect that performs the jump), because the scroll event that would
+   * update it lands a frame later, and for that frame the curve would be drawn
+   * against the copy we just left.
    */
   function recentre(selected: number, row: number) {
-    if (row === middleStart + selected) return;
-    const target = (middleStart + selected) * WheelToken.itemHeight;
-    offset.value = target;
-    scrollRef.current?.scrollTo({ y: target, animated: false });
+    const targetRow = middleStart + selected;
+    if (row === targetRow) return;
+    // Mount the landing rows first; the layout effect above jumps once they exist.
+    pendingJump.current = targetRow * WheelToken.itemHeight;
+    anchorRow.value = targetRow;
+    setAnchors([row, targetRow]);
   }
 
   return (
@@ -170,9 +227,11 @@ export function Wheel({
         scrollEventThrottle={16}
         accessibilityLabel={accessibilityLabel}
         contentContainerStyle={styles.content}>
-        {rows.map((item, i) => (
-          <WheelRow key={item.key} label={item.label} position={i} offset={offset} />
-        ))}
+        <View style={{ height: rows.length * WheelToken.itemHeight }}>
+          {mounted.map((i) => (
+            <WheelRow key={rows[i].key} label={rows[i].label} position={i} offset={offset} />
+          ))}
+        </View>
       </Animated.ScrollView>
     </View>
   );
@@ -184,7 +243,8 @@ type WheelRowProps = {
   offset: ReturnType<typeof useSharedValue<number>>;
 };
 
-function WheelRow({ label, position, offset }: WheelRowProps) {
+/** Memoised: moving the window mounts the new rows without redrawing the rest. */
+const WheelRow = memo(function WheelRow({ label, position, offset }: WheelRowProps) {
   const animated = useAnimatedStyle(() => {
     const centre = position * WheelToken.itemHeight;
     // Signed: positive means this row has passed above the centre of the window,
@@ -208,13 +268,14 @@ function WheelRow({ label, position, offset }: WheelRowProps) {
   });
 
   return (
-    <Animated.View style={[styles.row, animated]}>
+    <Animated.View
+      style={[styles.row, { top: position * WheelToken.itemHeight }, animated]}>
       <Text style={styles.label} numberOfLines={1}>
         {label}
       </Text>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   column: {
@@ -225,6 +286,9 @@ const styles = StyleSheet.create({
     paddingVertical: WheelToken.itemHeight * PAD_COUNT,
   },
   row: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     height: WheelToken.itemHeight,
     alignItems: 'center',
     justifyContent: 'center',
