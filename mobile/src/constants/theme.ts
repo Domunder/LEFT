@@ -874,6 +874,10 @@ export const Group = {
     avatarBg: 'rgba(255,255,255,0.1)',
     bg: 'rgba(255,255,255,0.06)',
     border: 'rgba(255,255,255,0.12)',
+    /** A chip for someone who joins while the host watches grows from this size. */
+    enterScale: 0.6,
+    /** Reduced motion: it fades in instead. */
+    fadeMs: 200,
   },
   status: {
     paddingY: 6,
@@ -1076,15 +1080,13 @@ export const ZoomPillState = {
  * flash / zoom / flip row beneath it.
  */
 export const Camera = {
-  /** Close button, the event's name and the roll counter. */
+  /** Close button, the event's name and the countdown. The roll counter is in the viewfinder. */
   header: {
     paddingX: 20,
     paddingTop: 8,
     paddingBottom: 12,
-    /** Both side slots, equal so the counter sits on the centre line: close, countdown. */
+    /** Both side slots, equal so the event's name sits on the centre line: close, countdown. */
     sideWidth: 76,
-    /** Event name -> counter. */
-    nameGap: 2,
   },
 
   /** "17 left" — the roll. */
@@ -1127,28 +1129,38 @@ export const Camera = {
     screenColor: '#ffffff',
   },
 
-  /** "Your shots", bottom-left — a tile like a print leaning in the corner. */
+  /**
+   * The glass chrome floating inside the viewfinder (2026-11-15): flash, the
+   * roll counter and flip along the top; "Your shots", zoom and invite along
+   * the bottom. Only the shutter sits outside the picture.
+   */
+  overlay: {
+    /** From the viewfinder's edge to the chrome. */
+    inset: 12,
+    /** The counter's capsule. */
+    counterPaddingX: 16,
+    counterPaddingY: 3,
+    /** The status note sits this far above the bottom row. */
+    noteGap: 10,
+  },
+
+  /** "Your shots", bottom-left of the viewfinder — a tile like a print leaning in the corner. */
   shots: {
     size: 46,
     radius: 12,
-    border: 'rgba(255,255,255,0.16)',
-    bg: 'rgba(255,255,255,0.04)',
     iconSize: 18,
-    iconColor: 'rgba(240,237,232,0.7)',
+    iconColor: 'rgba(240,237,232,0.85)',
     /** The last photo fading in once it exists. */
     fadeMs: 180,
   },
 
-  /** The invite tile, bottom-right — the same tile as "Your shots". */
+  /** The invite tile, bottom-right of the viewfinder — the same tile as "Your shots". */
   invite: {
     iconSize: 22,
-    /** Between the upload count and the tile. */
-    queueGap: 10,
   },
 
-  /** The status pill inside the viewfinder's bottom edge — offline, waiting shots. */
+  /** The status pill inside the viewfinder, above the bottom row of chrome — offline, a missed shot. */
   note: {
-    inset: 14,
     bg: 'rgba(0,0,0,0.52)',
     border: 'rgba(255,255,255,0.09)',
     paddingY: 6,
@@ -1158,25 +1170,14 @@ export const Camera = {
     color: 'rgba(240,237,232,0.8)',
   },
 
-  /** Flash, zoom and flip. */
+  /** Flash and flip — glass buttons (`GlassButton`, 44pt) in the viewfinder's top corners. */
   controls: {
-    paddingX: 24,
-    paddingTop: 16,
-    paddingBottom: 4,
-    /** The flash and flip buttons — 44pt, the minimum comfortable target. */
-    buttonSize: 44,
-    flashIconSize: 20,
-    flipIconSize: 21,
-    /** Flash off, and flash on. */
-    flashColor: ['rgba(240,237,232,0.32)', Colors.text] as const,
-    flipColor: 'rgba(240,237,232,0.55)',
+    /** Flash off, and flash on. Off is brighter than it was on the dark page: it sits over a picture now. */
+    flashColor: ['rgba(240,237,232,0.6)', Colors.text] as const,
   },
 
-  /** The glass segmented zoom control between them. */
+  /** The glass segmented zoom control, bottom centre of the viewfinder. */
   zoom: {
-    bg: 'rgba(0,0,0,0.48)',
-    border: 'rgba(255,255,255,0.08)',
-    blur: 24,
     gap: 3,
     paddingY: 4,
     paddingX: 5,
@@ -1440,11 +1441,14 @@ export const Toast = {
     iconSize: 11,
   },
 
+  /**
+   * Arrives and leaves on `Springs.settle` (a spring since 2026-11-15, replacing
+   * the artboard's 320ms curve). Reduced motion: no travel, a cross-fade.
+   */
   motion: {
-    duration: 320,
-    bezier: [0.32, 1.08, 0.58, 1] as const,
-    exitDuration: 200,
     travelY: -14,
+    /** The cross-fade under reduced motion. */
+    fadeMs: 200,
   },
 
   /** Chosen, not transcribed — see the note above. */
@@ -1573,6 +1577,37 @@ export const Springs = {
   settle: { dampingRatio: 1, duration: 380 },
   momentum: { dampingRatio: 0.82, duration: 420 },
   press: { dampingRatio: 1, duration: 180 },
+} as const;
+
+/**
+ * Touch-down feedback for anything that is not glass (`PressScale`): the
+ * control gives under the finger on press-in and springs back on release.
+ * Glass controls use `Glass.pressScale`.
+ */
+export const Press = {
+  /** Pills and other wide controls: a wide surface needs little to read. */
+  pillScale: 0.97,
+  /** Round icon buttons and tiles: a small target needs a larger change. */
+  iconScale: 0.9,
+  /** Cards — 08's scan card. */
+  cardScale: 0.98,
+} as const;
+
+/**
+ * Dragging a bottom sheet (`SheetDrag`): 1:1 with the finger downwards,
+ * resistance upwards, and a release that lands where the flick was going.
+ */
+export const SheetMotion = {
+  /** Finger travel before the drag takes over from a tap. */
+  slop: 8,
+  /** Projected travel past which a release closes the sheet. */
+  dismissDistance: 120,
+  /** `rubberband()`'s constant for pulling the sheet up past its rest. */
+  rubber: 0.12,
+  /** How far up it can be pulled at most — and how far its surface is drawn past the screen edge. */
+  overdraw: 48,
+  /** Scroll-like deceleration used to project where a flick would land. */
+  deceleration: 0.998,
 } as const;
 
 /**

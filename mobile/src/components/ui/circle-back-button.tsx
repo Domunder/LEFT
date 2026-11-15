@@ -10,16 +10,19 @@
  *   outline a fainter rgba(255,255,255,0.04) fill behind a hairline — 15's gear,
  *          which sits over the ambient glow rather than over a solid screen
  *
+ * Every fill gives under the finger on touch-down (`PressScale`).
+ *
  * `glass` stays a boolean prop because three screens already pass it that way;
  * `variant` is the fuller control and wins when both are given.
  */
 
 import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Colors } from '@/constants/theme';
+import { Colors, Press } from '@/constants/theme';
 import { Glass } from './glass';
+import { PressScale } from './press-scale';
 
 const SIZE = 38;
 const ICON_SIZE = 16;
@@ -66,18 +69,16 @@ export function CircleIconButton({
   );
 
   return (
-    <Pressable
+    <PressScale
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.pressable,
-        dimensions,
-        pressed && !disabled && styles.pressed,
-        disabled && styles.disabled,
-      ]}>
+      scale={Press.iconScale}
+      // 38pt is under the 44pt minimum; the slop carries it there.
+      hitSlop={Math.max(0, (44 - size) / 2)}
+      style={[styles.pressable, dimensions, disabled && styles.disabled]}>
       {resolved === 'glass' ? (
         <Glass radius={size / 2} style={[styles.fill, dimensions]}>
           {content}
@@ -85,7 +86,7 @@ export function CircleIconButton({
       ) : (
         <View style={[styles.fill, dimensions, fills[resolved]]}>{content}</View>
       )}
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -115,9 +116,6 @@ export function CircleBackButton({ glass = false, fallback }: { glass?: boolean;
 const styles = StyleSheet.create({
   pressable: {
     overflow: 'hidden',
-  },
-  pressed: {
-    opacity: 0.6,
   },
   disabled: {
     opacity: 0.3,

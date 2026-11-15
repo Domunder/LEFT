@@ -19,11 +19,12 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 
 import { Colors, Invite, PillPaddingY, Radii } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { PressScale } from './press-scale';
 
 type ShareButtonProps = {
   label: string;
@@ -60,16 +61,15 @@ export function ShareButton({
   const foreground = light ? Colors.onLightDeep : Colors.text;
 
   return (
-    <Pressable
+    <PressScale
       accessibilityRole="button"
       accessibilityState={{ disabled: disabled || busy, busy }}
       disabled={disabled || busy}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.base,
         { paddingVertical: paddingY },
         light ? styles.light : styles.glass,
-        pressed && styles.pressed,
         disabled && styles.disabled,
         style,
       ]}>
@@ -85,7 +85,7 @@ export function ShareButton({
         )}
       </View>
       <Text style={[styles.label, light && styles.lightLabel]}>{label}</Text>
-    </Pressable>
+    </PressScale>
   );
 }
 
@@ -123,9 +123,6 @@ const styles = StyleSheet.create({
     ...Typography.authButton,
     fontSize: Typography.choice.fontSize,
     color: Colors.onLightDeep,
-  },
-  pressed: {
-    opacity: 0.85,
   },
   disabled: {
     opacity: 0.4,

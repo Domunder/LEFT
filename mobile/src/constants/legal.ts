@@ -233,7 +233,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     heading: 'How long we keep it',
     blocks: [
       { bullets: [
-        'Clips and events: until you or the host deletes them, or you delete your account.',
+        'Clips and events: for six months after the event ends, or until you or the host deletes them, or you delete your account — whichever comes first.',
         'Account data: for as long as your account exists.',
         'Purchase records: as long as tax and accounting law requires, typically six years.',
         'Diagnostic logs: a short rolling window, normally under 90 days.',

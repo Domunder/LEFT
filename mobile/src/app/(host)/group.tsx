@@ -46,7 +46,24 @@ export default function GroupScreen() {
   const { eventId } = useLocalSearchParams<{ eventId?: string }>();
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
-  const [members, setMembers] = useState<EventMember[]>([]);
+  /*
+    The roster, and who was on it when it first arrived (`seed`). Null until
+    then. Anyone not in the seed joined while the host was watching, and their
+    chip springs in; the people already there are simply there.
+  */
+  const [roster, setRoster] = useState<{
+    members: EventMember[];
+    seed: ReadonlySet<string>;
+  } | null>(null);
+  const setMembers = useCallback(
+    (members: EventMember[]) =>
+      setRoster((previous) => ({
+        members,
+        seed: previous?.seed ?? new Set(members.map((member) => member.user_id)),
+      })),
+    []
+  );
+  const members = roster?.members ?? [];
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,7 +96,7 @@ export default function GroupScreen() {
     return () => {
       cancelled = true;
     };
-  }, [eventId]);
+  }, [eventId, setMembers]);
 
   // Held live only once there is an event to subscribe to.
   const event = state.kind === 'ready' ? state.event : undefined;
@@ -94,7 +111,7 @@ export default function GroupScreen() {
   useEffect(() => {
     if (!liveEventId) return;
     return subscribeToMembers(liveEventId, setMembers);
-  }, [liveEventId]);
+  }, [liveEventId, setMembers]);
 
   const handleStart = useCallback(async () => {
     if (!event || starting) return;
@@ -161,7 +178,11 @@ export default function GroupScreen() {
           <>
             <View style={styles.chipRow}>
               {members.map((member) => (
-                <MemberChip key={member.user_id} name={member.display_name} />
+                <MemberChip
+                  key={member.user_id}
+                  name={member.display_name}
+                  arriving={roster !== null && !roster.seed.has(member.user_id)}
+                />
               ))}
             </View>
 

@@ -2,9 +2,10 @@
  * Bottom sheet chrome for the modal routes: a dismissable scrim with a rounded
  * card pinned to the bottom, drag handle on top.
  *
- * Deliberately dependency-free for now. @gorhom/bottom-sheet is installed and
- * should replace this once the sheets need real drag gestures, snap points, or
- * keyboard avoidance.
+ * The card can be dragged (`SheetDrag`): it follows the finger, and a flick or
+ * a pull past the threshold closes it with the hand's velocity. Tapping the
+ * scrim still closes it too. The card is a solid surface, not glass — what is
+ * behind it is a blurred scrim, and controls inside it stay flat.
  */
 
 import { BlurView } from 'expo-blur';
@@ -13,28 +14,41 @@ import type { PropsWithChildren } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BlurIntensity, Colors, Radii, Spacing } from '@/constants/theme';
+import { BlurIntensity, Colors, Radii, SheetMotion, Spacing } from '@/constants/theme';
+import { SheetDrag } from './sheet-drag';
 
 type SheetProps = PropsWithChildren<{
-  /** Called when the scrim is tapped. Defaults to router.back(). */
+  /** Called when the scrim is tapped or the sheet is dragged away. Defaults to router.back(). */
   onDismiss?: () => void;
+  /** Neither the scrim nor a drag closes it — while its action is running. */
+  locked?: boolean;
 }>;
 
-export function Sheet({ children, onDismiss }: SheetProps) {
+export function Sheet({ children, onDismiss, locked = false }: SheetProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dismiss = onDismiss ?? (() => router.back());
 
   return (
     <View style={styles.root}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={dismiss} accessibilityLabel="Dismiss" />
+      <Pressable
+        style={StyleSheet.absoluteFill}
+        onPress={locked ? undefined : dismiss}
+        accessibilityLabel="Dismiss"
+      />
       <BlurView intensity={BlurIntensity.scrim} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
       <View style={styles.scrim} pointerEvents="none" />
 
-      <View style={[styles.sheet, { paddingBottom: insets.bottom + Spacing.lg }]}>
+      <SheetDrag
+        onDismiss={dismiss}
+        locked={locked}
+        style={[
+          styles.sheet,
+          { paddingBottom: insets.bottom + Spacing.lg + SheetMotion.overdraw },
+        ]}>
         <View style={styles.handle} />
         {children}
-      </View>
+      </SheetDrag>
     </View>
   );
 }
@@ -61,6 +75,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screenX,
     paddingTop: Spacing.md,
     gap: Spacing.md,
+    // Drawn past the screen edge, so pulling the sheet up shows no gap under it.
+    marginBottom: -SheetMotion.overdraw,
   },
   handle: {
     alignSelf: 'center',
