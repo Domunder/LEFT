@@ -1,0 +1,145 @@
+/**
+ * 03 · Onboarding — Film
+ *
+ * "Which film are you loading?" — the host picks one look for the whole event.
+ * Every photo is developed with it, so the album reads as one roll rather than
+ * as a hundred different filters, which is also what a photo book needs later.
+ *
+ * **Not in the prototype.** This slot was "Format" (portrait or landscape video)
+ * until LEFT became a photo app. It is designed in the existing language — same
+ * header, eyebrow, headline rhythm and Continue pill as 02 and 04 — with four
+ * cards in a two-by-two grid.
+ *
+ * The cards show a swatch of each look's palette, not a real preview: the shader
+ * that produces the look arrives with the camera in M2, and a sample frame run
+ * through it replaces the swatch then (see `LookSwatch`).
+ *
+ * The ambient glow is not rendered here; it lives in (onboarding)/_layout.tsx so
+ * it can travel between screens. `useGlow` just claims this screen's position.
+ */
+
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
+
+import { LookCard } from '@/components/ui/look-card';
+import { PillButton } from '@/components/ui/pill-button';
+import { Screen } from '@/components/ui/screen';
+import { ScreenHeader } from '@/components/ui/screen-header';
+import { Display, Em, Label } from '@/components/ui/typography';
+import { DEFAULT_LOOK, LOOKS } from '@/constants/looks';
+import { LookCard as Tokens, Motion, Spacing } from '@/constants/theme';
+import type { FilmLook } from '@/lib/events';
+import { useGlow, useOnboarding, useStep } from '@/lib/onboarding-draft';
+
+const EASING = Easing.bezier(...Motion.bezier).factory();
+
+/** Cards arrive in reading order, a beat apart. */
+const ENTER_BASE = 120;
+const ENTER_STAGGER = 50;
+
+function entering(index: number) {
+  return FadeInDown.duration(Motion.duration)
+    .easing(EASING)
+    .delay(ENTER_BASE + index * ENTER_STAGGER);
+}
+
+export default function LookScreen() {
+  const router = useRouter();
+  const { draft, patch } = useOnboarding();
+  useGlow('format');
+  useStep(2);
+
+  // Preselected, so there is no empty state and Continue is always available.
+  // Returning to this screen restores the earlier choice.
+  const [look, setLook] = useState<FilmLook>(draft.look ?? DEFAULT_LOOK);
+
+  function select(next: FilmLook) {
+    if (next === look) return;
+    // Web has no haptics engine; calling through is a no-op but noisy in logs.
+    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    setLook(next);
+  }
+
+  function handleContinue() {
+    patch({ look });
+    router.push('/(onboarding)/ending');
+  }
+
+  return (
+    <Screen transparent>
+      <ScreenHeader style={styles.header} />
+
+      <Label style={styles.eyebrow}>Film</Label>
+
+      <Display size="xl" style={styles.headline}>
+        Which film are{'\n'}
+        <Em>you loading?</Em>
+      </Display>
+
+      {/*
+        Scrolls only when it has to: four cards fit a regular phone, and a small
+        one or a large text size must not push the last row under the button.
+      */}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}>
+        <View style={styles.grid} accessibilityRole="radiogroup">
+          {LOOKS.map((option, index) => (
+            <Animated.View key={option.id} entering={entering(index)} style={styles.cell}>
+              <LookCard
+                look={option}
+                selected={option.id === look}
+                onPress={() => select(option.id)}
+              />
+            </Animated.View>
+          ))}
+        </View>
+      </ScrollView>
+
+      <PillButton
+        label="Continue"
+        icon="arrow-right"
+        onPress={handleContinue}
+        style={styles.cta}
+      />
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    marginBottom: Tokens.headerGap,
+  },
+  eyebrow: {
+    marginBottom: Tokens.eyebrowGap,
+  },
+  headline: {
+    marginBottom: Spacing.xxl,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Tokens.gap,
+  },
+  // Two per row. `flexBasis` under half so the gap fits; `flexGrow` takes up the rest.
+  cell: {
+    flexBasis: '45%',
+    flexGrow: 1,
+  },
+  cta: {
+    marginTop: Spacing.lg,
+    marginBottom: Spacing.screenBottom,
+  },
+});

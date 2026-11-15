@@ -44,7 +44,7 @@ export default function EventScreen() {
   function handleContinue() {
     if (!eventType || !trimmedName) return;
     patch({ eventType, filmName: trimmedName });
-    router.push('/(onboarding)/format');
+    router.push('/(onboarding)/look');
   }
 
   return (

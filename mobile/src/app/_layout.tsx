@@ -5,7 +5,6 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import { ClipArrivalsProvider } from '@/components/ui/clip-arrivals';
 import { ToastProvider } from '@/components/ui/toast-host';
 import { getSession } from '@/lib/auth';
 import { OnboardingProvider } from '@/lib/onboarding-draft';
@@ -178,38 +177,30 @@ export default function RootLayout() {
             and a notification cancelled by a screen change is not one.
           */}
           <ToastProvider>
-            {/*
-              18's subscription, inside the host so it can raise one. Here
-              rather than on the camera screen: a member waiting on 12 or
-              browsing their films is exactly who needs telling that the shared
-              budget just shrank. Renders nothing.
-            */}
-            <ClipArrivalsProvider>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: Colors.bg },
-                  animation: 'slide_from_right',
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: Colors.bg },
+                animation: 'slide_from_right',
+              }}
+            >
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(onboarding)" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(host)" />
+              <Stack.Screen name="(guest)" />
+              <Stack.Screen name="(capture)" />
+              <Stack.Screen name="(library)" />
+              <Stack.Screen name="(legal)" />
+              <Stack.Screen name="settings" />
+              <Stack.Screen
+                name="(modals)"
+                options={{
+                  presentation: 'transparentModal',
+                  animation: 'fade',
                 }}
-              >
-                <Stack.Screen name="index" />
-                <Stack.Screen name="(onboarding)" />
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(host)" />
-                <Stack.Screen name="(guest)" />
-                <Stack.Screen name="(capture)" />
-                <Stack.Screen name="(library)" />
-                <Stack.Screen name="(legal)" />
-                <Stack.Screen name="settings" />
-                <Stack.Screen
-                  name="(modals)"
-                  options={{
-                    presentation: 'transparentModal',
-                    animation: 'fade',
-                  }}
-                />
-              </Stack>
-            </ClipArrivalsProvider>
+              />
+            </Stack>
           </ToastProvider>
         </OnboardingProvider>
       </ThemeProvider>

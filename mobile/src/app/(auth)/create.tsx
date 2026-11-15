@@ -123,7 +123,7 @@ export default function CreateAccountScreen() {
             <Em>memory.</Em>
           </Display>
           <Body color={Colors.textMuted} style={styles.subcopy}>
-            Hosting needs an account. Sign in and everything you filmed as a guest
+            Hosting needs an account. Sign in and everything you shot as a guest
             comes with you.
           </Body>
         </View>

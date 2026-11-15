@@ -50,7 +50,7 @@ export function EventCountdown({ endsAt }: EventCountdownProps) {
       style={styles.root}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={`${parts[0].value} ${parts[0].unit}, ${parts[1].value} ${parts[1].unit} left to film`}>
+      accessibilityLabel={`${parts[0].value} ${parts[0].unit}, ${parts[1].value} ${parts[1].unit} left to shoot`}>
       {parts.map((part, index) => (
         <View key={part.unit} style={styles.unit}>
           <Text style={[styles.value, { color: Camera.countdown.valueColor[index] }]}>

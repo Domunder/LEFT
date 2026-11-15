@@ -2,14 +2,14 @@ import { Stack } from 'expo-router';
 
 import { Colors } from '@/constants/theme';
 
-/** Recording and compilation (screens 13, 14). */
+/** The disposable camera (screen 13). */
 export default function CaptureLayout() {
   return (
     <Stack
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: Colors.bg },
-        // No swipe-back out of the camera mid-recording.
+        // No swipe-back out of the camera.
         gestureEnabled: false,
       }}
     />

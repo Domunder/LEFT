@@ -1,8 +1,9 @@
 # Payments — one-time event charges
 
-Groups of five or more are a one-time charge per event, paid when the event is
-created, taken through the app store and brokered by RevenueCat. There is no
-subscription. Groups of four or fewer are free.
+An event is free up to 100 guests on any finite roll (5–36 shots each). The
+unlimited roll, or a group of 101–200, is a one-time charge per event — one
+product, **LEFT Unlimited** — paid when the event is created, taken through the
+app store and brokered by RevenueCat. There is no subscription.
 
 Two decisions shape everything below, and both are easy to get wrong:
 
@@ -48,38 +49,32 @@ customer's history — it never goes near `mobile/`.
 
 ## The three products
 
-Create each one in both stores, using the **same identifier in both**. The id is
-keyed on the tier's upper bound, so a price change never needs a new SKU.
+Create it in both stores, using the **same identifier in both**.
 
-| Group size on 05.1 | Price | Product ID |
+| Event | Price | Product ID |
 |---|---|---|
-| Up to 4 | free — nothing is bought | — |
-| Up to 10 | $4.99 | `left_film_unlock_10` |
-| Up to 50 | $14.99 | `left_film_unlock_50` |
-| Any group | $29.99 | `left_film_unlock_unlimited` |
+| Up to 100 guests, roll of 5–36 | free — nothing is bought | — |
+| Unlimited roll, or 101–200 guests | CHF 5 (set per storefront) | `left_unlimited` |
 
-In **App Store Connect**, create them under In-App Purchases with type
-**Consumable**. In **Google Play Console**, create them under Products →
+In **App Store Connect**, create it under In-App Purchases with type
+**Consumable**. In **Google Play Console**, create it under Products →
 In-app products (a one-time product, *not* a subscription).
 
-> **These ids have outlived two pricing models and are deliberately unchanged.**
-> They replaced six group-size tiers (`left_event_tier_*`), then briefly meant
-> "unlock the finished film" rather than "create the event". Renaming a SKU that
-> has ever shipped strands every receipt bought under it, and `unlock_max_members()`
-> still maps the six legacy ids for exactly that reason. Do not remove them.
+> **Do not rename the id once it has shipped.** Renaming a SKU strands every
+> receipt bought under it. `public.unlock_max_members()` is the authority on which
+> product ids the server accepts; `mobile/src/lib/tiers.ts` is the display mirror.
 
-**The charge is at creation, on the group size the host picks.** That is a guess
-made before the party, and it is the buyer's own guess — the alternative is
-billing them afterwards for who turned up. `create_event()` compares the receipt
-against `max_members` server-side and claims it in the same transaction as the
-insert, so an event is paid for exactly once or does not exist.
+**The charge is at creation, on the group and roll the host picks.**
+`create_event()` decides server-side whether the event needs a purchase and claims
+it in the same transaction as the insert, so an event is paid for exactly once or
+does not exist.
 
 This table lives in two places in code, and they must be edited together:
 
 | File | What it holds |
 |---|---|
-| `mobile/src/lib/tiers.ts` | `EVENT_TIERS` and `FREE_MAX_MEMBERS` — what the app offers and quotes |
-| `supabase/migrations/*_unlock_the_film.sql` | `unlock_max_members()` — what the server will honour, including the legacy ids |
+| `mobile/src/lib/tiers.ts` | `UNLIMITED` and `FREE_MAX_MEMBERS` — what the app offers and quotes |
+| `supabase/migrations/*_baseline.sql` | `unlock_max_members()`, `free_max_members()` — what the server will honour |
 
 ## RevenueCat setup
 
@@ -128,17 +123,16 @@ increasing delay — the first retry is about five minutes out.
 
 ## How a purchase becomes an event
 
-1. 05.1 quotes the price for the group size on screen, from `tierFor()`. At four
-   people or fewer it says "Free for groups of four or fewer" and steps 2–4 are
-   skipped entirely.
+1. 05.1 decides with `needsUnlimited()` whether the chosen group and roll are
+   paid, and names the price on the button. A free event skips steps 2–4
+   entirely.
 2. `Purchases.logIn(<supabase user id>)` runs before anything is bought, or the
    receipt lands on an anonymous RevenueCat id and the ledger row matches nobody.
 3. The store sheet takes the money. `purchaseTier()` returns a transaction id.
 4. The app calls the `create-event` function, which asks RevenueCat's REST API
    whether that transaction exists for that user, writes the ledger row, and calls
    `create_event()` — all in one request.
-5. `create_event()` claims the cheapest unconsumed purchase that covers
-   `max_members` and marks it consumed **in the same transaction** as the insert,
+5. `create_event()` claims an unconsumed purchase and marks it consumed **in the same transaction** as the insert,
    so it can never be spent twice and a failed insert never burns a receipt.
 6. RevenueCat's webhook arrives later and hits the unique index on
    `store_transaction_id`, which is a no-op.
@@ -152,12 +146,6 @@ seconds.
 > **Pay first, then create.** A purchase that exists but is never spent is
 > recoverable — it stays unconsumed and pays for the next attempt. An event that
 > exists but was never paid for is not.
-
-> **The group size can change while the store sheet is open.** `create_event()`
-> therefore accepts any receipt bought in the last 15 minutes regardless of the
-> tier it names. Without that window, a host who bumps the group from 10 to 25
-> mid-purchase has a receipt that is too small and creation is refused *after* the
-> money is taken.
 
 > **A retry never charges twice.** `use-event-creation.ts` holds the paid
 > transaction in a ref for the life of the screen, so re-entering `submit()` after
@@ -183,13 +171,13 @@ into edge functions automatically. Do not set them by hand.
 Check the server enforcement first — it needs no store at all. In Studio:
 
 ```sql
--- The free tier is capped server-side, not by the client.
-select public.create_event('T','party','vertical',now() + interval '1 day', 4, 600);
--- expect: the free tier is limited to 60 seconds
+-- Free: up to 100 guests on a finite roll.
+select public.create_event('T','party','golden',now() + interval '1 day', 100, 36);
 
--- A paid tier with no purchase is refused.
-select public.create_event('T','party','vertical',now() + interval '1 day', 25, 240);
--- expect: no unconsumed purchase for this group size
+-- The unlimited roll, or more than 100 guests, with no purchase is refused.
+select public.create_event('T','party','golden',now() + interval '1 day', 50, null);
+select public.create_event('T','party','golden',now() + interval '1 day', 101, 24);
+-- expect: no unspent purchase covers this event   (HINT: unsettled)
 ```
 
 An anonymous caller is refused before any of that, free tier included — hosting
@@ -199,8 +187,8 @@ thing standing in a guest's way. Run it as one:
 ```sql
 set local request.jwt.claims = '{"sub":"<an anonymous user id>","role":"authenticated"}';
 set local role authenticated;
-select public.create_event('T','party','vertical',now() + interval '1 day', 4, 60);
--- expect: hosting a memory requires a full account   (HINT: anonymous)
+select public.create_event('T','party','golden',now() + interval '1 day', 10, 24);
+-- expect: hosting an event requires a full account   (HINT: anonymous)
 ```
 
 The check reads `auth.users.is_anonymous`, not the JWT claim: `linkIdentity()`
@@ -211,14 +199,14 @@ Then the check that matters most — that a client cannot skip the RPC entirely:
 
 ```sql
 set role authenticated;
-insert into public.events (host_id, name, ends_at, max_members, budget_seconds)
-values (auth.uid(), 'bypass', now() + interval '1 day', 200, 600);
+insert into public.events (host_id, name, ends_at, max_members)
+values (auth.uid(), 'bypass', now() + interval '1 day', 200);
 -- expect: permission denied for table events
 ```
 
 On device, with a sandbox account:
 
-1. Buy a paid tier and confirm you reach the Invite screen.
+1. Create an event with the unlimited roll, pay, and confirm you reach the Invite screen.
 2. One `purchases` row, `environment = 'SANDBOX'`, `user_id` matching your
    `auth.users` id — **not** a `$RCAnonymousID:…` — and `consumed_at` set with
    `consumed_by_event_id` pointing at the new event.
@@ -237,7 +225,7 @@ testing possible. On Android use an internal testing track with licence testers.
 |---|---|
 | `getProducts()` returns an empty array | Products not approved, or the paid-apps agreement and banking are incomplete. This is the usual cause. |
 | `... is not available in this store` | The SKU does not exist, or the build's bundle id does not match the store listing. |
-| `no unconsumed purchase for this group size` right after paying | The reconciliation lookup missed. The app retries automatically; if it persists, check `REVENUECAT_SECRET_API_KEY` is set on the function. |
+| `no unspent purchase covers this event` right after paying | The reconciliation lookup missed. The app retries automatically; if it persists, check `REVENUECAT_SECRET_API_KEY` is set on the function. |
 | Ledger row has a `$RCAnonymousID:…` user | `Purchases.logIn()` did not run before the purchase. Check the `identify()` calls in `app/index.tsx` and `hooks/use-event-creation.ts`. |
 | Webhook returns 401 | The Authorization header in RevenueCat does not match `REVENUECAT_WEBHOOK_SECRET`. |
 | `permission denied for table events` in the app | Expected — clients cannot insert events. Something is bypassing `createEvent()`. |

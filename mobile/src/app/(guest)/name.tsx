@@ -181,7 +181,7 @@ function describeJoinError(e: unknown): string {
     return "That invite code doesn't match an event. Ask the host for a fresh link or QR.";
   }
   if (message.includes('already ended')) {
-    return 'This event has already finished filming.';
+    return 'This event has already ended.';
   }
   if (message.includes('anonymous') || message.includes('disabled')) {
     // Anonymous sign-ins not enabled in the Supabase dashboard — a setup problem,

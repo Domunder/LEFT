@@ -563,51 +563,59 @@ export const Motion = {
 } as const;
 
 /**
- * The video preview cards on 03 · Format.
+ * 03 · Film — the four look cards, in a two-by-two grid.
  *
- * The design framed these as strips of film with sprocket-hole bands; that and a
- * later colour-halo treatment were both dropped at the user's request, leaving
- * the footage in a plain rounded frame. Geometry only — the two-state palette is
- * FilmStripState.
+ * Not in the prototype: this screen replaced "Format" when LEFT became a photo
+ * app. Geometry only — the two-state palette is LookCardState, the swatches are
+ * LookSwatch.
  */
-export const FilmStrip = {
-  /** Gap between the two cards. */
-  gap: 16,
-  /** Gap between the row of format names and the cards under it. */
-  labelGap: 20,
-  /** Corner radius of the video window. */
+export const LookCard = {
+  /** Between cards, both axes. */
+  gap: 12,
   radius: 18,
-
-  vertical: {
-    /** Fixed width; the horizontal card takes the remaining row. */
-    width: 130,
-    aspectRatio: 9 / 16,
-    ratioLabel: '9:16',
-    ratioFontSize: 13,
-  },
-  horizontal: {
-    aspectRatio: 16 / 9,
-    ratioLabel: '16:9',
-    ratioFontSize: 11,
-  },
-
-  /** Format label under each card. */
-  labelFontSize: 12,
+  /** A little taller than wide, like a print. */
+  aspectRatio: 4 / 5,
+  /** Name and blurb sit inside the card, bottom-left. */
+  padding: 14,
+  /** Name -> blurb. */
+  textGap: 3,
+  nameSize: 19,
+  blurbSize: 11,
+  blurbLineHeight: 15,
+  /** Press-in scale. Feedback lands on touch-down, not on release. */
+  pressedScale: 0.97,
+  pressSpring: { damping: 18, stiffness: 260 },
+  /** Headline -> grid, and the eyebrow/headline rhythm 02 uses. */
+  headerGap: 52,
+  eyebrowGap: 14,
 } as const;
 
 /**
- * Selected / unselected pairs for a preview card.
+ * Selected / unselected pairs for a look card.
  *
  * Ordered [unselected, selected] so a card can pick its end with one flag and
  * animate between them.
  */
-export const FilmStripState = {
-  border: ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.22)'] as const,
-  ratioText: ['rgba(240,237,232,0.4)', 'rgba(240,237,232,0.9)'] as const,
-  label: ['rgba(240,237,232,0.2)', 'rgba(240,237,232,0.55)'] as const,
-  /** Flat dim laid over the video — heavier when the card is not chosen. */
-  dim: ['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.35)'] as const,
-  videoOpacity: [0.3, 0.75] as const,
+export const LookCardState = {
+  border: ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.55)'] as const,
+  /** Flat dim over the swatch — heavier when the card is not chosen. */
+  dim: ['rgba(0,0,0,0.5)', 'rgba(0,0,0,0)'] as const,
+  name: ['rgba(240,237,232,0.6)', 'rgba(240,237,232,1)'] as const,
+  blurb: ['rgba(240,237,232,0.35)', 'rgba(240,237,232,0.75)'] as const,
+} as const;
+
+/**
+ * What each film stock looks like before a real preview exists.
+ *
+ * Top-to-bottom gradient stops standing in for the look's palette. M2 replaces
+ * these with a sample frame run through the actual shader — the card takes its
+ * artwork from here so that is a one-file change.
+ */
+export const LookSwatch = {
+  golden: ['#e0b06a', '#9a5526', '#2b150c'],
+  chrome: ['#8fb4c4', '#33596b', '#0d1b23'],
+  faded: ['#dccdbf', '#a3938f', '#4b4346'],
+  mono: ['#d4d4d4', '#707070', '#171717'],
 } as const;
 
 /**
@@ -692,7 +700,7 @@ export const LengthChoice = {
   radius: Radii.card,
   /** Between cards. */
   gap: 8,
-  /** "FILM LENGTH" -> the row. */
+  /** Section label -> the row. */
   labelGap: 14,
   /** The duration -> the per-person line inside a card. */
   lineGap: 5,
@@ -702,6 +710,20 @@ export const LengthChoice = {
   perPersonSize: 11,
   /** Row -> the sentence that explains what the per-person number is. */
   footnoteGap: 14,
+} as const;
+
+/**
+ * 05.1's roll cards — six in one row (5 · 10 · 16 · 24 · 36 · ∞), so they are
+ * narrower than the cards LengthChoice was first drawn for.
+ */
+export const RollChoice = {
+  ...LengthChoice,
+  paddingX: 2,
+  gap: 6,
+  /** The numeral. DM Serif; "36" has to fit a ~46px card. */
+  numeralSize: 21,
+  /** "shots" under it. */
+  unitSize: 10,
 } as const;
 
 /**
@@ -723,33 +745,6 @@ export const LengthChoiceState = {
   /** The per-person line, a step quieter than the duration at both ends. */
   perPerson: ['rgba(240,237,232,0.4)', 'rgba(11,11,12,0.6)'] as const,
 } as const;
-
-/**
- * 17 · The unlock bar — the app's only paywall, and it sits after the film.
- *
- * **Not in the artboard**, which was drawn when the money changed hands during
- * onboarding. It is a panel rather than a bare button because it has to say two
- * things before it asks for anything: what the viewer is watching now, and what
- * paying changes. A lone "Unlock $14.99" would be asking them to guess.
- *
- * Deliberately quiet. It sits under a film someone just watched for the first
- * time, and shouting over that moment is how you lose it — so it borrows the
- * glass panel treatment rather than the primary accent, and the CTA carries the
- * only strong colour on it.
- */
-export const UnlockBar = {
-  paddingX: Spacing.md,
-  paddingY: Spacing.md,
-  radius: Radii.sheetSm,
-  bg: 'rgba(255,255,255,0.05)',
-  border: 'rgba(255,255,255,0.09)',
-  /** Pitch -> CTA. */
-  gap: Spacing.md,
-  /** Between the two lines of the pitch. */
-  lineGap: 4,
-  marginTop: Spacing.lg,
-} as const;
-
 
 /**
  * 08 · Join Group Sheet — the glass panel and the two cards inside it.
@@ -907,100 +902,6 @@ export const DeleteAccount = {
   /** Between the two buttons. */
   buttonGap: 10,
   buttonPaddingY: 16,
-} as const;
-
-export const GroupInfo = {
-  /** The artboard's `left:16px; right:16px; bottom:24px`. */
-  inset: 16,
-  bottom: 24,
-  paddingTop: 28,
-  paddingX: 24,
-  paddingBottom: 24,
-  /** Drag handle -> headline. */
-  handleGap: 22,
-  /** Headline -> body copy. */
-  headlineGap: 10,
-  /** Body -> the bar. */
-  bodyGap: 22,
-  /** Bar -> its caption row. */
-  barGap: 8,
-  /**
-   * Height held for the caption row while the event loads.
-   *
-   * The numbers stay hidden until they are real — "0s used · shared by 0" is a
-   * claim, not a loading state — so the row reserves one line of Typography.caption
-   * to keep the "Got it" button still.
-   */
-  captionHeight: 18,
-  /** Caption row -> the "Got it" button. */
-  captionGap: 24,
-  /**
-   * The worked example the bar plays through — two people filming into one pool.
-   *
-   * Paced to be read, not raced: each entry lands well clear of the last so a
-   * host watching sees two separate events rather than one blur. The whole
-   * script runs in about two and a half seconds.
-   */
-  demo: {
-    /** Beat before the first clip lands, so the sheet settles first. */
-    startDelay: 620,
-    /**
-     * Between one clip landing and the next.
-     *
-     * Longer than the fill it follows, so each person's contribution is a
-     * separate event with a pause after it rather than one continuous slide.
-     */
-    stepInterval: 1500,
-    /** How long the bar takes to travel to its new width. */
-    fillDuration: 700,
-    /**
-     * How long the finished state rests before the loop starts over.
-     *
-     * The whole point of the last frame — both people listed, the bar showing
-     * what they jointly spent — is the thing being taught, so it gets the
-     * longest beat in the cycle.
-     */
-    holdDuration: 2600,
-    /**
-     * The bar's collapse back to empty at the start of a new cycle.
-     *
-     * Quicker than a fill and eased the same way: it should read as a reset, not
-     * as time being given back.
-     */
-    resetDuration: 420,
-    /** Bar -> the list of entries. */
-    entriesGap: 14,
-    /** Between entries. */
-    entryGap: 4,
-    /** One entry's row, held empty before it arrives so nothing below shifts. */
-    entryHeight: 18,
-    /** The leading dot and its gap to the text. */
-    dotSize: 4,
-    dotGap: 8,
-    /**
-     * The gradient's laid-out width inside the clipping fill.
-     *
-     * Comfortably wider than any phone, so the ramp is anchored to the track and
-     * does not re-run as the fill grows.
-     */
-    gradientWidth: 500,
-  },
-  /** The button is 16px tall here where PillButton uses 17. */
-  buttonPaddingY: 16,
-  bar: {
-    height: 8,
-    track: 'rgba(255,255,255,0.07)',
-    /** `linear-gradient(90deg, #f0ede8, #cfc9bd)`. */
-    fill: ['#f0ede8', '#cfc9bd'] as const,
-    /**
-     * Shortest visible fill, as a fraction of the track.
-     *
-     * A few seconds against a ten-minute budget rounds to a sliver too small to
-     * see, which reads as "nothing filmed" when something was. The floor keeps a
-     * small amount visibly present, and zero is still drawn as truly empty.
-     */
-    minFill: 0.02,
-  },
 } as const;
 
 /**
@@ -1455,282 +1356,6 @@ export const Films = {
 } as const;
 
 /**
- * 17 · Clip Detail — the finished-film screen for an event.
- *
- * Transcribed from the artboard, which draws a 280px hero player over a blurred
- * backdrop, a Download/Share row, and a grid of contributor clips. Four things
- * it draws that the app cannot yet produce, all of them the same gap:
- *
- *  - the backdrop is a blurred *cover photo* in the artboard. Nothing extracts a
- *    frame from a clip, so it is built from `tintFor(event.id)` — the third
- *    instance of the deviation `Films.backdrop` and lib/film-tint.ts document.
- *  - the hero plays *a compiled film*. Nothing compiles one — it needs ffmpeg,
- *    which nothing in this stack can run — so it plays the group's clips back to
- *    back instead, in `recorded_at` order. Same footage, same order, no file.
- *    That brings a "now playing" pill and an ended state the artboard has no
- *    need of, since it drew one film by nobody in particular.
- *  - the tiles carry photographs; they carry gradients here, for the same reason.
- *  - the artboard scrims **only the first tile** and leaves white-on-image badges
- *    unbacked on the other three. That reads as an oversight rather than intent,
- *    so `grid.scrim` is applied to every tile — flagged in clip-tile.tsx.
- *
- * The header pads to 24 and the body to 18, neither of which is `Spacing.screenX`
- * (28), so the screen sets its own horizontal padding — the same call `Films` made.
- */
-export const ClipDetail = {
-  /** The blurred wash behind everything. Matches `Films.backdrop` by construction. */
-  backdrop: {
-    /** The artboard over-scans by 20px a side so a 60px blur shows no edges. */
-    inset: -20,
-    opacity: 0.55,
-    scale: 1.1,
-  },
-
-  header: {
-    /** The artboard's `padding: 58px 24px 14px`. */
-    paddingTop: Spacing.screenTop,
-    paddingX: 24,
-    paddingBottom: 14,
-    /** Back button -> title block. */
-    gap: 12,
-    titleSize: 14,
-    subSize: 11,
-    /** Title -> "5 clips · 1m 0s". */
-    subGap: 1,
-  },
-
-  /** The artboard's `padding: 6px 18px 40px` on the scroll body. */
-  body: {
-    paddingTop: 6,
-    paddingX: 18,
-    paddingBottom: 40,
-  },
-
-  hero: {
-    /**
-     * The artboard's fixed height, now a floor rather than the whole story.
-     *
-     * The hero is sized by the film's aspect ratio — `events.format`, which the
-     * app read nowhere until the renderer's shape was brought forward into
-     * playback. A horizontal film is 16:9 and lands near this number anyway; a
-     * vertical one is 9:16 and would run the full height of the screen if
-     * nothing stopped it, hence `maxHeightRatio`.
-     */
-    height: 280,
-    /**
-     * The tallest the hero may get, as a fraction of the window.
-     *
-     * A 9:16 film at full width is taller than most phones, and a hero that
-     * filled the screen would push the actions and the whole grid below the
-     * fold — the film would look like the only thing on the page. Just over half
-     * leaves the "Save clips" row visible on every device, which is what tells
-     * someone there is more here than a video.
-     */
-    maxHeightRatio: 0.56,
-    radius: 22,
-    /** Two points off `Colors.bg` — the letterbox behind a contained video. */
-    bg: '#0a0a0b',
-    marginBottom: 14,
-
-    /** The expand button, top-right over the picture. */
-    expand: { inset: 12, size: 34, iconSize: 15 },
-
-    /**
-     * Laid over a real poster frame so the play button and note read against it.
-     *
-     * Much lighter than `Colors.backdropScrim`: that one is hiding a blurred
-     * wash, this one is on top of the picture someone came here to see.
-     */
-    posterScrim: 'rgba(0,0,0,0.34)',
-
-    play: {
-      size: 64,
-      bg: 'rgba(240,237,232,0.14)',
-      borderWidth: 1.5,
-      border: 'rgba(255,255,255,0.22)',
-      iconSize: 24,
-      /** The artboard's `padding-left: 4px` — optical centring for a triangle. */
-      iconOffsetX: 4,
-      /** The poster's inert play button. */
-      posterOpacity: 0.4,
-    },
-
-    /**
-     * The scrub bar. A **readout, not a scrubber**: the artboard draws a 3px
-     * track with no thumb, and a 3px hit target is not a control. Its 38% fill
-     * is a static mock; the real one is bound to playback position.
-     */
-    scrub: {
-      stripHeight: 32,
-      paddingBottom: 10,
-      trackHeight: 3,
-      track: 'rgba(255,255,255,0.12)',
-      marginX: 14,
-    },
-
-    /** The idle and ended states, neither of which the artboard draws. */
-    poster: { copyPaddingX: 32, copyGap: 14 },
-
-    /**
-     * The "now playing" pill, bottom-left above the scrub strip.
-     *
-     * Invented, like the ended state: the artboard drew one film by one nobody,
-     * so it had no author to name. Here the hero runs several people's clips in
-     * sequence and the pill changing at each cut is the only thing that says so.
-     * Geometrically `grid.badge`, so a pill on the hero and a badge on a tile
-     * read as the same object — duplicated rather than aliased for the reason
-     * `grid.badge` gives about `Films.card.badge`.
-     */
-    nowPlaying: {
-      inset: 12,
-      paddingY: 5,
-      paddingX: 10,
-      /** Name -> "3 of 8". */
-      gap: 6,
-      bg: 'rgba(0,0,0,0.4)',
-      blurIntensity: 10,
-      /** Cross-faded on advance so the name does not pop at a cut. */
-      fadeMs: 200,
-    },
-
-    /**
-     * The clip-to-clip boundary.
-     *
-     * `replaceAsync` takes a moment to load the next source, and an unmasked
-     * swap shows the previous clip's last frame stretched under a new one. A
-     * short opaque cover reads as a cut rather than a stall.
-     */
-    advance: {
-      scrimFadeMs: 150,
-      /**
-       * A spinner only past this. A boundary normally clears well inside it, and
-       * a spinner that flashed at every cut would make a finished film look like
-       * it was struggling.
-       */
-      spinnerDelayMs: 600,
-    },
-
-    /** The replay button on the ended state. */
-    ended: { iconSize: 22 },
-  },
-
-  /**
-   * The large view — the film filling the screen, without leaving the app.
-   *
-   * Deliberately not `expo-video`'s native fullscreen. That would rotate the
-   * device for a landscape film, and the app is portrait-locked in `app.json`;
-   * unlocking it to serve one control would mean re-locking every other screen
-   * with `expo-screen-orientation`. So the stage stays portrait and offers to
-   * rotate *the picture* instead, which needs nothing from the OS.
-   *
-   * There are almost no tokens here because there is almost nothing to style:
-   * playback is drawn by the platform (`nativeControls`), and the app supplies
-   * only a close button, a title and the rotate toggle.
-   *
-   * It borrows the hero's player rather than making one — see the one-surface
-   * rule in `use-clip-playlist`. The hero unmounts its `VideoView` while this is
-   * open, which is why playback carries across without a reload.
-   */
-  stage: {
-    /** Near-black, a shade under the hero's letterbox. */
-    bg: '#050506',
-    /** Close, title and rotate — the only chrome the app draws here. */
-    closeInset: 16,
-    chromeGap: 12,
-    /** Rotate-to-fill, offered only when the picture is wider than the screen. */
-    rotate: { size: 38, iconSize: 16 },
-    /** How long the picture takes to turn. */
-    rotateMs: 220,
-  },
-
-  actions: {
-    gap: 10,
-    marginBottom: 28,
-    paddingY: 16,
-    paddingX: 18,
-    /** The artboard draws Download at 17 and Share at 16. Followed as drawn. */
-    downloadIconSize: 17,
-    shareIconSize: 16,
-  },
-
-  /** "Contributing Clips" -> the grid. */
-  sectionLabel: { marginBottom: 12 },
-
-  /**
-   * The contributor grid.
-   *
-   * The artboard draws exactly four clips in one fixed arrangement: a full-width
-   * feature tile, then a 2-up row, then a full-width tile spanning `1 / -1`. The
-   * rule below reproduces that pixel-for-pixel at four clips and extends to any
-   * count — first full-width at 200, the rest 2-up at 148, a trailing odd one
-   * full-width at 160. The extension is inferred; the artboard shows one case.
-   *
-   * `badge` repeats `Films.card.badge*` exactly. Kept separate rather than
-   * aliased: those are 16's cards and these are 17's tiles, they merely coincide
-   * today, and either should be free to move without dragging the other.
-   */
-  grid: {
-    gap: 10,
-    marginTop: 10,
-    radius: 16,
-    featureHeight: 200,
-    pairHeight: 148,
-    wideHeight: 160,
-    /** Shows through until a cover exists. */
-    placeholder: 'rgba(255,255,255,0.04)',
-    /**
-     * How long a thumbnail takes to fade in over its tint.
-     *
-     * They arrive one at a time and out of step with the render — a grid that
-     * popped eight frames in at eight different moments would flicker. A short
-     * cross-fade makes each one land as a tile settling rather than changing.
-     */
-    coverTransitionMs: 220,
-    /** `linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 50%)`. */
-    scrim: ['rgba(0,0,0,0.5)', 'transparent'] as const,
-    scrimLocations: [0, 0.5] as const,
-    /** Dimming on a clip whose file has not landed. */
-    unavailableOpacity: 0.45,
-
-    /**
-     * The dot marking the clip the hero is playing right now.
-     *
-     * Distinct from the `selected` ring, which says "this is where the film is"
-     * and stays put while paused. This says "and it is running", so the grid can
-     * be read at a glance without looking up at the hero.
-     */
-    nowPlayingDotSize: 6,
-    nowPlayingColor: Colors.text,
-
-    /** The per-tile download chip, top-right. */
-    chip: {
-      size: 26,
-      bg: 'rgba(0,0,0,0.4)',
-      iconSize: 12,
-      inset: 10,
-    },
-
-    badge: {
-      inset: 10,
-      paddingY: 4,
-      paddingX: 9,
-      fontSize: 11,
-      /** The artboard's `backdrop-filter: blur(10px)` on both badges. */
-      blurIntensity: 10,
-    },
-
-    /**
-     * A half-width cell.
-     *
-     * `flexBasis` rather than `flex: 1`: on a row holding a single tile, `flex`
-     * would stretch it the full width and break the two-column rhythm. 48% plus
-     * `flexGrow` lets a pair share the row exactly once the 10pt gap is taken out.
-     */
-    halfBasis: '48%',
-  },
-} as const;
-
-/**
  * 18 · In-App Notification — the banner raised when someone else films.
  *
  * Transcribed from the artboard's toast, with four deliberate departures:
@@ -1882,19 +1507,4 @@ export const Settings = {
     /** Faster than `Motion.duration`: a switch must feel immediate. */
     duration: 180,
   },
-} as const;
-
-/**
- * 19 · Lockscreen Live Activity — the iOS-only budget widget.
- *
- * Identity strings only. The widget extension runs in a **separate process** and
- * cannot import from JavaScript, so its palette is duplicated in Swift by
- * necessity — see plugins/live-activity/LeftBudgetLiveActivity.swift, which must
- * be edited in lockstep with `Colors` whenever the palette moves.
- */
-export const LiveActivity = {
-  /** Must match the app group configured in plugins/withLiveActivity.js. */
-  appGroup: 'group.com.leftmoment.app',
-  /** iOS floor. Live Activities landed in 16.1; ActivityContent in 16.2. */
-  minimumIosVersion: 16.2,
 } as const;

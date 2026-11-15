@@ -3,7 +3,7 @@
  *
  * The control is the sizing: 4 people is a dot and 200 is a disc, so the row
  * reads as a scale before any of the numerals do. Picking one sets both the
- * price tier and which film lengths are on offer (see lib/pricing.ts).
+ * price tier and which film lengths are on offer (see lib/roll.ts and lib/tiers.ts).
  *
  * The circles bottom-align on a common line, which is why each sits in a
  * fixed-height box — letting them centre would make the numerals underneath
@@ -16,7 +16,7 @@ import Animated, { Easing, useAnimatedStyle, withTiming } from 'react-native-rea
 import { GroupCircleState, GroupRow, Motion } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { at } from '@/lib/pair';
-import { GROUP_PRESETS } from '@/lib/pricing';
+import { GROUP_PRESETS } from '@/lib/roll';
 
 const TIMING = {
   duration: Motion.duration,

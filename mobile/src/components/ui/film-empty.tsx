@@ -62,7 +62,7 @@ export function FilmEmpty({ onStart, onJoin }: FilmEmptyProps) {
       </Display>
 
       <Body small color={Colors.textFaint} style={styles.subcopy}>
-        Start a shared memory and invite{'\n'}your group to begin filming.
+        Start a shared memory and invite{'\n'}your group to start shooting.
       </Body>
 
       <Pressable
@@ -73,7 +73,7 @@ export function FilmEmpty({ onStart, onJoin }: FilmEmptyProps) {
         {/* RN has no inset box-shadow — the design's top highlight is an overlay view,
             the same answer PillButton gives. */}
         <View style={styles.insetHighlight} pointerEvents="none" />
-        <Feather name="play" size={Films.empty.ctaIconSize} color={Colors.onLight} />
+        <Feather name="camera" size={Films.empty.ctaIconSize} color={Colors.onLight} />
         <Text style={styles.ctaLabel}>Start a Memory</Text>
       </Pressable>
 

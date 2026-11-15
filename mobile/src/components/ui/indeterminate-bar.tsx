@@ -85,7 +85,7 @@ export function IndeterminateBar({ progress, accessibilityLabel }: Indeterminate
       style={styles.track}
       accessible
       accessibilityRole="progressbar"
-      accessibilityLabel={accessibilityLabel ?? 'Creating your film'}
+      accessibilityLabel={accessibilityLabel ?? 'Loading'}
       /* A `now` only when there is one. Claiming a position the bar does not
          know would mislead a screen reader as much as the eye. */
       accessibilityValue={

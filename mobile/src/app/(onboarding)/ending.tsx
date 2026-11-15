@@ -90,11 +90,11 @@ export default function EndingScreen() {
       */}
       <Display size="md" style={styles.headline}>
         When does{'\n'}
-        <Em>filming end?</Em>
+        <Em>the event end?</Em>
       </Display>
 
       <Body small style={styles.subcopy}>
-        Pick when the event wraps up. Guests can keep adding clips until then.
+        Pick when the event wraps up. Guests can shoot until then — after that, the film is developed.
       </Body>
 
       <Animated.View entering={entering(ENTER_DELAY.date)}>

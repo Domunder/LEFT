@@ -5,7 +5,7 @@ import { AmbientGlow } from '@/components/ui/ambient-glow';
 import { Colors } from '@/constants/theme';
 
 /**
- * Film library and clip playback (screens 15/16, 17).
+ * Film library and the event album (screens 15/16, 17).
  *
  * The glow is mounted here rather than in the screen — the same three-part setup
  * (host) and (onboarding) use: `Colors.bg` painted once on this root, a

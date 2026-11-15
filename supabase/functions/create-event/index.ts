@@ -17,10 +17,10 @@
  * is what confirms the purchase exists and belongs to this user, so a modified
  * client inventing an id gets nothing.
  *
- * **Groups of four or fewer never reach the paid path.** The client sends no
- * transaction id for them and `create_event()` skips the claim entirely — the
+ * **Free events never reach the paid path.** Up to 100 guests on a finite roll
+ * the client sends no transaction id and `create_event()` skips the claim — the
  * free tier is enforced in the database, not here, so a client that lies about
- * its group size is refused by the RPC rather than by this function.
+ * its group or roll is refused by the RPC rather than by this function.
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -37,10 +37,11 @@ const json = (body: unknown, status: number) =>
 type CreateEventBody = {
   name?: string;
   eventType?: string;
-  format?: string;
+  look?: string;
   endsAt?: string;
   maxMembers?: number;
-  budgetSeconds?: number | null;
+  /** 5, 10, 16, 24, 36 — or null for the unlimited roll. */
+  rollSize?: number | null;
   transactionId?: string | null;
 };
 
@@ -58,22 +59,22 @@ Deno.serve(async (req) => {
     return json({ error: 'invalid body' }, 400);
   }
 
-  const { name, eventType, format, endsAt, maxMembers, budgetSeconds, transactionId } = body;
+  const { name, eventType, look, endsAt, maxMembers, rollSize, transactionId } = body;
 
   /*
     Shape checks only. Every *rule* — the ending being in the future, the group
-    size band, the budget ceiling, the anonymous-host refusal — belongs to
+    size band, the roll sizes, the anonymous-host refusal — belongs to
     `create_event()`, which is the one thing a modified client cannot go around.
   */
   if (typeof name !== 'string' || name.trim() === '') return json({ error: 'invalid name' }, 400);
   if (typeof eventType !== 'string') return json({ error: 'invalid event type' }, 400);
-  if (typeof format !== 'string') return json({ error: 'invalid format' }, 400);
+  if (typeof look !== 'string') return json({ error: 'invalid look' }, 400);
   if (typeof endsAt !== 'string' || Number.isNaN(Date.parse(endsAt))) {
     return json({ error: 'invalid ending time' }, 400);
   }
   if (!Number.isInteger(maxMembers)) return json({ error: 'invalid group size' }, 400);
-  if (budgetSeconds != null && !Number.isInteger(budgetSeconds)) {
-    return json({ error: 'invalid filming time' }, 400);
+  if (rollSize != null && !Number.isInteger(rollSize)) {
+    return json({ error: 'invalid roll size' }, 400);
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -106,10 +107,10 @@ Deno.serve(async (req) => {
   const { data, error } = await asUser.rpc('create_event', {
     p_name: name,
     p_event_type: eventType,
-    p_format: format,
+    p_look: look,
     p_ends_at: endsAt,
     p_max_members: maxMembers,
-    p_budget_seconds: budgetSeconds ?? null,
+    p_roll_size: rollSize ?? null,
     p_transaction_id: transactionId ?? null,
   });
 

@@ -131,7 +131,7 @@ export default function KeepScreen() {
             <Em>ready.</Em>
           </Display>
           <Body color={Colors.textMuted} style={styles.subcopy}>
-            You filmed as a guest, so it lives on this phone alone. Sign in and it
+            You shot as a guest, so it lives on this phone alone. Sign in and it
             stays yours.
           </Body>
         </View>

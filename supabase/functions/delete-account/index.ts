@@ -34,7 +34,7 @@ const json = (body: unknown, status: number) =>
     headers: { 'Content-Type': 'application/json' },
   });
 
-const BUCKET = 'clips';
+const BUCKET = 'photos';
 
 /** Storage rejects an oversized batch; clips are large but rows are cheap. */
 const REMOVE_BATCH = 100;
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     );
     if (prepareError) throw prepareError;
 
-    const paths: string[] = prepared?.[0]?.clip_paths ?? [];
+    const paths: string[] = prepared?.[0]?.photo_paths ?? [];
 
     // 2. The bucket. Nothing else will ever remove these.
     for (let i = 0; i < paths.length; i += REMOVE_BATCH) {
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
         with an account they asked to be rid of — the account going is the part
         they are entitled to, and a stranded object is ours to sweep up.
       */
-      if (error) console.error('clip removal failed', error);
+      if (error) console.error('photo removal failed', error);
     }
 
     // 3. The user. Everything else follows from the cascades.

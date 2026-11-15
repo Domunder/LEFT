@@ -16,15 +16,14 @@
  */
 
 import { countdownParts, hasEnded } from './event-end';
-import type { Event } from './events';
+import { isDeveloped, type Event } from './events';
 
 /** The route a card opens, matching where that event's flow actually continues. */
 export type FilmDestination =
   | { pathname: '/(host)/invite'; params: { eventId: string } }
   | { pathname: '/(guest)/waiting'; params: { eventId: string } }
   | { pathname: '/(capture)/camera'; params: { eventId: string } }
-  | { pathname: '/(capture)/processing'; params: { eventId: string } }
-  | { pathname: '/(library)/clip/[id]'; params: { id: string } };
+  | { pathname: '/(library)/album/[id]'; params: { id: string } };
 
 /**
  * The card's right-hand badge.
@@ -38,14 +37,13 @@ export function statusLabel(event: Event, now: Date = new Date()): string {
       return 'Not started';
     case 'live': {
       const endsAt = new Date(event.ends_at);
-      if (hasEnded(endsAt, now)) return 'Ended';
+      // The clock has run out and the status has not caught up yet.
+      if (hasEnded(endsAt, now)) return 'Developed';
       const [first, second] = countdownParts(endsAt, now);
       return `${first.value}${first.unit} ${second.value}${second.unit} left`;
     }
-    case 'processing':
-      return 'Creating film…';
-    case 'ready':
-      return 'Completed';
+    case 'developed':
+      return 'Developed';
   }
 }
 
@@ -94,19 +92,12 @@ export function destinationFor(event: Event, userId: string | undefined): FilmDe
         ? { pathname: '/(host)/invite', params: { eventId: event.id } }
         : { pathname: '/(guest)/waiting', params: { eventId: event.id } };
     case 'live':
-      return { pathname: '/(capture)/camera', params: { eventId: event.id } };
-    case 'processing':
-      return { pathname: '/(capture)/processing', params: { eventId: event.id } };
-    case 'ready':
-      /*
-        The param is named `id` and carries an **event** id, not a clip id. 17 is
-        the destination for a finished event and there is no single film object to
-        have an id of its own — so the route's name is a misnomer, kept because
-        renaming it would churn this union, its exported type and the generated
-        typed-route surface for nothing a user could see. 17's own header says
-        the same thing from the other end.
-      */
-      return { pathname: '/(library)/clip/[id]', params: { id: event.id } };
+      // Past ends_at the photos are already readable, whatever the status says.
+      return isDeveloped(event)
+        ? { pathname: '/(library)/album/[id]', params: { id: event.id } }
+        : { pathname: '/(capture)/camera', params: { eventId: event.id } };
+    case 'developed':
+      return { pathname: '/(library)/album/[id]', params: { id: event.id } };
   }
 }
 

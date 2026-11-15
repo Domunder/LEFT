@@ -88,28 +88,21 @@ on conflict (provider, provider_id) do nothing;
 -- event, which start_event() would refuse outright.
 
 insert into public.events (
-  id, host_id, name, event_type, format,
-  invite_code, max_members, budget_seconds, used_seconds,
+  id, host_id, name, event_type, look,
+  invite_code, max_members, roll_size,
   status, ends_at
 )
 values (
   'bbbbbbbb-0000-4000-8000-000000000001',
   '2252058e-dc4d-4f3f-ae4d-59c16cafe35c',
-  'Summer Trip', 'trip', 'vertical',
-  -- 4 people -> budget_plan() gives 60 seconds, shared between all of them.
-  -- Stated rather than left to the column default, which only matches by
-  -- coincidence.
-  'DEV123', 4, 60, 0,
+  'Summer Trip', 'trip', 'golden',
+  'DEV123', 25, 24,
   'setup', now() + interval '3 days'
 )
 on conflict (id) do update set
-  status       = 'setup',
-  used_seconds = 0,
-  ends_at      = now() + interval '3 days';
+  status  = 'setup',
+  ends_at = now() + interval '3 days';
 
--- The roster. Three members, against an estimate of four — 10 shows a group that
--- is filling up. The estimate is no longer a limit: join_event admits anyone with
--- the code, and max_members only sizes the budget and prices the event.
 insert into public.event_members (event_id, user_id, display_name, role)
 values
   ('bbbbbbbb-0000-4000-8000-000000000001', '2252058e-dc4d-4f3f-ae4d-59c16cafe35c', 'Marcus', 'host'),

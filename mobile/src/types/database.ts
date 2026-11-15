@@ -34,113 +34,13 @@ export type Database = {
   }
   public: {
     Tables: {
-      budget_reservations: {
-        Row: {
-          actual_seconds: number | null
-          charged_seconds: number | null
-          clip_id: string | null
-          committed_at: string | null
-          created_at: string
-          event_id: string
-          expires_at: string
-          id: string
-          resolved_at: string | null
-          seconds: number
-          settled_at: string | null
-          user_id: string
-        }
-        Insert: {
-          actual_seconds?: number | null
-          charged_seconds?: number | null
-          clip_id?: string | null
-          committed_at?: string | null
-          created_at?: string
-          event_id: string
-          expires_at: string
-          id?: string
-          resolved_at?: string | null
-          seconds: number
-          settled_at?: string | null
-          user_id: string
-        }
-        Update: {
-          actual_seconds?: number | null
-          charged_seconds?: number | null
-          clip_id?: string | null
-          committed_at?: string | null
-          created_at?: string
-          event_id?: string
-          expires_at?: string
-          id?: string
-          resolved_at?: string | null
-          seconds?: number
-          settled_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "budget_reservations_clip_id_fkey"
-            columns: ["clip_id"]
-            isOneToOne: false
-            referencedRelation: "clips"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "budget_reservations_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      clips: {
-        Row: {
-          created_at: string
-          duration_seconds: number
-          event_id: string
-          id: string
-          recorded_at: string
-          status: Database["public"]["Enums"]["clip_status"]
-          storage_path: string | null
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string
-          duration_seconds: number
-          event_id: string
-          id?: string
-          recorded_at?: string
-          status?: Database["public"]["Enums"]["clip_status"]
-          storage_path?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string
-          duration_seconds?: number
-          event_id?: string
-          id?: string
-          recorded_at?: string
-          status?: Database["public"]["Enums"]["clip_status"]
-          storage_path?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "clips_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       event_members: {
         Row: {
           display_name: string
           event_id: string
           joined_at: string
           role: Database["public"]["Enums"]["member_role"]
+          shots_taken: number
           user_id: string
         }
         Insert: {
@@ -148,6 +48,7 @@ export type Database = {
           event_id: string
           joined_at?: string
           role?: Database["public"]["Enums"]["member_role"]
+          shots_taken?: number
           user_id: string
         }
         Update: {
@@ -155,6 +56,7 @@ export type Database = {
           event_id?: string
           joined_at?: string
           role?: Database["public"]["Enums"]["member_role"]
+          shots_taken?: number
           user_id?: string
         }
         Relationships: [
@@ -169,48 +71,95 @@ export type Database = {
       }
       events: {
         Row: {
-          budget_seconds: number
           created_at: string
+          developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
-          format: Database["public"]["Enums"]["film_format"]
           host_id: string
           id: string
           invite_code: string
+          look: Database["public"]["Enums"]["film_look"]
           max_members: number
           name: string
+          roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
-          used_seconds: number
         }
         Insert: {
-          budget_seconds: number
           created_at?: string
+          developed_at?: string | null
           ends_at: string
           event_type?: Database["public"]["Enums"]["event_type"]
-          format?: Database["public"]["Enums"]["film_format"]
           host_id: string
           id?: string
           invite_code?: string
+          look?: Database["public"]["Enums"]["film_look"]
           max_members: number
           name: string
+          roll_size?: number | null
           status?: Database["public"]["Enums"]["event_status"]
-          used_seconds?: number
         }
         Update: {
-          budget_seconds?: number
           created_at?: string
+          developed_at?: string | null
           ends_at?: string
           event_type?: Database["public"]["Enums"]["event_type"]
-          format?: Database["public"]["Enums"]["film_format"]
           host_id?: string
           id?: string
           invite_code?: string
+          look?: Database["public"]["Enums"]["film_look"]
           max_members?: number
           name?: string
+          roll_size?: number | null
           status?: Database["public"]["Enums"]["event_status"]
-          used_seconds?: number
         }
         Relationships: []
+      }
+      photos: {
+        Row: {
+          created_at: string
+          event_id: string
+          height: number | null
+          id: string
+          status: Database["public"]["Enums"]["photo_status"]
+          storage_path: string | null
+          taken_at: string
+          thumb_path: string | null
+          user_id: string | null
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          height?: number | null
+          id: string
+          status?: Database["public"]["Enums"]["photo_status"]
+          storage_path?: string | null
+          taken_at?: string
+          thumb_path?: string | null
+          user_id?: string | null
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          height?: number | null
+          id?: string
+          status?: Database["public"]["Enums"]["photo_status"]
+          storage_path?: string | null
+          taken_at?: string
+          thumb_path?: string | null
+          user_id?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photos_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       purchases: {
         Row: {
@@ -273,65 +222,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      available_seconds: { Args: { p_event_id: string }; Returns: number }
-      budget_plan: { Args: { p_max_members: number }; Returns: number }
-      close_expired_events: { Args: never; Returns: number }
-      commit_reservation: {
-        Args: { p_actual_seconds: number; p_reservation_id: string }
+      claim_shot: {
+        Args: { p_event_id: string; p_photo_id: string; p_taken_at?: string }
         Returns: {
-          budget_seconds: number
-          charged_seconds: number
-          clip_id: string
-          status: string
-          used_after: number
+          photo_id: string
+          shots_left: number
+          shots_taken: number
         }[]
-      }
-      compile_film: {
-        Args: { p_event_id: string }
-        Returns: {
-          budget_seconds: number
-          created_at: string
-          ends_at: string
-          event_type: Database["public"]["Enums"]["event_type"]
-          format: Database["public"]["Enums"]["film_format"]
-          host_id: string
-          id: string
-          invite_code: string
-          max_members: number
-          name: string
-          status: Database["public"]["Enums"]["event_status"]
-          used_seconds: number
-        }
-        SetofOptions: {
-          from: "*"
-          to: "events"
-          isOneToOne: true
-          isSetofReturn: false
-        }
       }
       create_event: {
         Args: {
-          p_budget_seconds?: number
           p_ends_at: string
           p_event_type: Database["public"]["Enums"]["event_type"]
-          p_format: Database["public"]["Enums"]["film_format"]
+          p_look: Database["public"]["Enums"]["film_look"]
           p_max_members: number
           p_name: string
+          p_roll_size: number
           p_transaction_id?: string
         }
         Returns: {
-          budget_seconds: number
           created_at: string
+          developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
-          format: Database["public"]["Enums"]["film_format"]
           host_id: string
           id: string
           invite_code: string
+          look: Database["public"]["Enums"]["film_look"]
           max_members: number
           name: string
+          roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
-          used_seconds: number
         }
         SetofOptions: {
           from: "*"
@@ -340,21 +261,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      finish_event: {
+      develop_expired_events: { Args: never; Returns: number }
+      end_event: {
         Args: { p_event_id: string }
         Returns: {
-          budget_seconds: number
           created_at: string
+          developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
-          format: Database["public"]["Enums"]["film_format"]
           host_id: string
           id: string
           invite_code: string
+          look: Database["public"]["Enums"]["film_look"]
           max_members: number
           name: string
+          roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
-          used_seconds: number
         }
         SetofOptions: {
           from: "*"
@@ -363,7 +285,9 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      free_max_members: { Args: never; Returns: number }
       generate_invite_code: { Args: never; Returns: string }
+      is_event_developed: { Args: { p_event_id: string }; Returns: boolean }
       is_event_member: {
         Args: { p_event_id: string; p_user_id: string }
         Returns: boolean
@@ -372,43 +296,30 @@ export type Database = {
         Args: { p_display_name: string; p_invite_code: string }
         Returns: string
       }
-      max_take_seconds: { Args: never; Returns: number }
+      max_event_days: { Args: never; Returns: number }
+      max_event_members: { Args: never; Returns: number }
       prepare_account_deletion: {
         Args: { p_user_id: string }
         Returns: {
-          clip_paths: string[]
           hosted_event_ids: string[]
+          photo_paths: string[]
         }[]
       }
-      release_reservation: {
-        Args: { p_reservation_id: string }
-        Returns: number
-      }
-      remaining_seconds: { Args: { p_event_id: string }; Returns: number }
-      reserve_budget: {
-        Args: { p_event_id: string; p_seconds: number }
-        Returns: {
-          granted_seconds: number
-          remaining_after: number
-          reservation_id: string
-        }[]
-      }
-      resolve_takes: { Args: { p_event_id: string }; Returns: undefined }
       start_event: {
         Args: { p_event_id: string }
         Returns: {
-          budget_seconds: number
           created_at: string
+          developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
-          format: Database["public"]["Enums"]["film_format"]
           host_id: string
           id: string
           invite_code: string
+          look: Database["public"]["Enums"]["film_look"]
           max_members: number
           name: string
+          roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
-          used_seconds: number
         }
         SetofOptions: {
           from: "*"
@@ -417,11 +328,11 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      unlimited_roll_cap: { Args: never; Returns: number }
       unlock_max_members: { Args: { p_product_id: string }; Returns: number }
     }
     Enums: {
-      clip_status: "pending" | "uploaded" | "failed"
-      event_status: "setup" | "live" | "processing" | "ready"
+      event_status: "setup" | "live" | "developed"
       event_type:
         | "wedding"
         | "birthday"
@@ -430,8 +341,9 @@ export type Database = {
         | "graduation"
         | "company"
         | "other"
-      film_format: "vertical" | "horizontal"
+      film_look: "golden" | "chrome" | "faded" | "mono"
       member_role: "host" | "guest"
+      photo_status: "pending" | "uploaded" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -562,8 +474,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      clip_status: ["pending", "uploaded", "failed"],
-      event_status: ["setup", "live", "processing", "ready"],
+      event_status: ["setup", "live", "developed"],
       event_type: [
         "wedding",
         "birthday",
@@ -573,8 +484,9 @@ export const Constants = {
         "company",
         "other",
       ],
-      film_format: ["vertical", "horizontal"],
+      film_look: ["golden", "chrome", "faded", "mono"],
       member_role: ["host", "guest"],
+      photo_status: ["pending", "uploaded", "failed"],
     },
   },
 } as const

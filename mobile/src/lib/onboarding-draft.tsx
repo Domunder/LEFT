@@ -31,7 +31,8 @@ import {
 } from 'react';
 
 import type { GlowPresetName } from '@/constants/theme';
-import type { CreateEventInput, EventType, FilmFormat } from './events';
+import type { CreateEventInput, EventType, FilmLook } from './events';
+import { DEFAULT_ROLL_SIZE, type RollSize } from './roll';
 
 /** Mirrors CreateEventInput, but every field is optional until its screen fills it. */
 export type OnboardingDraft = {
@@ -40,7 +41,7 @@ export type OnboardingDraft = {
   /** 02 · Event */
   filmName?: string;
   /** 03 · Format */
-  format?: FilmFormat;
+  look?: FilmLook;
   /** 04 · Event End */
   endsAt?: Date;
   /**
@@ -61,7 +62,8 @@ export type OnboardingDraft = {
    * two different numbers. They are one again: this is what the group may film,
    * and therefore how long what they watch runs.
    */
-  budgetSeconds?: number;
+  /** Undefined until 05.1 is answered; null is the unlimited roll. */
+  rollSize?: RollSize;
 };
 
 /** Why a draft cannot be turned into an event yet. */
@@ -93,14 +95,9 @@ export function draftToCreateEventInput(
   draft: OnboardingDraft,
   now: Date = new Date()
 ): DraftNarrowing {
-  const { eventType, filmName, format, endsAt, maxMembers, budgetSeconds } = draft;
+  const { eventType, filmName, look, endsAt, maxMembers, rollSize } = draft;
 
-  /*
-    `budgetSeconds` is deliberately not required. Undefined means "use the group's
-    default", which is what almost every event does and what 05.1 sends unless the
-    host picked a shorter one — the server derives it from `max_members`.
-  */
-  if (!eventType || !filmName?.trim() || !format || !endsAt || !maxMembers) {
+  if (!eventType || !filmName?.trim() || !look || !endsAt || !maxMembers) {
     return { ok: false, problem: 'incomplete' };
   }
 
@@ -110,7 +107,15 @@ export function draftToCreateEventInput(
 
   return {
     ok: true,
-    input: { name: filmName.trim(), eventType, format, endsAt, maxMembers, budgetSeconds },
+    input: {
+      name: filmName.trim(),
+      eventType,
+      look,
+      endsAt,
+      maxMembers,
+      // `undefined` is "never asked"; null is a deliberate unlimited roll.
+      rollSize: rollSize === undefined ? DEFAULT_ROLL_SIZE : rollSize,
+    },
   };
 }
 

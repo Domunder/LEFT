@@ -169,7 +169,7 @@ export default function InviteScreen() {
 
       <Body color={Invite.subcopy} style={styles.subcopy}>
         Show them the QR or send the link —{'\n'}
-        once they&rsquo;re in, filming can begin.
+        once they&rsquo;re in, the cameras can open.
       </Body>
 
       <Animated.View

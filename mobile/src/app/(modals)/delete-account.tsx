@@ -37,8 +37,8 @@ import { deleteAccount } from '@/lib/events';
  * footage goes too. See supabase/functions/delete-account for why it does not.
  */
 const CONSEQUENCES = [
-  'Films you started are deleted for everyone in them, along with all their clips.',
-  "Clips you filmed in other people's films stay, but are no longer linked to you.",
+  'Films you started are deleted for everyone in them, along with all their photos.',
+  "Photos you took in other people's films stay, but are no longer linked to you.",
   'Purchases are not refunded, and cannot be restored afterwards.',
 ];
 

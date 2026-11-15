@@ -87,7 +87,7 @@ export function KeepYourFilm({ onLinked, onDismiss }: KeepYourFilmProps) {
       </View>
 
       <Body small style={styles.copy}>
-        You&rsquo;re filming as a guest. Sign in so your films stay yours if you lose this
+        You&rsquo;re shooting as a guest. Sign in so your films stay yours if you lose this
         phone.
       </Body>
 

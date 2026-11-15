@@ -1,54 +1,23 @@
 /**
- * 05.1 · Onboarding — Group Size
+ * 05.1 · Onboarding — Group and roll
  *
- * **Two questions, both visible, both answerable.**
+ * **Two questions, both visible, both answerable**: how many people, and how
+ * many shots each of them gets. A host knows roughly who is coming, and "24
+ * shots each" is a unit anyone who has held a disposable camera understands.
  *
- * This screen used to ask three things at once — group size, film length, price
- * — and the middle one was a control with a dominant option: within any tier
- * both lengths cost the same, so the longer one was strictly better and the
- * choice was decoration. It was also unanswerable. Nobody knows, before their
- * wedding, whether it is a four-minute film or a six-minute one. They do know
- * roughly how many people are coming.
+ * The two answers are independent — changing the group does not touch the roll —
+ * and together they decide the price: free up to 100 guests on any finite roll,
+ * one purchase ("LEFT Unlimited") for the unlimited roll or a larger group.
+ * `needsUnlimited()` mirrors that for the copy and the button; `create_event()`
+ * enforces it, so a modified client gets a refusal rather than a free event.
  *
- * The fix then was to demote the length: derive it from the group, draw it as a
- * bar, and hide the alternatives behind an "Adjust" popover. That went too far in
- * the other direction. The one adjustable thing on the screen was the one thing
- * you could not see, and the bar it hid behind measured the film against the
- * longest one the app can make — so a small group's film always looked like a
- * shortfall.
+ * The price sits under the thing it buys and on the button that charges it,
+ * never on a card: a host reads the group, then the roll, then what it costs.
  *
- * Now both questions are face-up, and the second one is answerable because each
- * option states the only thing that separates them: **how long each person gets
- * to film.** That is a unit a host has intuition for, where "six minutes" is not,
- * and it is what makes a longer film a trade rather than a free upgrade. See
- * components/ui/film-length-choices.tsx.
- *
- * **The duration is the shared budget, not a film length.** They were two numbers
- * while a renderer cut a short film out of a larger pool of footage; nothing
- * renders now, so what the host picks here is what the group may film *and* how
- * long what they watch runs. The per-person line on each card is therefore the
- * real share, and a smaller number than it used to be.
- *
- * **The price is back on this screen, and the middle option is no longer free.**
- * It moved to 17 when what was being sold was a clean re-render; with nothing
- * rendered there is nothing to sell after the fact, so the ask returns to where
- * it started. Groups of four or fewer stay free and never see a store sheet —
- * `isFreeGroup()` decides, and `create_event()` enforces the same band
- * server-side, so a modified client gets a refusal rather than a free event.
- *
- * The invariant this screen holds is that the chosen duration is always legal for
- * the chosen group. A group change **resets** the duration to that group's
- * default rather than clamping it: a duration picked for a different group is not
- * a preference worth preserving, and the default is the recommendation. It
- * happens in the same handler rather than an effect — clamping later would render
- * a frame of an illegal pair and re-animate the cards twice. The prototype does
- * exactly that, with a `setTimeout` fired during render.
- *
- * Deviations from the prototype, all in CLAUDE.md's known-conflicts list:
+ * Deviations from the prototype (which drew a film-length dial here, for video):
+ *  - The roll row replaces the dial and its legend.
  *  - The artboard pads this screen to 24px; it keeps the flow's standard 28.
- *  - The prototype's glossy length *dial* is gone, and so is the meter that
- *    replaced it. The options themselves are the readout.
- *  - The CTA carries no arrow icon, unlike 02/03/04. The artboard omits it.
+ *  - The CTA carries no arrow icon, unlike 02/03/04.
  *
  * The ambient glow is not rendered here; it lives in (onboarding)/_layout.tsx so
  * it can travel between screens. `useGlow` just claims this screen's position.
@@ -60,9 +29,9 @@ import { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 
-import { FilmLengthChoices } from '@/components/ui/film-length-choices';
 import { GroupSizeRow } from '@/components/ui/group-size-row';
 import { PillButton } from '@/components/ui/pill-button';
+import { RollChoices } from '@/components/ui/roll-choices';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
@@ -70,13 +39,13 @@ import { Colors, GroupRow, LengthChoice, Motion, Spacing } from '@/constants/the
 import { Typography } from '@/constants/typography';
 import { useEventCreation, type CreationPhase } from '@/hooks/use-event-creation';
 import { draftToCreateEventInput, useGlow, useOnboarding, useStep } from '@/lib/onboarding-draft';
-import { GROUP_PRESETS, adjustOptionsFor, budgetSecondsFor } from '@/lib/pricing';
-import { ctaLabel, isFreeGroup, tierFor, type EventTier } from '@/lib/tiers';
+import { DEFAULT_GROUP_SIZE, DEFAULT_ROLL_SIZE, type RollSize } from '@/lib/roll';
+import { ctaLabel, needsUnlimited, UNLIMITED, unlimitedReason } from '@/lib/tiers';
 
 const EASING = Easing.bezier(...Motion.bezier).factory();
 
-/** The group question arrives after the headline, and the length question trails it. */
-const ENTER_DELAY = { group: 120, length: 180 } as const;
+/** The group question arrives after the headline, and the roll question trails it. */
+const ENTER_DELAY = { group: 120, roll: 180 } as const;
 
 function entering(delay: number) {
   return FadeInDown.duration(Motion.duration).easing(EASING).delay(delay);
@@ -89,10 +58,10 @@ function entering(delay: number) {
  * already gone by then, and a generic label there reads as a hang at the exact
  * moment someone is watching for a charge to go through.
  *
- * A paid group names the price on the button itself. A button that opens a store
+ * A paid event names the price on the button itself. A button that opens a store
  * sheet without saying what it costs is the thing every store guideline is about.
  */
-function ctaFor(phase: CreationPhase['kind'], free: boolean, tier: EventTier): string {
+function ctaFor(phase: CreationPhase['kind'], free: boolean): string {
   switch (phase) {
     case 'purchasing':
       return 'Opening the store…';
@@ -101,7 +70,7 @@ function ctaFor(phase: CreationPhase['kind'], free: boolean, tier: EventTier): s
     case 'creating':
       return 'Working…';
     default:
-      return free ? 'Start filming' : ctaLabel(tier);
+      return free ? 'Create event' : ctaLabel(UNLIMITED);
   }
 }
 
@@ -113,71 +82,40 @@ export default function GroupSizeScreen() {
   useStep(4);
 
   // Preseeded like 02/03/04, so there is no empty state and the CTA is never
-  // disabled. Returning to this screen restores the earlier choice.
-  const [groupSize, setGroupSize] = useState(draft.maxMembers ?? GROUP_PRESETS[0]);
+  // disabled. Returning to this screen restores the earlier choices.
+  const [groupSize, setGroupSize] = useState(draft.maxMembers ?? DEFAULT_GROUP_SIZE);
 
-  /*
-    Null means "whatever this group's default is", which is what almost every
-    event sends. Storing the default itself would make it indistinguishable from a
-    deliberate pick, and a later group change would have to guess whether to keep
-    it.
-  */
-  const [budgetSeconds, setBudgetSeconds] = useState<number | null>(draft.budgetSeconds ?? null);
+  // `undefined` in the draft is "never asked"; null is a deliberate unlimited roll.
+  const [rollSize, setRollSize] = useState<RollSize>(
+    draft.rollSize === undefined ? DEFAULT_ROLL_SIZE : draft.rollSize
+  );
 
-  /*
-    Plain derivations. `adjustOptionsFor` returns a stable module constant, so
-    this identity is safe to hand to animated styles.
-  */
-  const options = adjustOptionsFor(groupSize);
-  const effectiveBudget = budgetSeconds ?? budgetSecondsFor(groupSize);
-
-  /*
-    What this group costs. Quoted from the client's mirror of the SKU table, which
-    only decides which product the store sheet shows — `create_event()` compares
-    the receipt against `max_members` itself.
-  */
-  const free = isFreeGroup(groupSize);
-  const tier = tierFor(groupSize);
+  // A mirror of the server's rule, for the copy and the button only.
+  const free = !needsUnlimited(groupSize, rollSize);
 
   function selectGroup(next: number) {
     if (next === groupSize) return;
     // Web has no haptics engine; calling through is a no-op but noisy in logs.
     if (Platform.OS !== 'web') void Haptics.selectionAsync();
     setGroupSize(next);
-    /*
-      Reset rather than clamp, in the same handler. The duration must never be
-      illegal — not even for the frame between the group change and a cleanup
-      pass — and a duration chosen for twenty-five people means nothing at two
-      hundred. Back to that group's recommendation.
-    */
-    setBudgetSeconds(null);
   }
 
-  function selectBudgetSeconds(next: number) {
-    if (next === effectiveBudget) return;
+  function selectRoll(next: RollSize) {
+    if (next === rollSize) return;
     if (Platform.OS !== 'web') void Haptics.selectionAsync();
-    setBudgetSeconds(next);
+    setRollSize(next);
   }
 
   async function handleContinue() {
     if (creation.busy) return;
 
-    /*
-      `budgetSeconds` is sent only when the host actually chose one. Sending the
-      computed default instead would make this screen's mirror of `budget_plan()`
-      authoritative by accident, which is the one thing lib/pricing.ts must not
-      become.
-    */
-    const chosen = {
-      maxMembers: groupSize,
-      ...(budgetSeconds === null ? {} : { budgetSeconds }),
-    };
+    const chosen = { maxMembers: groupSize, rollSize };
     patch(chosen);
 
     /*
       Narrowed from a locally merged draft rather than from `draft` itself:
       `patch` is a state update, so the value read back on this tick is still
-      the old one and the event would be created at the previous group size.
+      the old one and the event would be created with the previous answers.
     */
     const narrowed = draftToCreateEventInput({ ...draft, ...chosen });
 
@@ -199,7 +137,7 @@ export default function GroupSizeScreen() {
     }
 
     /*
-      Pays first when the group is a paid one, then creates. The hook owns that
+      Pays first when the event is a paid one, then creates. The hook owns that
       whole sequence — the store sheet, the settle backoff, and the receipt held
       across a retry so a second attempt never charges twice.
     */
@@ -230,7 +168,7 @@ export default function GroupSizeScreen() {
       </Display>
 
       <Body small style={styles.subcopy}>
-        Make sure everyone gets a turn behind the camera.
+        Everyone gets their own roll of film.
       </Body>
 
       {/*
@@ -251,12 +189,6 @@ export default function GroupSizeScreen() {
         // child pan the whole view.
         horizontal={false}>
         <Animated.View entering={entering(ENTER_DELAY.group)}>
-          {/*
-            The answer to the headline, in words. It used to share this line with
-            the price; the duration moved into the cards below, where it is chosen
-            rather than merely reported, and the price moved under them, where it
-            sits next to the thing being bought.
-          */}
           <Text style={styles.answer}>Up to {groupSize} people</Text>
 
           <GroupSizeRow value={groupSize} onChange={selectGroup} />
@@ -264,37 +196,25 @@ export default function GroupSizeScreen() {
 
         <View style={styles.divider} />
 
-        <Animated.View entering={entering(ENTER_DELAY.length)}>
+        <Animated.View entering={entering(ENTER_DELAY.roll)}>
           <Label small style={styles.sectionLabel}>
-            Filming time
+            Shots per person
           </Label>
 
-          <FilmLengthChoices
-            options={options}
-            value={effectiveBudget}
-            group={groupSize}
-            onChange={selectBudgetSeconds}
-          />
+          <RollChoices value={rollSize} onChange={selectRoll} />
 
-          {/*
-            One line, and it exists only to name the number on the cards. Without
-            it "~18s each" is a quantity of nothing in particular; with it the
-            options differ by something a host can actually weigh.
-          */}
           <Caption color={Colors.textFaint} style={styles.footnote}>
-            Shared between everyone — that’s roughly how long each person gets.
+            Nobody sees a photo until the event ends. Then the film is developed for everyone.
           </Caption>
 
           {/*
-            The price, under the thing it buys rather than up by the headline. A
-            host reads the group, then what it gets them, then what it costs, in
-            that order — and the free tier says so plainly instead of showing a
-            struck-out price, which would read as a discount that ran out.
+            The price, under the thing it buys. Free says so plainly instead of
+            showing a struck-out price, which would read as a discount that ran out.
           */}
           <Caption color={free ? Colors.textFaint : Colors.text} style={styles.price}>
             {free
-              ? 'Free for groups of four or fewer.'
-              : `${tier.price} once — ${tier.label}. No subscription.`}
+              ? 'Free — up to 100 guests and 36 shots each.'
+              : `${unlimitedReason(groupSize, rollSize)} — ${UNLIMITED.price} once for this event. No subscription.`}
           </Caption>
         </Animated.View>
       </ScrollView>
@@ -316,7 +236,7 @@ export default function GroupSizeScreen() {
       )}
 
       <PillButton
-        label={ctaFor(creation.phase.kind, free, tier)}
+        label={ctaFor(creation.phase.kind, free)}
         onPress={() => void handleContinue()}
         disabled={creation.busy}
         style={styles.cta}

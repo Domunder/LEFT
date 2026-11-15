@@ -281,11 +281,11 @@ export default function SettingsScreen() {
           ) : null}
 
           <SettingsGroup title="Notifications">
-            <SettingsListRow label="Someone films a clip">
+            <SettingsListRow label="Someone joins your film">
               <ToggleSwitch
                 value={prefs.clipFilmed}
                 onValueChange={(next) => setPref('clipFilmed', next)}
-                accessibilityLabel="Notify me when someone films a clip"
+                accessibilityLabel="Notify me when someone joins my film"
               />
             </SettingsListRow>
 
@@ -295,11 +295,11 @@ export default function SettingsScreen() {
               notification to suppress. Drawn because the artboard draws it, and
               read the moment there is something to gate. See notification-prefs.ts.
             */}
-            <SettingsListRow label="Film is ready">
+            <SettingsListRow label="Film is developed">
               <ToggleSwitch
                 value={prefs.filmReady}
                 onValueChange={(next) => setPref('filmReady', next)}
-                accessibilityLabel="Notify me when the film is ready"
+                accessibilityLabel="Notify me when the film is developed"
               />
             </SettingsListRow>
           </SettingsGroup>

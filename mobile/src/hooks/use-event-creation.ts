@@ -1,22 +1,15 @@
 /**
  * Spending the onboarding draft: pay, then create the event.
  *
- * **This hook used to be the paywall, then was not, and is again.** The purchase
- * machinery below — the settle backoff, the paid-transaction ref, the cancelled
- * sheet handling — moved out to `use-film-unlock.ts` when the ask moved to 17,
- * and has moved back near-verbatim now that there is nothing to sell after the
- * film. Read it as a return rather than a rewrite; the reasoning for each piece
- * is unchanged, only the moment it runs at.
- *
  * The order is pay, then create, and it is that way round for one reason:
  * `create_event()` claims a ledger row in the same transaction as the insert, so
  * a purchase that exists but is never spent is recoverable (it stays unconsumed
  * and pays for the next attempt) while an event that exists but was never paid
  * for is not.
  *
- * **Groups of four or fewer never touch any of this.** `isFreeGroup()` short-
- * circuits straight to `createEvent()` with no transaction id, and the server
- * skips its claim for the same band. The free tier is enforced there, not here.
+ * **A free event never touches any of this.** `needsUnlimited()` short-circuits
+ * straight to `createEvent()` with no transaction id, and the server skips its
+ * claim for the same events. The free tier is enforced there, not here.
  */
 
 import { useRef, useState } from 'react';
@@ -35,7 +28,7 @@ import {
   PURCHASES_UNAVAILABLE,
   purchaseTier,
 } from '@/lib/purchases';
-import { isFreeGroup, tierFor } from '@/lib/tiers';
+import { needsUnlimited, UNLIMITED } from '@/lib/tiers';
 
 /**
  * Waits between creation attempts while a purchase settles, in ms.
@@ -75,8 +68,8 @@ export function useEventCreation(): EventCreation {
     after it is written, and nothing renders from it.
 
     It does not survive unmount, which is what Restore Purchases is for — the
-    receipt is still in the ledger and still unspent, so the next attempt at any
-    group size it covers will find and spend it.
+    receipt is still in the ledger and still unspent, so the next paid event will find
+    and spend it.
   */
   const paidTransaction = useRef<string | undefined>(undefined);
 
@@ -117,7 +110,7 @@ export function useEventCreation(): EventCreation {
         server refuses a paid group size without a receipt whatever this says, so
         a wrong answer here is a bad screen rather than a free event.
       */
-      if (isFreeGroup(input.maxMembers)) {
+      if (!needsUnlimited(input.maxMembers, input.rollSize)) {
         setPhase({ kind: 'creating' });
         return await createEvent(input);
       }
@@ -138,13 +131,8 @@ export function useEventCreation(): EventCreation {
         }
 
         setPhase({ kind: 'purchasing' });
-        /*
-          Priced on the group size on screen. The server compares the receipt
-          against `max_members` itself — this only decides which product the store
-          sheet shows — and `create_event`'s 15-minute leniency covers the host who
-          changes the group while that sheet is open.
-        */
-        paidTransaction.current = (await purchaseTier(tierFor(input.maxMembers))).transactionId;
+        // One product. The server checks the receipt itself; this only opens the sheet.
+        paidTransaction.current = (await purchaseTier(UNLIMITED)).transactionId;
       }
 
       setPhase({ kind: 'creating' });

@@ -19,7 +19,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
-import { CircleIconButton } from '@/components/ui/circle-back-button';
 import { MemberChip } from '@/components/ui/member-chip';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
@@ -120,16 +119,7 @@ export default function GroupScreen() {
 
   return (
     <Screen transparent style={styles.screen}>
-      <ScreenHeader
-        style={styles.header}
-        right={
-          <CircleIconButton
-            icon="info"
-            accessibilityLabel="How the shared budget works"
-            onPress={() => router.push('/(modals)/group-info')}
-          />
-        }
-      />
+      <ScreenHeader style={styles.header} />
 
       <Label style={styles.eyebrow}>Your Group</Label>
 
@@ -230,7 +220,7 @@ export default function GroupScreen() {
 
       <PillButton
         label={starting ? 'Starting…' : 'Start the Event'}
-        icon="video"
+        icon="camera"
         disabled={!event || starting}
         onPress={() => void handleStart()}
       />

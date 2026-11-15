@@ -177,7 +177,7 @@ export default function LandingScreen() {
         </Display>
 
         <Body style={styles.subcopy}>
-          Set a time limit. Everyone films.{'\n'}One memory, automatically made.
+          One roll each. No peeking.{'\n'}Developed together when it ends.
         </Body>
 
         <View style={styles.providers}>
