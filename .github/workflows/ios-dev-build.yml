@@ -57,10 +57,13 @@ jobs:
       PROFILE: ${{ inputs.profile || 'development' }}
       # Keep Xcode's logs if the build fails (see the upload step below).
       EAS_LOCAL_BUILD_SKIP_CLEANUP: '1'
-      EAS_LOCAL_BUILD_WORKINGDIR: ${{ runner.temp }}/eas-build
 
     steps:
       - uses: actions/checkout@v4
+
+      # The `runner` context does not exist in job-level `env`, so this is set here.
+      - name: Point the local build at a known directory
+        run: echo "EAS_LOCAL_BUILD_WORKINGDIR=$RUNNER_TEMP/eas-build" >> "$GITHUB_ENV"
 
       - name: Fail early without the Expo token
         run: |
