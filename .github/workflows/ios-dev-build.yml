@@ -1,0 +1,109 @@
+# iOS development build on a GitHub-hosted Mac, without spending EAS build quota.
+#
+# `eas build --local` runs the same build EAS would, on this runner. It talks to
+# Expo only to check the project and to download the signing credentials EAS
+# already manages (the ad hoc profile with the registered iPhones). `eas upload`
+# then hands the .ipa to EAS for an install link — the same QR / link flow as a
+# cloud build, which matters because there is no Mac to install an .ipa from.
+#
+# Needs one repository secret: EXPO_TOKEN (expo.dev -> Account settings ->
+# Access tokens). Nothing else is stored here.
+#
+# Start it either way:
+#   - Actions tab -> "iOS dev build" -> Run workflow (only once this file is on
+#     the default branch), or
+#   - push a tag from any branch that contains this file:
+#       git tag ios-build-1 && git push origin ios-build-1
+#
+# This repository is public, so the build log is too. The .ipa is deliberately
+# not attached as a workflow artifact.
+
+name: iOS dev build
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Build profile from mobile/eas.json
+        default: development
+        type: choice
+        options:
+          - development
+          - preview
+  push:
+    tags:
+      - 'ios-build-*'
+
+concurrency:
+  group: ios-dev-build
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # Expo SDK 58 builds against the iOS 27 SDK; EAS itself uses Xcode 27.1 for it.
+    # `xcode-27` is GitHub's (preview) image with that toolchain.
+    runs-on: xcode-27
+    timeout-minutes: 90
+
+    defaults:
+      run:
+        working-directory: mobile
+
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      PROFILE: ${{ inputs.profile || 'development' }}
+      # Keep Xcode's logs if the build fails (see the upload step below).
+      EAS_LOCAL_BUILD_SKIP_CLEANUP: '1'
+      EAS_LOCAL_BUILD_WORKINGDIR: ${{ runner.temp }}/eas-build
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail early without the Expo token
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::Add the EXPO_TOKEN repository secret (Settings -> Secrets and variables -> Actions)."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Toolchain
+        run: |
+          xcodebuild -version
+          pod --version
+          fastlane --version | tail -1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install --global eas-cli
+
+      - name: Build
+        run: |
+          eas build --local \
+            --platform ios \
+            --profile "$PROFILE" \
+            --non-interactive \
+            --output "$RUNNER_TEMP/left.ipa"
+
+      - name: Upload to EAS for an install link
+        run: eas upload --platform ios --build-path "$RUNNER_TEMP/left.ipa" --non-interactive
+
+      # Build logs only — no binary, no credentials.
+      - name: Keep Xcode logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcode-logs
+          path: ${{ runner.temp }}/eas-build/logs
+          if-no-files-found: ignore
+          retention-days: 7
