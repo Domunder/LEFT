@@ -1,23 +1,20 @@
 /**
  * Which notifications someone wants — 20's two switches.
  *
- * Structured like lib/prompt-dismissal.ts, for the same reasons: keyed by user
- * id so a shared device does not carry one person's choice into the next
- * person's session, and in AsyncStorage rather than the database because an
- * anonymous user's row is exactly the thing that can vanish.
+ * Kept in AsyncStorage, keyed by user id so a shared device does not carry one
+ * person's choice into the next person's session — and copied to the server
+ * with the push token (`lib/push.ts` -> `register_push_token`), because the
+ * server is what sends. The local copy is the source: it exists before there is
+ * a token (permission not asked yet, or refused) and survives the token
+ * changing.
  *
- * Both default to on, because the artboard draws both switches on and never
- * draws one off. A read that fails returns the defaults rather than silence:
- * the cost of a lost preference is a notification someone did not want, and the
- * cost of guessing the other way is never being told your film is ready.
+ * Both default to on. A read that fails returns the defaults rather than
+ * silence: the cost of a lost preference is a notification someone did not
+ * want, and the cost of guessing the other way is never being told the photos
+ * are ready.
  *
- * **`clipFilmed` is live** — it gates 18's toast, raised app-wide by
- * `ClipArrivalsProvider` rather than by any one screen, which is
- * what makes this screen's switch do something rather than merely remember
- * something. **`filmReady` gates nothing yet.** There is no push infrastructure
- * in the app at all, so the preference is recorded and honoured by nobody. It is
- * drawn because the artboard draws it, and it will be read the moment there is a
- * notification to suppress.
+ * Both are honoured by the server: `notification_recipients()` leaves out a
+ * device whose owner switched that kind off.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,15 +22,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const KEY_PREFIX = 'left:notifications:';
 
 export type NotificationPrefs = {
-  /** Someone in the group filmed a clip. Gates 18's in-app toast. */
-  clipFilmed: boolean;
-  /** The film finished compiling. Nothing raises this yet — see the header. */
-  filmReady: boolean;
+  /** "Your photos are developed" — when an event ends. */
+  developed: boolean;
+  /** The reminder about an hour before an event ends, while there are shots left. */
+  reminder: boolean;
 };
 
 export const DEFAULT_PREFS: NotificationPrefs = {
-  clipFilmed: true,
-  filmReady: true,
+  developed: true,
+  reminder: true,
 };
 
 function keyFor(userId: string, pref: keyof NotificationPrefs): string {
@@ -44,20 +41,20 @@ function keyFor(userId: string, pref: keyof NotificationPrefs): string {
  * Read both switches.
  *
  * One key per preference rather than a serialised object: a half-written blob
- * would take both switches with it, and there is no migration story here worth
- * the coupling. Read together so the screen renders in one pass.
+ * would take both switches with it. Read together so the screen renders in one
+ * pass.
  */
 export async function readPrefs(userId: string): Promise<NotificationPrefs> {
   try {
-    const [clipFilmed, filmReady] = await Promise.all([
-      AsyncStorage.getItem(keyFor(userId, 'clipFilmed')),
-      AsyncStorage.getItem(keyFor(userId, 'filmReady')),
+    const [developed, reminder] = await Promise.all([
+      AsyncStorage.getItem(keyFor(userId, 'developed')),
+      AsyncStorage.getItem(keyFor(userId, 'reminder')),
     ]);
 
     return {
       // Absent means never set, which is the default — only an explicit '0' is off.
-      clipFilmed: clipFilmed === null ? DEFAULT_PREFS.clipFilmed : clipFilmed === '1',
-      filmReady: filmReady === null ? DEFAULT_PREFS.filmReady : filmReady === '1',
+      developed: developed === null ? DEFAULT_PREFS.developed : developed === '1',
+      reminder: reminder === null ? DEFAULT_PREFS.reminder : reminder === '1',
     };
   } catch {
     return DEFAULT_PREFS;

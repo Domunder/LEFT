@@ -109,3 +109,17 @@ values
   ('bbbbbbbb-0000-4000-8000-000000000001', 'cccccccc-0000-4000-8000-000000000002', 'Yuki',   'guest'),
   ('bbbbbbbb-0000-4000-8000-000000000001', 'cccccccc-0000-4000-8000-000000000003', 'Priya',  'guest')
 on conflict (event_id, user_id) do nothing;
+
+-- ---------------------------------------------------------------------------
+-- Waking edge functions from the database (push, retention)
+-- ---------------------------------------------------------------------------
+-- pg_cron reaches the edge functions through pg_net, and reads where and with
+-- which key from Vault. Inside the local Docker network the gateway is `kong`.
+-- The key is not written here: copy "service_role key" from `npm run db:status`
+-- and run, once per reset,
+--
+--     select vault.create_secret('<service_role key>', 'service_role_key');
+--
+-- Without it nothing breaks; notifications queue up and the purge never runs.
+select vault.create_secret('http://kong:8000', 'project_url')
+ where not exists (select 1 from vault.secrets where name = 'project_url');

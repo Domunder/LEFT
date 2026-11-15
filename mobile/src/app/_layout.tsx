@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ToastProvider } from '@/components/ui/toast-host';
 import { getSession } from '@/lib/auth';
 import { OnboardingProvider } from '@/lib/onboarding-draft';
+import { onPushOpened, syncPush } from '@/lib/push';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { startUploadQueue } from '@/lib/upload-queue';
 import { Colors } from '@/constants/theme';
@@ -138,6 +139,14 @@ export default function RootLayout() {
     startUploadQueue();
   }, []);
 
+  /*
+    Keep this phone's push token current — it can change, and the person signed
+    in can. Never prompts: the permission is asked for in context (lib/push.ts).
+  */
+  useEffect(() => {
+    void syncPush({ ask: false });
+  }, []);
+
   const fontsSettled = fontsLoaded || fontError || fontsTimedOut;
 
   useEffect(() => {
@@ -162,6 +171,24 @@ export default function RootLayout() {
     setRedirectTo(null);
     router.replace(redirectTo);
   }, [ready, redirectTo, router]);
+
+  /*
+    A tapped notification opens what it was about: the album for "developed",
+    the camera for the reminder. Subscribed only once the Stack is mounted, for
+    the reason given on `redirectTo`; a notification that launched the app is
+    delivered here too, after the returning-user redirect, so it lands on top.
+  */
+  useEffect(() => {
+    if (!ready) return;
+
+    return onPushOpened(({ eventId, kind }) => {
+      if (kind === 'developed') {
+        router.push({ pathname: '/(library)/album/[id]', params: { id: eventId } });
+      } else {
+        router.push({ pathname: '/(capture)/camera', params: { eventId } });
+      }
+    });
+  }, [ready, router]);
 
   // Hold the splash rather than rendering headlines in a fallback font.
   if (!ready) return null;

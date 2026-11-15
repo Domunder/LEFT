@@ -86,6 +86,7 @@ import { useCameraSession } from '@/hooks/use-camera-session';
 import type { FilmLook } from '@/lib/events';
 import { latestShotThumb } from '@/lib/my-shots';
 import { at } from '@/lib/pair';
+import { askForPushOnce } from '@/lib/push';
 import { enqueueShot, subscribeToQueue } from '@/lib/upload-queue';
 import { pinchZoom, stopAt, stopsForDevice, wideZoom } from '@/lib/zoom';
 
@@ -95,6 +96,9 @@ const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, 
 const CAPTURE_QUALITY = 0.92;
 
 const DEV = __DEV__;
+
+/** How long after a shot the notification prompt waits, so it never lands on the shutter animation. */
+const PUSH_PROMPT_DELAY_MS = 1200;
 
 /** Every lens the phone has, behind one zoom range — see `lib/zoom.ts`. */
 const BACK_LENSES: DeviceFilter = {
@@ -602,6 +606,10 @@ function Viewfinder({
         width: picture.width,
         height: picture.height,
       });
+
+      // A frame now exists that will be developed later — the moment to ask
+      // whether to say when. Once per run, after the shutter has settled.
+      setTimeout(askForPushOnce, PUSH_PROMPT_DELAY_MS);
     } catch (e) {
       // Nothing was queued, so nothing was spent. Say so; the next press is a new frame.
       if (DEV) console.warn(`[camera] shot not taken: ${e}`);

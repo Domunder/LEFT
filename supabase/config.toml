@@ -464,3 +464,10 @@ verify_jwt = false
 [functions.create-event]
 enabled = true
 verify_jwt = true
+
+# Woken by Postgres (pg_cron -> pg_net, see dispatch_notifications()) with the
+# service-role key, which is a valid JWT, so the gate stays on; the function
+# additionally compares the key in full.
+[functions.send-notifications]
+enabled = true
+verify_jwt = true

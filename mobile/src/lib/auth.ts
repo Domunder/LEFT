@@ -22,6 +22,7 @@ import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
 
 import { forgetUser } from './purchases';
+import { unregisterPush } from './push';
 import { getSupabase } from './supabase';
 
 /** Apple's private-relay domain. Its local part is a random handle, not a name. */
@@ -326,6 +327,10 @@ export async function signOut() {
   } catch {
     // Nothing actionable — the Supabase sign-out below is what matters.
   }
+
+  // While there is still a session to authorise it: this phone stops receiving
+  // the departing user's notifications. Never throws.
+  await unregisterPush();
 
   const { error } = await getSupabase().auth.signOut();
   if (error) throw error;

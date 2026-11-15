@@ -3,7 +3,8 @@
  *
  * Reached from the gear on 15/16. Everything on it is real: the profile card
  * reads the live session, Log Out actually signs out, the legal rows open the
- * screens that exist, and both switches persist per user.
+ * screens that exist, and both switches persist per user and gate what the
+ * server sends to this phone.
  *
  * Deviations from the artboard, all deliberate:
  *
@@ -40,7 +41,15 @@
 import type { Session } from '@supabase/supabase-js';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { AmbientGlow } from '@/components/ui/ambient-glow';
 import { CircleIconButton } from '@/components/ui/circle-back-button';
@@ -60,6 +69,7 @@ import {
   writePref,
   type NotificationPrefs,
 } from '@/lib/notification-prefs';
+import { syncPush } from '@/lib/push';
 
 /** What the profile card shows, once the session has been read. */
 type Profile = {
@@ -153,7 +163,31 @@ export default function SettingsScreen() {
   const setPref = useCallback(
     (key: keyof NotificationPrefs, value: boolean) => {
       setPrefs((previous) => ({ ...previous, [key]: value }));
-      if (userId) void writePref(userId, key, value);
+      if (!userId) return;
+
+      void (async () => {
+        await writePref(userId, key, value);
+
+        /*
+          The server sends, so the server has to hear about it. Switching one on
+          is also a fair moment for the system prompt if it was never shown —
+          the user has just asked for exactly this. After a refusal only the
+          system settings can help, and saying so beats a switch that is on and
+          does nothing.
+        */
+        const status = await syncPush({ ask: value });
+
+        if (value && status === 'denied') {
+          Alert.alert(
+            'Notifications are off',
+            'LEFT is not allowed to send notifications on this phone. You can change that in Settings.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+            ]
+          );
+        }
+      })();
     },
     [userId]
   );
@@ -281,25 +315,24 @@ export default function SettingsScreen() {
           ) : null}
 
           <SettingsGroup title="Notifications">
-            <SettingsListRow label="Someone joins your film">
+            {/*
+              Both are honoured by the server, per device: the choice travels
+              with the push token (lib/push.ts) and `notification_recipients()`
+              leaves this phone out of a kind that is switched off.
+            */}
+            <SettingsListRow label="Photos are developed">
               <ToggleSwitch
-                value={prefs.clipFilmed}
-                onValueChange={(next) => setPref('clipFilmed', next)}
-                accessibilityLabel="Notify me when someone joins my film"
+                value={prefs.developed}
+                onValueChange={(next) => setPref('developed', next)}
+                accessibilityLabel="Notify me when an event's photos are developed"
               />
             </SettingsListRow>
 
-            {/*
-              Recorded and honoured by nobody yet — there is no push
-              infrastructure in the app, so nothing raises a "film is ready"
-              notification to suppress. Drawn because the artboard draws it, and
-              read the moment there is something to gate. See notification-prefs.ts.
-            */}
-            <SettingsListRow label="Film is developed">
+            <SettingsListRow label="Reminder before it ends">
               <ToggleSwitch
-                value={prefs.filmReady}
-                onValueChange={(next) => setPref('filmReady', next)}
-                accessibilityLabel="Notify me when the film is developed"
+                value={prefs.reminder}
+                onValueChange={(next) => setPref('reminder', next)}
+                accessibilityLabel="Remind me about an hour before an event ends"
               />
             </SettingsListRow>
           </SettingsGroup>

@@ -90,6 +90,12 @@
         }
       ],
       "expo-apple-authentication",
+      [
+        "expo-notifications",
+        {
+          "color": "#101010"
+        }
+      ],
       "./plugins/with-worklets-headers"
     ],
     "experiments": {
