@@ -351,6 +351,7 @@ export type Database = {
       }
       develop_expired_events: { Args: never; Returns: number }
       dispatch_notifications: { Args: never; Returns: boolean }
+      dispatch_purge: { Args: never; Returns: boolean }
       end_event: {
         Args: { p_event_id: string }
         Returns: {
@@ -375,10 +376,23 @@ export type Database = {
         }
       }
       enqueue_ending_reminders: { Args: never; Returns: number }
+      event_storage_paths: {
+        Args: { p_event_id: string }
+        Returns: {
+          path: string
+        }[]
+      }
+      events_due_for_purge: {
+        Args: { p_limit?: number }
+        Returns: {
+          event_id: string
+        }[]
+      }
       free_max_members: { Args: never; Returns: number }
       generate_invite_code: { Args: never; Returns: string }
       invoke_edge_function: { Args: { p_name: string }; Returns: boolean }
       is_event_developed: { Args: { p_event_id: string }; Returns: boolean }
+      is_event_due_for_purge: { Args: { p_event_id: string }; Returns: boolean }
       is_event_member: {
         Args: { p_event_id: string; p_user_id: string }
         Returns: boolean
@@ -403,6 +417,7 @@ export type Database = {
           photo_paths: string[]
         }[]
       }
+      purge_event: { Args: { p_event_id: string }; Returns: boolean }
       register_push_token: {
         Args: {
           p_notify_developed?: boolean
@@ -414,6 +429,7 @@ export type Database = {
       }
       reminder_lead: { Args: never; Returns: string }
       reminder_min_event_length: { Args: never; Returns: string }
+      retention_period: { Args: never; Returns: string }
       start_event: {
         Args: { p_event_id: string }
         Returns: {
