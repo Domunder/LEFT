@@ -18,6 +18,11 @@
  *    is nothing behind to go back to, so the button leaves the flow for 15 (Films)
  *    rather than popping a history that isn't there.
  *
+ * Also opened from the camera's bottom-right tile (`from=camera`), by any
+ * member while the film is live: then the close button goes back to the camera,
+ * the copy stops promising that the cameras are about to open, and the host's
+ * "See who's joined" is left out.
+ *
  * The ambient glow lives in (host)/_layout.tsx, which is why this is `transparent`.
  */
 
@@ -59,7 +64,9 @@ type SaveState = { kind: 'idle' | 'saving' } | { kind: 'done' | 'failed'; messag
 
 export default function InviteScreen() {
   const router = useRouter();
-  const { eventId } = useLocalSearchParams<{ eventId?: string }>();
+  const { eventId, from } = useLocalSearchParams<{ eventId?: string; from?: string }>();
+  /** Opened over a running camera rather than at the end of creating the event. */
+  const fromCamera = from === 'camera';
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [sharing, setSharing] = useState(false);
@@ -143,8 +150,10 @@ export default function InviteScreen() {
         <View style={styles.headerSpacer} />
         <CircleIconButton
           icon="x"
-          accessibilityLabel="Close, back to your films"
-          onPress={() => router.replace('/(library)/films')}
+          accessibilityLabel={fromCamera ? 'Close, back to the camera' : 'Close, back to your films'}
+          onPress={() =>
+            fromCamera && router.canGoBack() ? router.back() : router.replace('/(library)/films')
+          }
         />
       </View>
 
@@ -169,7 +178,9 @@ export default function InviteScreen() {
 
       <Body color={Invite.subcopy} style={styles.subcopy}>
         Show them the QR or send the link —{'\n'}
-        once they&rsquo;re in, the cameras can open.
+        {fromCamera
+          ? 'they can join while the film is running.'
+          : 'once they’re in, the cameras can open.'}
       </Body>
 
       <Animated.View
@@ -218,11 +229,13 @@ export default function InviteScreen() {
         </View>
       </Animated.View>
 
-      <PillButton
-        label="See who's joined"
-        icon="arrow-right"
-        onPress={() => router.push('/(host)/group')}
-      />
+      {fromCamera ? null : (
+        <PillButton
+          label="See who's joined"
+          icon="arrow-right"
+          onPress={() => router.push('/(host)/group')}
+        />
+      )}
     </Screen>
   );
 }

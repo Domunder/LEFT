@@ -43,7 +43,7 @@ export function inviteUrl(code: string): string {
  * linkify.
  */
 export function inviteMessage(eventName: string, code: string): string {
-  return `Join "${eventName}" on LEFT — we're filming one shared film together.\n\n${inviteUrl(code)}\n\nCode: ${code.toUpperCase()}`;
+  return `Join "${eventName}" on LEFT — one roll of photos each, developed together when it ends.\n\n${inviteUrl(code)}\n\nCode: ${code.toUpperCase()}`;
 }
 
 /** Filename for a QR saved to the camera roll. */

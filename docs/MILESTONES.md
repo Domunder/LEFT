@@ -54,9 +54,6 @@ Zum Vergleich ONCE: bis 5 Gäste gratis, 10 → 2 CHF, 25 → 4, 50 → 14, 100 
 - **„Event starten“ durch den Host behalten?** Heute: Host tippt Start, dann gehen
   alle Kameras auf. Alternative: Event ist ab Erstellung offen (weniger Reibung
   für Reisen). Empfehlung: behalten für M1, in der Beta testen.
-- **Filter-Technik:** Skia-Shader (LUT) nach der Aufnahme einbrennen (empfohlen)
-  vs. Live-Filter im Sucher (bräuchte `react-native-vision-camera`, deutlich
-  aufwändiger). MVP: Sucher mit dezenter Tönung/Korn, echter Look im Ergebnis.
 - **Web-Album:** Sollen entwickelte Alben auch ohne App per Link ansehbar sein?
   Für den MVP nicht nötig, für Fotobuch-Verkauf in Phase 2 sehr wertvoll.
 - **Domain:** `leftmoment.com` existiert noch nicht — ohne sie sind Einladungen tot.
@@ -94,23 +91,95 @@ Zum Vergleich ONCE: bis 5 Gäste gratis, 10 → 2 CHF, 25 → 4, 50 → 14, 100 
   neue Schema hat.
 
 Vorläufig entschieden (bitte widersprechen, falls falsch): Looks heissen
-Golden, Chrome, Faded, Mono (Karten zeigen bis M2 Farbverläufe statt echter
-Vorschau); Events dauern höchstens 31 Tage; nach Event-Ende kann man per Link
+Golden, Chrome, Faded, Mono; Events dauern höchstens 31 Tage; nach Event-Ende kann man per Link
 weiterhin beitreten, um das Album zu sehen; ein belichtetes Bild wird nie
 zurückerstattet.
 
-## M2 · Kamera
+## M2 · Kamera (gebaut, auf dem Gerät noch nicht geprüft)
 
-- Screen 13 neu: Sucher, **ein Auslöser** (Reaktion bei Touch-down, Haptik im
-  selben Frame), Rollenzähler „17 left“, Blitz, Zoom, Front/Rück, Countdown bis
-  zur Entwicklung. Keine Vorschau des geschossenen Bilds.
-- Look einbrennen (Skia), Original + Thumbnail erzeugen; echte Look-Vorschau
-  auf den Karten von Screen 03 (ersetzt die Farbverläufe).
-- Kamera nutzt `claimShot()` aus `lib/photos.ts`; Zähler zeigt nur, was der Server meldet.
-- **Robuste Upload-Queue:** Datei sofort persistent ablegen, Queue überlebt
-  App-Kill und Funklöcher, Retry mit Backoff. (Grösste Schwäche der Video-Version.)
-- Zustände: Kamera-Berechtigung verweigert, Rolle leer, Event beendet, offline.
-- Braucht einen Dev-Build (kein Expo Go).
+- **Look-Pipeline:** ein Skia-Shader (`lib/look-shader.ts`), vier Rezepte in
+  `constants/looks.ts`. Derselbe Shader zeichnet die Karten auf 03 (über
+  `assets/images/look-sample.jpg`, Unsplash-Lizenz) und brennt den Look ins JPEG.
+  Ausgabe: Original mit 3000 px langer Kante + Thumbnail mit 640 px.
+- **Screen 13 neu:** 3:4-Sucher, ein Auslöser (Reaktion und Haptik bei
+  Touch-down, Auslösung beim Loslassen), Rollenzähler, Blitz (LED als Lampe
+  während der Belichtung; Frontkamera: weisser Bildschirm), Zoom (nur echte
+  Linsen des Geräts + Pinch), Front/Rück, Countdown oben rechts.
+- **„Your shots“** (`(capture)/roll`, Kachel unten links): jeder sieht die
+  eigenen Fotos schon vor der Entwicklung, die der anderen nicht (RLS).
+  **Entschieden am 15.11.2026**, ersetzt „keine Vorschau des geschossenen Bilds“.
+- **Looks** an Einwegkamera-Film der 90er/2000er angelehnt (warmer Farbfilm,
+  kühlerer grünstichiger Film, gealterter Abzug, Schwarzweiss) plus Farbsäume
+  der Plastiklinse.
+- **Robuste Upload-Queue** (`lib/upload-queue.ts`): Datei sofort im
+  Dokumentverzeichnis, Eintrag in AsyncStorage; Claim → Entwickeln → Upload →
+  `markPhotoUploaded`, jeder Schritt wiederholbar mit derselben Foto-ID; Neustart
+  bei App-Start, Wiederverbinden und im Backoff.
+- **Zustände:** Berechtigung verweigert, Rolle leer, Film entwickelt, keine
+  Verbindung beim allerersten Öffnen; offline-Hinweis im Sucher.
+- **Entschieden:** Auslösen geht offline. Der Zähler zeigt den letzten Serverwert
+  minus unbestätigte Aufnahmen und sperrt bei 0. Bilder, die bei Event-Ende noch
+  nicht bestätigt sind, lehnt der Server ab – sie gehen verloren.
+- **Sucher zeigt den Film exakt (15.11.2026):** Kamera von `expo-camera` auf
+  `react-native-vision-camera` 5 umgestellt (`SkiaCamera`); derselbe Shader wie
+  im JPEG läuft über jedes Live-Bild, Mono ist im Sucher schwarzweiss.
+  `expo-camera` bleibt nur für den QR-Scanner (08). Blend-Ebenen
+  (`mixBlendMode`) verdecken auf iOS das Kamerabild – nicht wieder versuchen.
+- **`react-native-worklets` 0.8.3** statt Expos 0.5.1 (VisionCamera braucht es),
+  von `expo install` ausgenommen. Erster EAS-Build scheiterte mit 0.7.4 an
+  `'React/RCTMessageThread.h' file not found`; behoben durch 0.8.3 plus
+  `plugins/with-worklets-headers.js` – noch nicht durch einen Build bestätigt.
+- **Zoom:** Stopps aus den Linsenwechselpunkten des Geräts, beschriftet relativ
+  zur Weitwinkellinse (zeigt den echten Tele-Faktor).
+- **Blitz:** jetzt der echte Kamerablitz (`flashMode: 'on'`); Frontkamera:
+  weisser Bildschirm.
+- **Auflösung:** Fotos in 4:3 bis 3024×4032.
+- **Build läuft, Kamera öffnet (15.11.2026).** Zoom-Stopps auf dem Gerät: 0.5×, 1×, 5×.
+- **Absturz nach einiger Zeit im Sucher:** vermutlich Speicher (zu grosse
+  Vorschau-Frames, jeder wird kopiert). Gegenmassnahme: kleinere Frames, 30 fps.
+  Ursache nicht bewiesen, Fix nicht auf dem Gerät bestätigt.
+- **Looks neu abgestimmt:** nur noch Farbschema (gedämpft, sauber), kein Korn im
+  Sucher, kaum Korn/Vignette im Foto. Entschieden nach Referenzbildern des Nutzers.
+- **Runde 6 (15.11.2026):** Frontkamera stand auf dem Kopf → Frames werden nativ
+  gedreht. Vorschaubilder zeigten kurz das ungefilterte Foto → Queue entwickelt
+  jetzt zuerst (dann Claim, dann Upload) und zeigt nur entwickelte Bilder.
+  Blitz: LED wird vor der Aufnahme als Lampe eingeschaltet, zusätzlich zum
+  Kamerablitz. Absturz: Frame-Worklet kann keine Exception mehr nach aussen
+  werfen, React Compiler für `camera.tsx` aus. **Absturzursache weiter unbekannt,
+  nichts davon auf dem Gerät bestätigt.**
+- **Runde 7 (15.11.2026) – Absturzursache gefunden:** Der Absturzbericht zeigt
+  `EXC_BREAKPOINT` auf der Kamera-Queue in Skias GPU-Cache
+  (`makeNonTextureImage` in `SkiaCamera`). RN Skia hat einen GPU-Kontext pro
+  Thread, die Kamera-Queue wechselt den Thread. Speicher und Exceptions (Runden
+  5/6) waren es nicht. `SkiaCamera` ist ersetzt durch
+  `components/ui/film-camera.tsx`: der Kamera-Thread kopiert nur noch Pixel
+  (CPU), gezeichnet wird mit dem Look-Shader im normalen `<Canvas>`.
+  Auslöser nach Kamerawechsel: Freigabe hing an `onStarted`, das beim Wechsel
+  nicht erneut feuert → jetzt `onConfigured` + laufende Session. Blitz: LED als
+  Lampe mit Rückmeldung, Kamerablitz nur als Ersatz; `[camera] fire` /
+  `[camera] torch` loggen jeden Schritt. Fotos folgen jetzt der Gerätelage
+  (quer gehalten = Querformat). **Nur JS, kein neuer Build nötig. Nichts davon
+  auf dem Gerät bestätigt.**
+- **Auf dem Gerät prüfen (Runde 7):** Speicheranzeige im Sucher über 1–2 Minuten
+  (muss flach bleiben), Flüssigkeit der Vorschau, Frontkamera aufrecht und
+  gespiegelt, Auslöser nach Kamerawechsel, Blitz (Logs `[camera] fire` /
+  `[camera] torch`), Querformat-Foto. Bekanntes Restrisiko: Skia wird auf dem
+  Kamera-Thread noch für die Pixelkopie aufgerufen (kein GPU-Zugriff).
+- **Letztes Foto** als Kachel unten links (`lib/my-shots.ts`), Tipp öffnet „Your shots“.
+- **Follow-up:** `GrainOverlay` kachelt auf grossen Flächen nicht (auch Landing).
+- **03:** Beide Kartenreihen passen ohne Scrollen auf ein iPhone 16.
+- **Geprüft:** Typecheck und Lint sauber; `claim_shot` lehnt bei nicht
+  gestartetem Event mit `event_closed` ab (gegen den lokalen Stack).
+- **Nicht geprüft – die VisionCamera-Fassung ist nie gebaut oder gelaufen:**
+  iOS-Build mit den neuen nativen Modulen, Live-Shader und seine Flüssigkeit,
+  Zoom-Stopps und ihre Beschriftung, Blitz, Ausrichtung und Grösse der Fotos,
+  Kachel mit letztem Foto, „Your shots“, 03 ohne Scrollen, Upload in den Bucket,
+  Verhalten nach App-Kill und im Funkloch.
+- **Für dich:** neuer Dev-Build nötig (`react-native-vision-camera` + Skia- und
+  Worklets-Plugin, Nitro, `react-native-worklets` 0.8.3).
+- **Offen:** Look-Rezepte an echten Partyfotos abstimmen; Beispielbild evtl.
+  ersetzen; `developPhoto()` blockiert den JS-Thread kurz (bei Serienaufnahmen
+  ggf. in eine Worklet-Runtime verlegen).
 
 ## M3 · Entwickeln & Album
 

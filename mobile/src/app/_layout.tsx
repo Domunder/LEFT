@@ -9,6 +9,7 @@ import { ToastProvider } from '@/components/ui/toast-host';
 import { getSession } from '@/lib/auth';
 import { OnboardingProvider } from '@/lib/onboarding-draft';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { startUploadQueue } from '@/lib/upload-queue';
 import { Colors } from '@/constants/theme';
 import { useAppFonts } from '@/hooks/use-app-fonts';
 
@@ -128,6 +129,14 @@ export default function RootLayout() {
   useEffect(() => {
     const timer = setTimeout(() => setFontsTimedOut(true), FONT_LOAD_TIMEOUT_MS);
     return () => clearTimeout(timer);
+  }, []);
+
+  /*
+    Photos shot in an earlier run and never sent — a killed app, a venue with no
+    signal — resume here, whatever screen the user lands on.
+  */
+  useEffect(() => {
+    startUploadQueue();
   }, []);
 
   const fontsSettled = fontsLoaded || fontError || fontsTimedOut;

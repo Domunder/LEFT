@@ -26,9 +26,17 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   picker and 05.1 picks group and roll. Verified against a local stack with SQL
   (roll, idempotent claim, reveal, storage policies, paid path); **not yet run on
   a device**.
-- **Next:** `(capture)/camera` (M2) and `(library)/album/[id]` (M3) are
-  placeholders (`components/dev/placeholder.tsx`). Create → invite → join → start
-  works and stops at the camera placeholder.
+- **Done (M2), partly run on a device:** the look pipeline (one Skia shader,
+  `lib/look-shader.ts`), real look previews on 03, the camera
+  (`(capture)/camera`) and the durable upload queue (`lib/upload-queue.ts`).
+  Typecheck and lint are clean. The dev build with
+  `react-native-vision-camera` 5 builds and the camera opens (2026-11-15). The
+  viewfinder was then rewritten (`components/ui/film-camera.tsx`) after a crash
+  on the camera; **that rewrite, the flash and the camera flip are not yet
+  confirmed on a device** — it is JS only, no new build needed.
+- **Next:** `(library)/album/[id]` (M3) is a placeholder
+  (`components/dev/placeholder.tsx`). Create → invite → join → start → shoot
+  works; the developed state's "Open the album" lands on the placeholder.
 
 ## How we work together
 
@@ -57,7 +65,7 @@ panels, the travelling ambient glow. Recreate with React Native primitives —
 never port HTML/CSS.
 
 **These frames predate the reframe and are not valid specs any more:**
-03 Format · 05.1 film length/pricing · 10.1 budget info · 13 Camera · 14 Processing ·
+03 Format · 05.1 film length/pricing · 10.1 budget info · 13 Camera (rebuilt in M2) · 14 Processing ·
 17 Clip detail · 18 toast copy · 19 Lockscreen. New screens for them are designed
 in the existing language, applying the `apple-design` skill, and every decision
 is flagged to the user.
@@ -118,7 +126,7 @@ mobile/src/
     (legal)/              Terms · Privacy
     (host)/               09 Invite · 10 Your group
     (guest)/              11 Name · 12 Waiting
-    (capture)/            13 Camera (placeholder → M2)
+    (capture)/            13 Camera · Your shots (roll)
     (library)/            15/16 Films · album/[id] (placeholder → M3)
     (modals)/             08 Join sheet · Delete account
     settings.tsx          20 Settings
@@ -126,10 +134,12 @@ mobile/src/
   components/ui/          shared primitives
   components/dev/         placeholder.tsx — scaffold, delete when M3 is done
   constants/              theme.ts, typography.ts — all design values; looks.ts
+                          (the looks and their shader recipes)
+  hooks/                  use-camera-session (event + roll + queue for 13), …
   lib/                    supabase, auth, auth-errors, entry, events, photos,
                           storage, roll, tiers, purchases, realtime, invite,
                           event-end, film-status, film-tint, zoom,
-                          notification-prefs
+                          look-shader, upload-queue, notification-prefs
   types/database.ts       generated — `npm run db:types` at the root
 supabase/                 migrations/ (one baseline), functions/, seed.sql
 ```
@@ -138,13 +148,115 @@ Vocabulary: an event is a **film**; a guest's allowance is their **roll**; an
 event ends by being **developed**. "Film" in file names (`film-card`,
 `film-status`) is that metaphor, not video — keep it.
 
-Kept on purpose for M2: `lib/zoom.ts`, `zoom-selector.tsx`, `event-countdown.tsx`,
-`grain-overlay.tsx`.
+## The camera and the looks (M2)
+
+- **One shader, two callers.** `lib/look-shader.ts` holds the only SkSL; a look
+  is a recipe in `constants/looks.ts` (`LOOK_RECIPES`). `LookPreview` draws it on
+  03's cards over `assets/images/look-sample.jpg`, `developPhoto()` runs it
+  offscreen over a capture and encodes original (long edge 3000) + thumbnail
+  (640). Change a look in the recipe and both follow. Recipes are provisional.
+- **The looks are colour schemes, not effects** (decided 2026-11-15): warm
+  (Golden), cool (Chrome), washed out (Faded), black and white (Mono) — muted
+  and clean, with only a trace of grain, vignette and lens fringing (`LENS`) in
+  the print. **The viewfinder draws no grain at all**, only the colour.
+- **The viewfinder shows the film, exactly.** The camera is
+  `react-native-vision-camera` 5; the viewfinder is our own
+  `components/ui/film-camera.tsx` (`FilmCamera`). The frame output delivers
+  small BGRA frames, the frame worklet copies each into a CPU image and hands
+  it to the JS thread, and a `<Canvas>` draws it through the same shader as the
+  JPEG (uniforms from `liveLookUniforms()`) — the same tree as `LookPreview`.
+  Mono's viewfinder is black and white.
+- **No Skia GPU call on the camera thread — ever.** `SkiaCamera` (from
+  `react-native-vision-camera-skia`) shades frames on the GPU on the camera's
+  GCD queue and crashed the app about 20 s after the camera opened
+  (2026-11-15: `EXC_BREAKPOINT` on `com.margelo.camera.frame` in
+  `GrResourceCache`, under `JsiSkImage::makeNonTextureImage`). RN Skia keeps one
+  GPU context per *thread*, and that queue changes threads. Do not go back to
+  `SkiaCamera`, `Skia.Surface.MakeOffscreen` or `MakeImageFromNativeBuffer` in a
+  frame worklet. The package is still installed (removing it changes the native
+  build); prune it in M6.
+- **`expo-camera` stays for one thing: 08's QR scanner** (and its config plugin
+  writes the camera permission string). Do not put overlays with
+  `mixBlendMode` over a camera preview: on iOS they paint over the picture.
+- **`react-native-worklets` is pinned to 0.8.3, above Expo 54's 0.5.1**, and
+  excluded from `expo install` (`expo.install.exclude` in `package.json`).
+  VisionCamera's worklets plugin needs `scheduleOnRuntime` and the
+  `worklets/RunLoop/AsyncQueue.h` header (0.7+); Reanimated 4.1 accepts 0.5–0.8.
+  `expo install --fix` must not pull it back. `@react-native/metro-config` is a
+  dev dependency only because 0.8 lists it as a peer — keep it on RN's version.
+- **`plugins/with-worklets-headers.js` is load-bearing for the iOS build.**
+  Without React-Core's private header path on the `VisionCameraWorklets` pod,
+  EAS fails with `'React/RCTMessageThread.h' file not found` / `could not build
+  module 'RNWorklets'` (seen 2026-11-15 with worklets 0.7.4).
+- **Zoom stops are real lenses only.** The back camera is the phone's virtual
+  multi-lens device; `lib/zoom.ts` turns its `zoomLensSwitchFactors` into stops
+  and labels them as ratios to the wide lens (0.5× / 1× / the telephoto's true
+  factor). One lens and the front camera get no stops — the control hides,
+  pinch still zooms.
+- **Flash** (`fire` / `lightTorch` in `camera.tsx`): the LED is lit as a torch
+  through the camera controller `Camera.flash.leadMs` before the exposure and
+  read back; the front camera turns the viewfinder white instead. The camera's
+  own `flashMode: 'on'` is only requested when the torch could not be confirmed
+  lit — the library drops that request silently when the photo output does not
+  list the mode. **No flash has been seen on a device yet** (not with
+  `expo-camera` either); `[camera] fire` and `[camera] torch` log every step in
+  dev.
+- **The shutter is ready when the session runs *and* was configured for the
+  selected camera** (`onStarted`/`onStopped` plus `onConfigured` in
+  `camera.tsx`). `onStarted` does not fire again after a flip — the running
+  session is only reconfigured — so gating on it alone left the shutter dead.
+- **The frame worklet must never throw, and `film-camera.tsx` and `camera.tsx`
+  are `'use no memo'`.** An exception leaving the worklet aborts the app
+  (margelo/react-native-vision-camera#4219); the React Compiler breaks worklets
+  passed to the camera (#3748). With the compiler off, everything handed to the
+  camera hooks needs a stable identity (`useMemo`/`useCallback`).
+- **Frames arrive upright: `enablePhysicalBufferRotation` is always on**, for
+  both cameras, and the front camera's are mirrored natively (`mirrorMode`).
+  Constant on purpose: changing it recreates the frame output, its queue and
+  its worklet runtime on every flip. The preview is pinned to `'up'`
+  (portrait-locked app); the photo output follows the phone
+  (`useOrientation('device')`), so a sideways phone takes a landscape picture.
+  Selfies are saved mirrored, as previewed.
+- **A frame's pixels are freed by the garbage collector, not by `dispose()`**
+  (a no-op in Skia 2.2.12), and a JS heap only counts an image's megabytes if
+  the image was *made* in it. So `film-camera.tsx` sends the raw `SkData`
+  across and makes an image in each runtime it passes (JS thread: a throwaway,
+  to be charged; UI thread: the one drawn). Handing one image across runtimes
+  leaks about 90 MB/s until some heap happens to collect. **Watch the memory
+  gauge on the first device run.**
+- **Keep the preview frames small.** Every frame is copied once (about 3 MB at
+  768x1024) and uploaded to the GPU on draw. Hence `HD_4_3`,
+  `enablePreviewSizedOutputBuffers` and 30 fps in `film-camera.tsx`, and the
+  camera skips frames while the JS or UI thread is behind (`MAX_IN_FLIGHT`).
+  `[camera] frame` logs the real frame size in dev.
+- **Photos are captured at 4:3, up to 3024x4032**, as JPEG (`usePhotoOutput`).
+- **`GrainOverlay`'s tiled image does not repeat reliably over a large area**
+  (seen as one tile top-left over the viewfinder). Landing still uses it.
+- **A guest can see their own frames before the reveal** (decided 2026-11-15,
+  replacing "no preview at all"): `(capture)/roll`, from the tile bottom-left of
+  the camera, which shows the last photo taken. Both read `lib/my-shots.ts`:
+  uploaded rows + frames still in the queue. Others' stay hidden — RLS.
+- **Any member can invite from the camera** (decided 2026-11-15): the tile
+  bottom-right of 13 opens 09 with `from=camera` — QR, link, back to the
+  camera, without the host's "See who's joined". Members can read their
+  event's `invite_code` (RLS), so no server change.
+- **The shutter only enqueues.** `enqueueShot()` moves the capture into
+  `Paths.document/shots/` and writes the entry to AsyncStorage; develop → claim →
+  upload → `markPhotoUploaded` happen in the queue, each step recorded and
+  repeatable. `startUploadQueue()` runs from the root layout and re-drains on
+  reconnect, on foreground and with backoff.
+- **Shooting works offline** (decided). The counter is the server's last count
+  minus unclaimed queued frames (`useCameraSession`), floored at zero, so the roll
+  cannot be overdrawn. Accepted risk: frames still unclaimed when the event ends
+  are refused by the server and dropped.
+- `developPhoto()` is synchronous on the JS thread (a few hundred ms per frame).
+  If the shutter feels sticky during bursts, move it to a worklet runtime.
+- Skia must never be touched at import time — keep it inside functions.
 
 ## The roll model
 
-The server half exists (`supabase/migrations/20261115000000_baseline.sql`); the
-camera and upload queue that use it are M2.
+The server half is `supabase/migrations/20261115000000_baseline.sql`; the camera
+and upload queue that use it are described above.
 
 - **Roll size is chosen by the host per event: 5, 10, 16, 24, 36 or ∞.** Stored on
   the event (`null` = unlimited). Every guest gets the same roll.
@@ -171,7 +283,8 @@ camera and upload queue that use it are M2.
   the album.
 - **Uploads are durable.** A captured file is moved somewhere persistent and
   queued before the shutter animation finishes; the queue survives app kills and
-  retries. (The video version never had this — it was its biggest gap.)
+  retries (`lib/upload-queue.ts`). (The video version never had this — it was
+  its biggest gap.)
 - **Design for Phase 2 now:** keep a print-capable original (long edge ~3000px)
   plus a thumbnail, with width/height, author and capture time on the row; go
   through one storage seam (`lib/storage.ts`) so the bucket can move to
@@ -240,18 +353,21 @@ The launch list lives in `docs/MILESTONES.md`. Things that bite during developme
   `reset()` after a successful create is load-bearing.
 - **Settings' two notification switches gate nothing** — there is no push
   infrastructure yet (M4).
+- **The seed host cannot sign in with its password** — `signInWithPassword` for
+  `devhost@left.local` answers "Database error querying schema" (seen 2026-11-15
+  against the local stack). Not investigated; the app has no password sign-in.
 - **A local stack from before M1 has the old schema** — run `npm run db:reset`
   at the root once (it wipes local data).
 - `constants/legal.ts` still describes video; rewritten in M6.
 - The store product `left_unlimited` does not exist yet (`mobile/docs/payments.md`).
 - Unused dependencies to prune in M6 unless a milestone picks them up:
   `expo-device`, `expo-symbols`, `expo-web-browser`, `expo-linking`,
-  `@gorhom/bottom-sheet`. (`expo-file-system`, `expo-image` are needed by M2/M3.)
+  `@gorhom/bottom-sheet`. (`expo-image` is needed by M3.)
 
 ## Constraints
 
 - **Dark-only. Portrait-locked.**
-- **Expo Go covers navigation only.** Camera, media library, Google/Apple sign-in,
+- **Expo Go covers navigation only.** Camera, Skia, media library, Google/Apple sign-in,
   purchases, 09's "Save QR" and 08's QR scanner need a dev build
   (`mobile/docs/social-sign-in.md`).
 - **`.env` is optional, but data screens look broken without it.** Copy

@@ -1,9 +1,9 @@
 /**
- * One film stock on 03 — a swatch of the look with its name inside.
+ * One film stock on 03 — a sample photo developed with the look, its name inside.
  *
- * The swatch is a gradient standing in for the look's palette (`LookSwatch`);
- * M2 swaps it for a sample frame run through the real shader. Everything else —
- * selection, press feedback, labelling — stays.
+ * The artwork is `LookPreview`: the camera's own shader over a bundled frame, so
+ * the card shows what the look does rather than a palette standing in for it. A
+ * gradient under the text keeps the name legible over any picture.
  *
  * Feedback lands on press-in, as a spring: the card gives under the finger
  * before the selection commits on release, and a spring can be interrupted
@@ -17,7 +17,8 @@ import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'rea
 import Animated, { Easing, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 
 import type { LookOption } from '@/constants/looks';
-import { LookCard as Tokens, LookCardState, LookSwatch, Motion } from '@/constants/theme';
+import { LookPreview } from '@/components/ui/look-preview';
+import { LookCard as Tokens, LookCardState, Motion } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { at } from '@/lib/pair';
 
@@ -73,7 +74,13 @@ export function LookCard({ look, selected, onPress, style }: LookCardProps) {
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
       style={[styles.card, shell, style]}>
-      <LinearGradient colors={[...LookSwatch[look.id]]} style={StyleSheet.absoluteFill} />
+      <LookPreview look={look.id} />
+      <LinearGradient
+        colors={[...Tokens.textScrim]}
+        locations={[...Tokens.textScrimLocations]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
       <Animated.View style={[StyleSheet.absoluteFill, dim]} pointerEvents="none" />
 
       <View style={styles.text}>
@@ -93,6 +100,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     justifyContent: 'flex-end',
+    backgroundColor: Tokens.bg,
   },
   text: {
     padding: Tokens.padding,

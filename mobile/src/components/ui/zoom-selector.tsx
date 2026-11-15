@@ -6,11 +6,10 @@
  * across a room needs to hit without looking at their hand. The artboard draws
  * the stops; the pinch lives on the viewfinder and drives the same value.
  *
- * What a stop *means* depends on the phone, and `lib/zoom.ts` decides that: on an
- * iPhone with more than one rear lens they are real optical switches, and
- * everywhere else they are points on the digital range. Which is why the labels
- * arrive as data rather than being drawn from a constant — a device with an
- * ultra-wide shows "0.5×" because it genuinely has one.
+ * A stop is always one of the phone's own lenses (`lib/zoom.ts`), which is why
+ * the labels arrive as data rather than being drawn from a constant — a device
+ * with an ultra-wide shows "0.5×" because it genuinely has one. A phone with a
+ * single lens has no stops, and the camera does not render this control at all.
  *
  * Nothing is selected while a pinch is in progress: the value is then between
  * stops, and lighting one up would claim a precision the zoom does not have.
@@ -35,7 +34,7 @@ const TIMING = {
 } as const;
 
 type ZoomSelectorProps = {
-  /** The stops this device can actually offer — see `stopsForLenses`. */
+  /** The stops this device can actually offer — see `stopsForDevice`. */
   stops: ZoomStop[];
   /** The label of the selected stop, or '' while pinching between them. */
   selected: string;

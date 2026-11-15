@@ -157,6 +157,26 @@ export const Typography = {
     fontSize: 16,
   } as TextStyle,
 
+  /**
+   * 13's roll counter — the "17" of "17 left". DM Serif at 34, the largest
+   * numeral on the screen: the roll is the one thing a guest must never misread.
+   */
+  shotCount: {
+    fontFamily: FontFamily.numeric,
+    fontSize: 34,
+    lineHeight: 38,
+    letterSpacing: 34 * -0.01,
+    fontVariant: ['tabular-nums'],
+  } as TextStyle,
+
+  /** The "left" beside it — 12px, weight 500, uppercase. */
+  shotSuffix: {
+    fontFamily: FontFamily.medium,
+    fontSize: 12,
+    letterSpacing: 12 * 0.14,
+    textTransform: 'uppercase',
+  } as TextStyle,
+
   /** The unit letter beside it — 9px, weight 600, uppercase. */
   countdownUnit: {
     fontFamily: FontFamily.semibold,

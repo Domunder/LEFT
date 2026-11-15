@@ -74,6 +74,32 @@ export async function claimShot(
   return { shotsTaken: row.shots_taken, shotsLeft: row.shots_left ?? null };
 }
 
+/**
+ * Where the caller's roll stands, without spending anything — what the camera
+ * shows before its first claim of a session.
+ *
+ * Reads the same `shots_taken` that `claim_shot()` writes, so it is the server's
+ * number. The unlimited roll reports null, as the claim does.
+ */
+export async function getRollState(
+  eventId: string,
+  userId: string,
+  rollSize: number | null
+): Promise<RollState> {
+  const { data, error } = await getSupabase()
+    .from('event_members')
+    .select('shots_taken')
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .single();
+  if (error) throw error;
+
+  return {
+    shotsTaken: data.shots_taken,
+    shotsLeft: rollSize === null ? null : Math.max(0, rollSize - data.shots_taken),
+  };
+}
+
 /** Attach a finished upload to its row. */
 export async function markPhotoUploaded(
   photoId: string,
@@ -103,6 +129,22 @@ export async function listPhotos(eventId: string): Promise<Photo[]> {
     .eq('event_id', eventId)
     .eq('status', 'uploaded')
     .order('taken_at');
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
+ * The caller's own uploaded frames, newest first — readable before the event
+ * is developed, because RLS always lets a member see their own.
+ */
+export async function listMyPhotos(eventId: string, userId: string): Promise<Photo[]> {
+  const { data, error } = await getSupabase()
+    .from('photos')
+    .select()
+    .eq('event_id', eventId)
+    .eq('user_id', userId)
+    .eq('status', 'uploaded')
+    .order('taken_at', { ascending: false });
   if (error) throw error;
   return data ?? [];
 }

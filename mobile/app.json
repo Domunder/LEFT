@@ -3,12 +3,7 @@
     "name": "LEFT",
     "slug": "left",
     "version": "1.0.0",
-    "owner": "domunder87s-team",
-    "extra": {
-      "eas": {
-        "projectId": "53fd28b1-1a1b-4c60-ac31-5fb7116833b5"
-      }
-    },
+    "owner": "domundyhd",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "left",
@@ -94,10 +89,16 @@
           "iosUrlScheme": "com.googleusercontent.apps.247341244789-t9g88ohse2djb0961no6kcm1hnr754ip"
         }
       ],
-      "expo-apple-authentication"
+      "expo-apple-authentication",
+      "./plugins/with-worklets-headers"
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "6a69b943-0502-4388-8919-b19cf29fd219"
+      }
     }
   }
 }

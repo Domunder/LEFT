@@ -566,15 +566,20 @@ export const Motion = {
  * 03 · Film — the four look cards, in a two-by-two grid.
  *
  * Not in the prototype: this screen replaced "Format" when LEFT became a photo
- * app. Geometry only — the two-state palette is LookCardState, the swatches are
- * LookSwatch.
+ * app. Geometry only — the two-state palette is LookCardState; the artwork is a
+ * sample photo drawn by `LookPreview`.
  */
 export const LookCard = {
   /** Between cards, both axes. */
   gap: 12,
   radius: 18,
-  /** A little taller than wide, like a print. */
+  /** A little taller than wide, like a print — the tallest a card gets. */
   aspectRatio: 4 / 5,
+  /**
+   * The shortest a card may be squeezed to so both rows fit without scrolling.
+   * Below this (a small phone at a large text size) the grid scrolls instead.
+   */
+  minHeight: 132,
   /** Name and blurb sit inside the card, bottom-left. */
   padding: 14,
   /** Name -> blurb. */
@@ -588,6 +593,11 @@ export const LookCard = {
   /** Headline -> grid, and the eyebrow/headline rhythm 02 uses. */
   headerGap: 52,
   eyebrowGap: 14,
+  /** Behind the preview while the sample photo decodes. */
+  bg: '#141316',
+  /** Bottom-up darkening under the name and blurb, so they read over any photo. */
+  textScrim: ['rgba(8,8,10,0)', 'rgba(8,8,10,0.55)', 'rgba(8,8,10,0.9)'] as const,
+  textScrimLocations: [0.35, 0.7, 1] as const,
 } as const;
 
 /**
@@ -598,24 +608,10 @@ export const LookCard = {
  */
 export const LookCardState = {
   border: ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.55)'] as const,
-  /** Flat dim over the swatch — heavier when the card is not chosen. */
-  dim: ['rgba(0,0,0,0.5)', 'rgba(0,0,0,0)'] as const,
-  name: ['rgba(240,237,232,0.6)', 'rgba(240,237,232,1)'] as const,
-  blurb: ['rgba(240,237,232,0.35)', 'rgba(240,237,232,0.75)'] as const,
-} as const;
-
-/**
- * What each film stock looks like before a real preview exists.
- *
- * Top-to-bottom gradient stops standing in for the look's palette. M2 replaces
- * these with a sample frame run through the actual shader — the card takes its
- * artwork from here so that is a one-file change.
- */
-export const LookSwatch = {
-  golden: ['#e0b06a', '#9a5526', '#2b150c'],
-  chrome: ['#8fb4c4', '#33596b', '#0d1b23'],
-  faded: ['#dccdbf', '#a3938f', '#4b4346'],
-  mono: ['#d4d4d4', '#707070', '#171717'],
+  /** Flat dim over the photo — light, so an unchosen look can still be judged. */
+  dim: ['rgba(0,0,0,0.28)', 'rgba(0,0,0,0)'] as const,
+  name: ['rgba(240,237,232,0.72)', 'rgba(240,237,232,1)'] as const,
+  blurb: ['rgba(240,237,232,0.5)', 'rgba(240,237,232,0.8)'] as const,
 } as const;
 
 /**
@@ -1039,94 +1035,94 @@ export const ZoomPillState = {
 } as const;
 
 /**
- * 13 · Camera — the recording screen.
+ * 13 · Camera — the disposable camera.
  *
- * Transcribed from the artboard (`design/LEFT App.dc.html`, the frame labelled
- * `13 · Camera`). Two deviations from it, both noted at their token:
- * `criticalFraction` and `minClipSeconds`.
- *
- * Note the viewfinder is **inset and rounded**, not full-bleed. `design/README.md`
- * says "full-bleed camera viewfinder"; the artboard insets it 10px with a 26px
- * radius. The prototype wins, per the spec-authority rule.
+ * **Not in the prototype.** Frame 13 drew a video recorder; this screen is
+ * designed in the same language for one shutter and a roll that counts down.
+ * What carries over from the artboard is the inset, rounded viewfinder and the
+ * flash / zoom / flip row beneath it.
  */
 export const Camera = {
-  /** The artboard's `padding-top:58px; padding-bottom:10px; padding-inline:20px`. */
-  headerPaddingTop: 58,
-  headerPaddingBottom: 10,
-  headerPaddingX: 20,
-
-  /** The shared-budget bar, directly under the event name. */
-  bar: {
+  /** Close button, the event's name and the roll counter. */
+  header: {
     paddingX: 20,
-    marginBottom: 8,
-    /** Thin enough to read as a measure rather than a container. */
-    height: 3,
-    track: 'rgba(255,255,255,0.07)',
-    /**
-     * The fill, and what it becomes when the group is nearly out.
-     *
-     * The artboard uses a `linear-gradient` for each; a flat colour is used here
-     * because at 3px tall a horizontal ramp is not perceptible, and it saves a
-     * LinearGradient per frame on the app's most performance-sensitive screen.
-     */
-    fill: Colors.text,
-    fillCritical: '#ff5555',
-    /**
-     * How long one second of a running take takes to appear in the fill.
-     *
-     * Short and linear. The bar sits directly above a counter incrementing once
-     * a second, and easing a tick over the standard 550ms leaves the two visibly
-     * out of step with each other.
-     */
-    pendingDuration: 240,
-    /** Bar -> the "Ns used" / "Ns remaining" row. */
-    labelGap: 5,
-    labelSize: 10,
-    /** "Ns used" — always dim; it is the less useful of the two numbers. */
-    usedColor: 'rgba(240,237,232,0.2)',
-    /** "Ns remaining", at rest and when critical. */
-    remainingColor: 'rgba(240,237,232,0.2)',
-    remainingColorCritical: 'rgba(255,100,100,0.6)',
-    /**
-     * Shortest visible fill, as a fraction of the track — the same floor the
-     * other budget bars use, for the same reason: the first few seconds of a 10m
-     * budget round to an empty bar, which reads as "nothing recorded".
-     */
-    minFill: 0.02,
-    /**
-     * When the bar turns red, as a fraction of the whole budget.
-     *
-     * **A deviation from the prototype**, which hardcodes `remaining <= 9`
-     * against its 60s demo budget. That is 15% there, but on the 10m films the
-     * top tiers sell it would mean a bar that stays calm until the last nine
-     * seconds of ten minutes. Expressed as a fraction so it scales, with an
-     * absolute floor so a 30s film still gets a warning at a useful moment.
-     */
-    criticalFraction: 0.15,
-    criticalFloorSeconds: 5,
+    paddingTop: 8,
+    paddingBottom: 12,
+    /** Both side slots, equal so the counter sits on the centre line: close, countdown. */
+    sideWidth: 76,
+    /** Event name -> counter. */
+    nameGap: 2,
   },
 
-  /** The viewfinder — inset and rounded, per the artboard. */
+  /** "17 left" — the roll. */
+  counter: {
+    /** Numeral -> "left". */
+    gap: 6,
+    suffixColor: 'rgba(240,237,232,0.55)',
+    /** From this many shots down the numeral warms, as a film counter's last frames do. */
+    lowAt: 3,
+    lowColor: 'rgba(240,180,120,0.95)',
+  },
+
+  /** The viewfinder — inset and rounded, 3:4 like the sensor and like a print. */
   viewfinder: {
     paddingX: 10,
     radius: 26,
+    aspectRatio: 3 / 4,
     /** Behind the preview, and what shows while permission is still unresolved. */
     bg: '#0a0a0c',
   },
 
-  /** The "REC 12s" pill, pinned inside the viewfinder's top-left corner. */
-  recPill: {
+  /** The shutter closing over the viewfinder. */
+  blackout: {
+    color: '#000000',
+    /** Closed for this long, then it opens. */
+    holdMs: 70,
+    openMs: 240,
+    /** With reduced motion: a dip instead of a full close. */
+    reducedOpacity: 0.55,
+  },
+
+  /** The flash. */
+  flash: {
+    /**
+     * How long the light is on before the exposure. The LED is lit as a torch
+     * for the shot, and the camera needs a moment to meter for it.
+     */
+    leadMs: 320,
+    /** Front camera: the screen itself is the flash. */
+    screenColor: '#ffffff',
+  },
+
+  /** "Your shots", bottom-left — a tile like a print leaning in the corner. */
+  shots: {
+    size: 46,
+    radius: 12,
+    border: 'rgba(255,255,255,0.16)',
+    bg: 'rgba(255,255,255,0.04)',
+    iconSize: 18,
+    iconColor: 'rgba(240,237,232,0.7)',
+    /** The last photo fading in once it exists. */
+    fadeMs: 180,
+  },
+
+  /** The invite tile, bottom-right — the same tile as "Your shots". */
+  invite: {
+    iconSize: 22,
+    /** Between the upload count and the tile. */
+    queueGap: 10,
+  },
+
+  /** The status pill inside the viewfinder's bottom edge — offline, waiting shots. */
+  note: {
     inset: 14,
     bg: 'rgba(0,0,0,0.52)',
     border: 'rgba(255,255,255,0.09)',
-    blur: 16,
-    paddingY: 5,
+    paddingY: 6,
     paddingX: 12,
-    dotSize: 7,
-    /** Dot -> label. */
     gap: 6,
-    /** The blink's floor. Fully off reads as a dropped frame, not a pulse. */
-    dotDimOpacity: 0.25,
+    iconSize: 12,
+    color: 'rgba(240,237,232,0.8)',
   },
 
   /** Flash, zoom and flip. */
@@ -1140,7 +1136,7 @@ export const Camera = {
     flipIconSize: 21,
     /** Flash off, and flash on. */
     flashColor: ['rgba(240,237,232,0.32)', Colors.text] as const,
-    flipColor: 'rgba(240,237,232,0.32)',
+    flipColor: 'rgba(240,237,232,0.55)',
   },
 
   /** The glass segmented zoom control between them. */
@@ -1160,57 +1156,36 @@ export const Camera = {
     */
   },
 
-  /** Countdown, record button, clip badge. */
+  /** Countdown, shutter, upload status. */
   bottom: {
     paddingX: 24,
     paddingTop: 10,
-    paddingBottom: 46,
+    paddingBottom: 16,
+    /** Both side slots, equal so the shutter sits on the centre line. */
+    sideWidth: 96,
   },
 
-  /** The record button. */
-  record: {
-    /** The tap target. The visible dot is smaller and lives inside it. */
+  /** The shutter — a cream disc in a ring. Cream, not red: nothing is recording. */
+  shutter: {
+    /** The tap target and the ring. */
     size: 76,
-    /** The inner dot at rest — a circle — and while recording — a rounded square. */
-    idleSize: 60,
-    recordingSize: 28,
-    idleRadius: 30,
-    recordingRadius: 8,
-    color: Colors.rec,
-    /** Out of budget: still drawn, plainly inert. */
-    disabledOpacity: 0.3,
-    /**
-     * The morph's timing.
-     *
-     * Deliberately **not** `Motion.bezier`: the artboard specifies
-     * `cubic-bezier(0.34,1.56,0.64,1)`, whose control point above 1 overshoots.
-     * The button snaps past its target and settles — a shutter, not a fade.
-     */
-    duration: 220,
-    bezier: [0.34, 1.56, 0.64, 1] as const,
-    /**
-     * The take's countdown ring, drawn around the tap target while recording.
-     *
-     * **Not in the artboard**, which was drawn before takes were capped. A cap
-     * you cannot see is not a cap — without this the button gives no warning
-     * before the camera stops itself, which reads as a crash rather than a rule.
-     *
-     * Sized to sit *inside* the 76pt target rather than outside it, so the
-     * control's footprint does not change when a take starts and the row below
-     * does not reflow.
-     */
     ringWidth: 3,
-    ringTrack: 'rgba(255,255,255,0.18)',
-    ringColor: Colors.rec,
+    ringColor: 'rgba(240,237,232,0.5)',
+    discSize: 60,
+    discColor: Colors.text,
+    /** Gives under the finger on touch-down. */
+    pressedScale: 0.86,
+    /** Critically damped: a shutter button does not bounce. */
+    pressSpring: { damping: 26, stiffness: 420 },
+    /** Roll empty or camera not ready: still drawn, plainly inert. */
+    disabledOpacity: 0.3,
   },
 
-  /** The clip-count badge, bottom-right. */
-  badge: {
-    size: 58,
-    radius: 13,
-    borderWidth: 2,
-    border: 'rgba(255,255,255,0.16)',
-    bg: 'rgba(255,255,255,0.04)',
+  /** Uploads still on the phone, bottom-right. */
+  queue: {
+    gap: 5,
+    iconSize: 13,
+    color: 'rgba(240,237,232,0.45)',
   },
 
   /** The countdown to `ends_at`, bottom-left. */
@@ -1227,34 +1202,38 @@ export const Camera = {
     tickMs: 60_000,
   },
 
-  /**
-   * Shortest take that is worth charging the group for, in seconds.
-   *
-   * **Not in the artboard**, which has no notion of a discarded take. A stray tap
-   * produces a fraction of a second of footage that is unusable in the finished
-   * film, and charging the shared pool for it takes time away from everyone else.
-   * Anything under this releases its hold instead of committing.
-   */
-  minClipSeconds: 1,
+  /** The full-screen states: permission, roll empty, developed, error. */
+  state: {
+    /** Eyebrow -> headline -> copy. */
+    gap: 14,
+    /** Copy -> the countdown or the button below it. */
+    blockGap: 28,
+    buttonGap: 12,
+  },
+} as const;
 
-  /**
-   * Longest single take, in seconds.
-   *
-   * **Not in the artboard**, and not a display value — it is a product rule that
-   * happens to need a fast local copy, the same exception `minClipSeconds` makes.
-   * `public.max_take_seconds()` is the authority; a take is capped there whatever
-   * the client asks for. This copy exists because the countdown and the record
-   * ring have to be drawn on the frame the finger lands, not a round trip later.
-   *
-   * The two must agree. If the SQL changes, change this — a client that thinks
-   * the cap is higher than it is draws a ring that never fills.
-   *
-   * Why a cap at all: the budget is shared, so an uncapped take lets one member
-   * spend the group's whole pool in one go. Short takes also cut better — a film
-   * made of many brief shots feels like the group; one made of four long holds
-   * feels like whoever pressed record first.
-   */
-  maxTakeSeconds: 20,
+/**
+ * Your shots — a guest's own frames, reachable from 13's bottom-left tile.
+ *
+ * Not in the prototype. A contact sheet: tight grid, small radius, no chrome.
+ */
+export const Shots = {
+  headerPaddingTop: 8,
+  /** Header -> title block -> grid. */
+  titleGap: 20,
+  gridGap: 3,
+  columns: 3,
+  /** The same 3:4 as the viewfinder. */
+  tileAspectRatio: 3 / 4,
+  tileRadius: 4,
+  tileBg: '#141316',
+  /** Title -> the line under it. */
+  metaGap: 6,
+  /** The enlarged photo. */
+  viewer: {
+    scrim: 'rgba(8,8,10,0.96)',
+    padding: 12,
+  },
 } as const;
 
 /**

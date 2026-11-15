@@ -10,9 +10,8 @@
  * header, eyebrow, headline rhythm and Continue pill as 02 and 04 — with four
  * cards in a two-by-two grid.
  *
- * The cards show a swatch of each look's palette, not a real preview: the shader
- * that produces the look arrives with the camera in M2, and a sample frame run
- * through it replaces the swatch then (see `LookSwatch`).
+ * The cards are real previews: one bundled sample photo run through the same
+ * shader the camera bakes into every JPEG (`lib/look-shader.ts`).
  *
  * The ambient glow is not rendered here; it lives in (onboarding)/_layout.tsx so
  * it can travel between screens. `useGlow` just claims this screen's position.
@@ -56,6 +55,23 @@ export default function LookScreen() {
   // Returning to this screen restores the earlier choice.
   const [look, setLook] = useState<FilmLook>(draft.look ?? DEFAULT_LOOK);
 
+  /*
+    Both rows must be on screen at once — a host compares the four looks, and a
+    card below the fold is a look nobody picks. So the cards take their height
+    from the space that is left rather than from their width: the print's 4:5
+    where there is room, shorter where there is not, and never below
+    `minHeight`, at which point the grid scrolls after all.
+  */
+  const [area, setArea] = useState({ width: 0, height: 0 });
+  const cellWidth = (area.width - Tokens.gap) / 2;
+  const cardHeight =
+    area.height > 0
+      ? Math.max(
+          Tokens.minHeight,
+          Math.min(cellWidth / Tokens.aspectRatio, (area.height - Tokens.gap) / 2)
+        )
+      : undefined;
+
   function select(next: FilmLook) {
     if (next === look) return;
     // Web has no haptics engine; calling through is a no-op but noisy in logs.
@@ -80,11 +96,15 @@ export default function LookScreen() {
       </Display>
 
       {/*
-        Scrolls only when it has to: four cards fit a regular phone, and a small
-        one or a large text size must not push the last row under the button.
+        Scrolls only when the cards have hit their minimum height: a small phone
+        at a large text size must not push the last row under the button.
       */}
       <ScrollView
         style={styles.scroll}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setArea({ width, height });
+        }}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}>
@@ -95,6 +115,7 @@ export default function LookScreen() {
                 look={option}
                 selected={option.id === look}
                 onPress={() => select(option.id)}
+                style={cardHeight ? { aspectRatio: undefined, height: cardHeight } : undefined}
               />
             </Animated.View>
           ))}
