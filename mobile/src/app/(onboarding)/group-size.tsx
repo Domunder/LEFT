@@ -6,13 +6,14 @@
  * shots each" is a unit anyone who has held a disposable camera understands.
  *
  * The two answers are independent — changing the group does not touch the roll —
- * and together they decide the price: free up to 100 guests on any finite roll,
- * one purchase ("LEFT Unlimited") for the unlimited roll or a larger group.
- * `needsUnlimited()` mirrors that for the copy and the button; `create_event()`
- * enforces it, so a modified client gets a refusal rather than a free event.
+ * and together they decide the price (lib/tiers.ts): free up to 50 guests on a
+ * finite roll, then one purchase sized by the group — CHF 10 for the unlimited
+ * roll in a small group, 15 up to 100 guests, 20 up to 150, 25 up to 200.
+ * `tierFor()` mirrors that for the button; `create_event()` enforces it, so a
+ * modified client gets a refusal rather than a free event.
  *
- * The price sits under the thing it buys and on the button that charges it,
- * never on a card: a host reads the group, then the roll, then what it costs.
+ * The price is on the button that charges it; under the choices a paid event
+ * says only "No subscription." (the user's call, 2026-11-15).
  *
  * Deviations from the prototype (which drew a film-length dial here, for video):
  *  - The roll row replaces the dial and its legend.
@@ -40,7 +41,7 @@ import { Typography } from '@/constants/typography';
 import { useEventCreation, type CreationPhase } from '@/hooks/use-event-creation';
 import { draftToCreateEventInput, useGlow, useOnboarding, useStep } from '@/lib/onboarding-draft';
 import { DEFAULT_GROUP_SIZE, DEFAULT_ROLL_SIZE, type RollSize } from '@/lib/roll';
-import { ctaLabel, needsUnlimited, UNLIMITED, unlimitedReason } from '@/lib/tiers';
+import { ctaLabel, tierFor, type EventTier } from '@/lib/tiers';
 
 const EASING = Easing.bezier(...Motion.bezier).factory();
 
@@ -61,7 +62,7 @@ function entering(delay: number) {
  * A paid event names the price on the button itself. A button that opens a store
  * sheet without saying what it costs is the thing every store guideline is about.
  */
-function ctaFor(phase: CreationPhase['kind'], free: boolean): string {
+function ctaFor(phase: CreationPhase['kind'], tier: EventTier | null): string {
   switch (phase) {
     case 'purchasing':
       return 'Opening the store…';
@@ -70,7 +71,7 @@ function ctaFor(phase: CreationPhase['kind'], free: boolean): string {
     case 'creating':
       return 'Working…';
     default:
-      return free ? 'Create event' : ctaLabel(UNLIMITED);
+      return tier ? ctaLabel(tier) : 'Create event';
   }
 }
 
@@ -91,7 +92,7 @@ export default function GroupSizeScreen() {
   );
 
   // A mirror of the server's rule, for the copy and the button only.
-  const free = !needsUnlimited(groupSize, rollSize);
+  const tier = tierFor(groupSize, rollSize);
 
   function selectGroup(next: number) {
     if (next === groupSize) return;
@@ -164,7 +165,7 @@ export default function GroupSizeScreen() {
       */}
       <Display size="sm" style={styles.headline}>
         How many people{'\n'}
-        <Em>for your film?</Em>
+        <Em>for your moment?</Em>
       </Display>
 
       <Body small style={styles.subcopy}>
@@ -203,19 +204,16 @@ export default function GroupSizeScreen() {
 
           <RollChoices value={rollSize} onChange={selectRoll} />
 
-          <Caption color={Colors.textFaint} style={styles.footnote}>
-            Nobody sees a photo until the event ends. Then the film is developed for everyone.
-          </Caption>
-
           {/*
-            The price, under the thing it buys. Free says so plainly instead of
-            showing a struck-out price, which would read as a discount that ran out.
+            Only when the event costs something, and only this: the price itself
+            is on the button (the user's call, 2026-11-15). A free event says
+            nothing here.
           */}
-          <Caption color={free ? Colors.textFaint : Colors.text} style={styles.price}>
-            {free
-              ? 'Free — up to 100 guests and 36 shots each.'
-              : `${unlimitedReason(groupSize, rollSize)} — ${UNLIMITED.price} once for this event. No subscription.`}
-          </Caption>
+          {tier ? (
+            <Caption color={Colors.textFaint} style={styles.price}>
+              No subscription.
+            </Caption>
+          ) : null}
         </Animated.View>
       </ScrollView>
 
@@ -236,7 +234,7 @@ export default function GroupSizeScreen() {
       )}
 
       <PillButton
-        label={ctaFor(creation.phase.kind, free)}
+        label={ctaFor(creation.phase.kind, tier)}
         onPress={() => void handleContinue()}
         disabled={creation.busy}
         style={styles.cta}
@@ -275,10 +273,6 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     marginBottom: LengthChoice.labelGap,
-  },
-  footnote: {
-    textAlign: 'center',
-    marginTop: LengthChoice.footnoteGap,
   },
   price: {
     textAlign: 'center',

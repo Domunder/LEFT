@@ -148,7 +148,7 @@ mobile/src/
     (host)/               09 Invite · 10 Your group
     (guest)/              11 Name · 12 Waiting
     (capture)/            13 Camera · Your shots (roll)
-    (library)/            15/16 Films (carousel) · album/[id] (developing → reveal → album)
+    (library)/            15/16 Your Moments (stacks) · album/[id] (developing → reveal → album)
     (modals)/             08 Join sheet · Delete account
     settings.tsx          20 Settings
     +native-intent.ts     invite link -> 11
@@ -162,7 +162,7 @@ mobile/src/
                           look-shader, upload-queue, notification-prefs,
                           my-shots, album, covers, motion
   types/database.ts       generated — `npm run db:types` at the root
-supabase/                 migrations/ (one baseline), functions/, seed.sql
+supabase/                 migrations/ (baseline + price tiers), functions/, seed.sql
 ```
 
 Vocabulary: an event is a **film**; a guest's allowance is their **roll**; an
@@ -281,9 +281,12 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   solid surface under "Reduce Transparency". `GlassButton` is the round or
   capsule control on it. Glass only over imagery (viewer, album grid, film
   posters, the Films backdrop) — never glass on glass, and never animate a
-  glass view's opacity (fade a wrapper). `GlassPanel` and `CircleIconButton`'s
-  `glass` variant are the older blur surfaces; moving them over is part of the
-  proposed audit, not done.
+  glass view's opacity (fade a wrapper). `GlassPanel`, `CircleIconButton`'s
+  `glass` variant, the zoom selector and the toast draw on `Glass` since
+  2026-11-15; the camera's close button is glass too. **Glass over the
+  viewfinder's Skia canvas has not been seen on a device.** `PillButton`'s
+  `glass` variant is still its own blur — it sits inside glass panels, where
+  the material itself would be glass on glass.
 - **One viewer: `components/ui/photo-viewer.tsx`**, for "Your shots" and the
   album. An overlay inside the screen that owns the grid (not a route, not a
   `Modal`) so the tile's rect and the viewer share a coordinate space. It
@@ -313,11 +316,29 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   would need adding). Owner or host can delete (`deletePhoto`, RLS).
 - **`(auth)/keep` is reached when an anonymous guest leaves a developed album**
   (once, unless declined) — after the photos, never in front of them.
-- **Films is a carousel** (decided 2026-11-15, replacing the artboard's list):
-  a native horizontal scroll of `FilmPoster`s; neighbours recede with the
-  scroll position; the film in front is blurred into the backdrop. Covers come
-  from `lib/covers.ts` — your own latest shot while live, the album's first
-  photo once developed (RLS decides, not the client), the tint until then.
+- **The library is "Your Moments", a carousel of photo stacks** (decided
+  2026-11-15, replacing the artboard's list and the first poster carousel):
+  each moment is a `PhotoStack` (`photo-stack.tsx`) — the front print carries
+  the title, two more fan out behind it, and the fan opens with the scroll
+  position as a stack arrives in front. A developed moment shows its album's
+  first photos (`lib/covers.ts`); one that is not shows dimmed stock pictures
+  tagged "Sample" (`constants/samples.ts`, credits in
+  `assets/images/samples/CREDITS.md`) — the user's call, replacing "your own
+  latest shot". The carousel always ends in `NewMomentCard`; with no moments it
+  is the only stack, which replaces 15's empty state.
+- **04 Event End is one screen, no popovers** (decided 2026-11-15): the
+  question, then the answer written large (day, time, "developed in 5 days"),
+  and two wheels straight on the screen, no card — `DayStrip` (days sideways, the centred
+  day is the choice, days fade and shrink towards the edges) and `TimeWheel`.
+  A row of shortcuts was tried and removed the same day (too crowded). The
+  wheels mount with the screen, which is only affordable because `Wheel`
+  mounts just the rows near its band (a window of ±16 that follows the scroll;
+  rows are placed absolutely) and date formatters are built once
+  (`labelDays()`) — mounting all ~350 rows and constructing
+  `Intl.DateTimeFormat` per day per render made the screen slow to open.
+  **Not seen on a device:** whether a very hard fling outruns the window. The month grid, popover and value pill are deleted;
+  their tokens (`Picker`, `Popover`, parts of `EndRow`) are still in
+  `theme.ts` — prune in M6.
 
 ## The roll model
 
@@ -356,10 +377,16 @@ and upload queue that use it are described above.
   through one storage seam (`lib/storage.ts`) so the bucket can move to
   Cloudflare R2; never hard-delete before the retention window.
 
-- **Pricing: free up to 100 guests and a 36 roll. One SKU, "LEFT Unlimited"**
-  (~5 CHF, one purchase per event, paid by the host at creation) unlocks the ∞
-  roll and events up to 200 guests. `create_event()` is the authority; the
-  pay-first-then-create flow in `hooks/use-event-creation.ts` stays.
+- **Pricing (decided 2026-11-15, replacing "free up to 100, one SKU"):** free
+  up to 50 guests on a finite roll; `left_small` (~10 CHF) for the unlimited
+  roll in a group up to 50; `left_medium` (~15 CHF) up to 100 guests;
+  `left_large` (~20 CHF) up to 150; `left_unlimited` (~25 CHF) up to 200. One purchase per event, paid by the
+  host at creation. A purchase unlocks a group size; `create_event()` is the
+  authority (`free_max_members()`, `unlock_max_members()` — migration
+  `20261115010000_price_tiers.sql`), `lib/tiers.ts` mirrors it for the button,
+  and the pay-first-then-create flow in `hooks/use-event-creation.ts` stays.
+  05.1 shows the price on the button only; under the choices a paid event says
+  "No subscription." and a free one says nothing.
 
 Statuses: `setup → live → developed`. Clients cannot write `status`, `ends_at`,
 `roll_size`, `max_members` or `shots_taken`, and cannot INSERT events or photos —
@@ -406,6 +433,11 @@ to `absoluteFill` + `cover`.
 
 The launch list lives in `docs/MILESTONES.md`. Things that bite during development:
 
+- **"Edge Function returned a non-2xx status code" on creating an event,
+  locally, usually means the edge runtime container is down** (seen
+  2026-11-15: `supabase_edge_runtime_LEFT` had exited while the rest of the
+  stack ran, so `create-event` answered 503). `docker start
+  supabase_edge_runtime_LEFT`, or restart the stack.
 - **Anonymous sign-ins must be enabled in the Supabase dashboard**, or every guest
   join fails quietly ("Joining isn't available right now"). Turn on CAPTCHA and
   the rate limit while there.
@@ -425,7 +457,8 @@ The launch list lives in `docs/MILESTONES.md`. Things that bite during developme
 - **A local stack from before M1 has the old schema** — run `npm run db:reset`
   at the root once (it wipes local data).
 - `constants/legal.ts` still describes video; rewritten in M6.
-- The store product `left_unlimited` does not exist yet (`mobile/docs/payments.md`).
+- The store products `left_small`, `left_medium`, `left_large` and `left_unlimited` do not
+  exist yet (`mobile/docs/payments.md`).
 - Unused dependencies to prune in M6 unless a milestone picks them up:
   `expo-device`, `expo-symbols`, `expo-web-browser`, `expo-linking`,
   `@gorhom/bottom-sheet`. (`expo-image` is needed by M3.)

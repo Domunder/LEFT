@@ -17,7 +17,7 @@
  * is what confirms the purchase exists and belongs to this user, so a modified
  * client inventing an id gets nothing.
  *
- * **Free events never reach the paid path.** Up to 100 guests on a finite roll
+ * **Free events never reach the paid path.** Up to 50 guests on a finite roll
  * the client sends no transaction id and `create_event()` skips the claim — the
  * free tier is enforced in the database, not here, so a client that lies about
  * its group or roll is refused by the RPC rather than by this function.

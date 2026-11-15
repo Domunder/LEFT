@@ -7,7 +7,7 @@
  * and pays for the next attempt) while an event that exists but was never paid
  * for is not.
  *
- * **A free event never touches any of this.** `needsUnlimited()` short-circuits
+ * **A free event never touches any of this.** `tierFor()` short-circuits
  * straight to `createEvent()` with no transaction id, and the server skips its
  * claim for the same events. The free tier is enforced there, not here.
  */
@@ -28,7 +28,7 @@ import {
   PURCHASES_UNAVAILABLE,
   purchaseTier,
 } from '@/lib/purchases';
-import { needsUnlimited, UNLIMITED } from '@/lib/tiers';
+import { tierFor } from '@/lib/tiers';
 
 /**
  * Waits between creation attempts while a purchase settles, in ms.
@@ -110,7 +110,8 @@ export function useEventCreation(): EventCreation {
         server refuses a paid group size without a receipt whatever this says, so
         a wrong answer here is a bad screen rather than a free event.
       */
-      if (!needsUnlimited(input.maxMembers, input.rollSize)) {
+      const tier = tierFor(input.maxMembers, input.rollSize);
+      if (!tier) {
         setPhase({ kind: 'creating' });
         return await createEvent(input);
       }
@@ -131,8 +132,9 @@ export function useEventCreation(): EventCreation {
         }
 
         setPhase({ kind: 'purchasing' });
-        // One product. The server checks the receipt itself; this only opens the sheet.
-        paidTransaction.current = (await purchaseTier(UNLIMITED)).transactionId;
+        // The server checks the receipt, and that it covers the group; this only
+        // opens the sheet for the tier the event needs.
+        paidTransaction.current = (await purchaseTier(tier)).transactionId;
       }
 
       setPhase({ kind: 'creating' });

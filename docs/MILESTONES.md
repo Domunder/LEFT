@@ -12,7 +12,7 @@ Einwegkamera-App für Events umgebaut (Vorbild: ONCE, aber deutlich günstiger).
 | Look | Host wählt **einen Film/Look pro Event** (ersetzt Screen 03 „Format“). Wird beim Auslösen aufs Gerät eingebrannt. |
 | Entwicklung | Fotos sind bis Event-Ende für niemanden ausser dem Fotografen sichtbar; danach für alle. |
 | Gäste | Kein Konto — Link/QR → Name → drin (anonyme Supabase-Session, existiert bereits). |
-| Preis | **Gratis bis 100 Gäste und 36er-Rolle. Ein einziger SKU „LEFT Unlimited“** (Richtwert 5 CHF, einmalig pro Event) schaltet die ∞-Rolle und Events bis 200 Gäste frei. |
+| Preis | **Gratis bis 100 Gäste und 36er-Rolle. Ein einziger SKU „LEFT Unlimited“** (Richtwert 20 CHF, einmalig pro Event) schaltet die ∞-Rolle und Events bis 200 Gäste frei. |
 | Datenbank | Keine Bestandsdaten → Schema wird neu aufgesetzt (ein sauberer Baseline-Migrationsstand). |
 | Design | Bestehende Designsprache bleibt; neue Screens nach Apple-Design-Prinzipien (`apple-design`-Skill). |
 
@@ -20,7 +20,10 @@ Einwegkamera-App für Events umgebaut (Vorbild: ONCE, aber deutlich günstiger).
 
 ### 1. Details zum SKU (Vorschlag, bitte bestätigen)
 
-- Preis 5 CHF; Produkt-ID `left_unlimited` (Consumable, ein Kauf = ein Event).
+- **Preisstaffel (geändert 2026-11-15, ersetzt die Zeile oben und „ein SKU“):**
+  bis 50 Gäste mit endlicher Rolle gratis; ∞-Rolle bis 50 Gäste 10 CHF
+  (`left_small`); bis 100 Gäste 15 CHF (`left_medium`); bis 150 Gäste 20 CHF (`left_large`);
+  bis 200 Gäste 25 CHF (`left_unlimited`). Consumables, ein Kauf = ein Event.
 - Fair-Use-Deckel für ∞: 150 Fotos pro Gast. Harte Obergrenze 200 Gäste.
 - Aufbewahrung 12 Monate, länger sobald etwas gekauft wurde.
 
@@ -229,6 +232,21 @@ zurückerstattet.
   keine Datei senden); „offline" hat keinen eigenen Zustand, nur die
   Fehlermeldung; der Viewer nutzt die in Gesture Handler 3 veraltete
   Builder-API (wie die Kamera).
+
+### Nachtrag 2026-11-15 (nicht auf dem Gerät geprüft)
+
+- **Your Moments:** Bibliothek heisst „Your Moments"; jeder Moment ist ein
+  Bilderstapel (vorne das Titelbild, dahinter zwei gefächerte Fotos). Nicht
+  entwickelt: abgedunkelte Stockfotos mit „Sample". Am Ende des Karussells und
+  im leeren Zustand: Stapel „Start your moment" mit Plus und „Join a group".
+- **04 Event-Ende:** Schnellwahl-Pills, darunter eine Glas-Karte mit
+  Zusammenfassung, Tagesstreifen und Zeit-Rad; keine Popover mehr.
+- **Glas:** `GlassPanel` (Landing, Join, „Keep your films"), runde Glas-Buttons,
+  Zoom-Auswahl, Toast und der Schliessen-Button der Kamera nutzen jetzt `Glass`.
+  Punkte 1–4 der Liste unten sind damit teilweise umgesetzt; Sheets, Shutter-
+  Umfeld und Bewegungs-Federn stehen noch aus.
+- **CI:** iOS-Dev-Build über GitHub Actions (`.github/workflows/ios-dev-build.yml`,
+  Tag `ios-build-*`), ohne EAS-Kontingent.
 
 ### Vorschlag: Glas & Bewegung in den übrigen Screens (noch nicht umgesetzt)
 
