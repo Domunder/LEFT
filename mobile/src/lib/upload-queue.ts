@@ -230,7 +230,7 @@ export async function enqueueShot(shot: {
 }): Promise<string> {
   const id = Crypto.randomUUID();
 
-  new File(shot.capturedUri).move(rawFile(id));
+  await new File(shot.capturedUri).move(rawFile(id));
 
   items = [
     ...items,
@@ -299,8 +299,8 @@ async function develop(item: QueuedShot) {
   const result = developPhoto(bytes, item.look);
   if (__DEV__) console.log('[queue] develop done', { width: result.width, height: result.height });
 
-  originalFile(item.id).write(result.original);
-  thumbFile(item.id).write(result.thumb);
+  await originalFile(item.id).write(result.original);
+  await thumbFile(item.id).write(result.thumb);
   await update(item.id, { developed: true, width: result.width, height: result.height });
   raw.delete();
 }
@@ -373,8 +373,8 @@ async function sendUndeveloped(item: QueuedShot) {
     await remove(item.id);
     throw new Dropped();
   }
-  raw.copy(originalFile(item.id));
-  raw.copy(thumbFile(item.id));
+  await raw.copy(originalFile(item.id));
+  await raw.copy(thumbFile(item.id));
   await update(item.id, { developed: true });
   raw.delete();
 }

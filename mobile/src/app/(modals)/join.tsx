@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
   },
   scrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: JoinSheet.scrim,
   },
   panel: {

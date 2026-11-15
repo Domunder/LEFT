@@ -37,7 +37,8 @@ export const DisplaySize = {
   xs: 26, // 08 Join sheet
   xxs: 24, // 10.1 Group info
   xxxs: 22, // 15 Films — the "No films yet." empty-state headline
-  card: 21, // 16 Films — an event card's title
+  card: 21, // 16 Films — an event card's title (unused since the carousel)
+  poster: 30, // 16 Films — the title on a film's poster
 } as const;
 
 const displayBase = (size: number): TextStyle => ({
@@ -66,6 +67,7 @@ export const Typography = {
    */
   displayXxxs: displayBase(DisplaySize.xxxs),
   displayCard: displayBase(DisplaySize.card),
+  displayPoster: displayBase(DisplaySize.poster),
 
   /** Emphasis run inside a headline (`<em>` in the prototype). */
   displayItalic: { fontFamily: FontFamily.displayItalic } as TextStyle,
@@ -155,6 +157,22 @@ export const Typography = {
   countdown: {
     fontFamily: FontFamily.numeric,
     fontSize: 16,
+  } as TextStyle,
+
+  /**
+   * The album's "developing" countdown — DM Serif at 60, the only thing on that
+   * screen worth reading from across a table.
+   */
+  developingCount: {
+    fontFamily: FontFamily.numeric,
+    fontSize: 60,
+    letterSpacing: -1,
+  } as TextStyle,
+
+  /** The unit beside it — "d", "h", "m". */
+  developingUnit: {
+    fontFamily: FontFamily.regular,
+    fontSize: 15,
   } as TextStyle,
 
   /**

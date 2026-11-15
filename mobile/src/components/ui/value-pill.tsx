@@ -10,7 +10,14 @@
 
 import { Feather } from '@expo/vector-icons';
 import { useRef } from 'react';
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  type StyleProp,
+  type ViewInstance,
+  type ViewStyle,
+} from 'react-native';
 
 import { Colors, EndRow, Radii } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
@@ -36,7 +43,7 @@ type ValuePillProps = {
 };
 
 export function ValuePill({ label, icon, onPress, accessibilityLabel, style }: ValuePillProps) {
-  const ref = useRef<View>(null);
+  const ref = useRef<ViewInstance>(null);
 
   function handlePress() {
     // Window coordinates, which is what the popover positions against.

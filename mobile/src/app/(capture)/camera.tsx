@@ -38,11 +38,10 @@
 'use no memo';
 
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useNetworkState } from 'expo-network';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -189,6 +188,17 @@ export default function CameraScreen() {
           <EventCountdown endsAt={event.ends_at} />
         </View>
         <View style={styles.stateActions}>
+          {/* The album's "developing" state: the count so far, and the host's "develop now". */}
+          <PillButton
+            label="See how the film is doing"
+            icon="arrow-right"
+            onPress={() =>
+              router.replace({
+                pathname: '/(library)/album/[id]',
+                params: { id: event.id },
+              })
+            }
+          />
           <PillButton label="Back to your films" variant="secondary" onPress={leave} />
         </View>
       </StateScreen>

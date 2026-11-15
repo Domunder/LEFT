@@ -1,6 +1,6 @@
 # LEFT — mobile app
 
-The Expo (SDK 54) app for LEFT, a disposable camera for events. The project
+The Expo (SDK 58) app for LEFT, a disposable camera for events. The project
 guide is [`../CLAUDE.md`](../CLAUDE.md); the road to launch is
 [`../docs/MILESTONES.md`](../docs/MILESTONES.md).
 

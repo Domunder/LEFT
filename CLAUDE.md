@@ -34,9 +34,18 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   viewfinder was then rewritten (`components/ui/film-camera.tsx`) after a crash
   on the camera; **that rewrite, the flash and the camera flip are not yet
   confirmed on a device** — it is JS only, no new build needed.
-- **Next:** `(library)/album/[id]` (M3) is a placeholder
-  (`components/dev/placeholder.tsx`). Create → invite → join → start → shoot
-  works; the developed state's "Open the album" lands on the placeholder.
+- **Done (2026-11-15), not run on a device: the upgrade to Expo SDK 58**
+  (RN 0.88, React 19.3, Reanimated 4.7, Worklets 0.13, Gesture Handler 3,
+  Skia 2.14). Typecheck, lint, `expo-doctor` and an iOS bundle export are
+  clean; **no native build has been made**, so the camera stack on the new
+  versions is unproven. The old dev build cannot load this bundle.
+- **Done (M3), not run on a device:** the album (`(library)/album/[id]`) with
+  its "developing" state and the reveal, the shared `PhotoViewer`, save /
+  share / moderation / "develop now", the Films carousel with real covers, and
+  the `Glass` primitive (Liquid Glass on iOS 26+). See "Album, viewer and
+  glass (M3)" below.
+- **Next:** a dev build on SDK 58, then the device pass for M2 and M3; the glass
+  and motion audit of the older screens is proposed, not applied (MILESTONES).
 
 ## How we work together
 
@@ -105,13 +114,25 @@ Applied to every new or rebuilt screen:
 
 ## Stack
 
-Expo **SDK 54** / React Native 0.81 / React 19 / TypeScript / expo-router with
+Expo **SDK 58** / React Native 0.88 / React 19.3 / TypeScript 6 / expo-router with
 typed routes and the React Compiler. Backend: Supabase (Postgres, Auth, Storage,
 Realtime, edge functions). Purchases: RevenueCat, one consumable SKU.
 
-- Versioned docs: https://docs.expo.dev/versions/v54.0.0/. `expo-image` has no
+- Versioned docs: https://docs.expo.dev/versions/v58.0.0/. `expo-image` has no
   `resizeMode="repeat"`, so tiling needs RN's own `<Image>`.
 - Add native packages with `npx expo install`.
+- **SDK 58 changes that bit during the upgrade:** expo-router no longer ships
+  React Navigation (`ThemeProvider`, `DarkTheme`, `useIsFocused` come from
+  `expo-router`); `expo-file-system`'s `move`/`copy`/`write` are async
+  (awaited in `lib/upload-queue.ts`); `expo-media-library`'s default export is
+  the new object API (`MediaLibrary.Asset.create(uri)` saves a file);
+  `StyleSheet.absoluteFillObject` is gone (`absoluteFill`); view refs are typed
+  `ViewInstance` / `TextInputInstance`.
+- **Three React Compiler lint rules are off** in `eslint.config.js`
+  (`immutability`, `refs`, `set-state-in-effect`): they flag Reanimated's
+  `shared.value = x` and patterns in the device-tuned camera files. Revisit in M6.
+- Gesture Handler 3 deprecates the builder API (`Gesture.Pan()`), which the
+  camera's pinch and `PhotoViewer` use. It works; migrate both together.
 - `expo-video` stays for one thing only: the ambient background loop
   (`components/ui/background-video.tsx`) and 03's preview cards.
 
@@ -127,25 +148,25 @@ mobile/src/
     (host)/               09 Invite · 10 Your group
     (guest)/              11 Name · 12 Waiting
     (capture)/            13 Camera · Your shots (roll)
-    (library)/            15/16 Films · album/[id] (placeholder → M3)
+    (library)/            15/16 Films (carousel) · album/[id] (developing → reveal → album)
     (modals)/             08 Join sheet · Delete account
     settings.tsx          20 Settings
     +native-intent.ts     invite link -> 11
   components/ui/          shared primitives
-  components/dev/         placeholder.tsx — scaffold, delete when M3 is done
   constants/              theme.ts, typography.ts — all design values; looks.ts
                           (the looks and their shader recipes)
   hooks/                  use-camera-session (event + roll + queue for 13), …
   lib/                    supabase, auth, auth-errors, entry, events, photos,
                           storage, roll, tiers, purchases, realtime, invite,
                           event-end, film-status, film-tint, zoom,
-                          look-shader, upload-queue, notification-prefs
+                          look-shader, upload-queue, notification-prefs,
+                          my-shots, album, covers, motion
   types/database.ts       generated — `npm run db:types` at the root
 supabase/                 migrations/ (one baseline), functions/, seed.sql
 ```
 
 Vocabulary: an event is a **film**; a guest's allowance is their **roll**; an
-event ends by being **developed**. "Film" in file names (`film-card`,
+event ends by being **developed**. "Film" in file names (`film-poster`,
 `film-status`) is that metaphor, not video — keep it.
 
 ## The camera and the looks (M2)
@@ -178,12 +199,12 @@ event ends by being **developed**. "Film" in file names (`film-card`,
 - **`expo-camera` stays for one thing: 08's QR scanner** (and its config plugin
   writes the camera permission string). Do not put overlays with
   `mixBlendMode` over a camera preview: on iOS they paint over the picture.
-- **`react-native-worklets` is pinned to 0.8.3, above Expo 54's 0.5.1**, and
-  excluded from `expo install` (`expo.install.exclude` in `package.json`).
-  VisionCamera's worklets plugin needs `scheduleOnRuntime` and the
-  `worklets/RunLoop/AsyncQueue.h` header (0.7+); Reanimated 4.1 accepts 0.5–0.8.
-  `expo install --fix` must not pull it back. `@react-native/metro-config` is a
-  dev dependency only because 0.8 lists it as a peer — keep it on RN's version.
+- **`react-native-worklets` is Expo 58's own version (0.13) again** — the pin
+  to 0.8.3 and the `expo.install.exclude` entry are gone. VisionCamera 5.2.4
+  against Worklets 0.13 / RN 0.88 **has not been built**; if the iOS build
+  fails there, that pairing is the first suspect. `@react-native/metro-config`
+  is a dev dependency only because Worklets lists it as a peer — keep it on
+  RN's version.
 - **`plugins/with-worklets-headers.js` is load-bearing for the iOS build.**
   Without React-Core's private header path on the `VisionCameraWorklets` pod,
   EAS fails with `'React/RCTMessageThread.h' file not found` / `could not build
@@ -218,7 +239,7 @@ event ends by being **developed**. "Film" in file names (`film-card`,
   (`useOrientation('device')`), so a sideways phone takes a landscape picture.
   Selfies are saved mirrored, as previewed.
 - **A frame's pixels are freed by the garbage collector, not by `dispose()`**
-  (a no-op in Skia 2.2.12), and a JS heap only counts an image's megabytes if
+  (a no-op in Skia 2.2.12; not re-checked on 2.14), and a JS heap only counts an image's megabytes if
   the image was *made* in it. So `film-camera.tsx` sends the raw `SkData`
   across and makes an image in each runtime it passes (JS thread: a throwaway,
   to be charged; UI thread: the one drawn). Handing one image across runtimes
@@ -252,6 +273,51 @@ event ends by being **developed**. "Film" in file names (`film-card`,
 - `developPhoto()` is synchronous on the JS thread (a few hundred ms per frame).
   If the shutter feels sticky during bursts, move it to a worklet runtime.
 - Skia must never be touched at import time — keep it inside functions.
+
+## Album, viewer and glass (M3)
+
+- **One material: `components/ui/glass.tsx`.** `Glass` is Liquid Glass
+  (`expo-glass-effect`) on iOS 26+, a blur with a tinted fill elsewhere, and a
+  solid surface under "Reduce Transparency". `GlassButton` is the round or
+  capsule control on it. Glass only over imagery (viewer, album grid, film
+  posters, the Films backdrop) — never glass on glass, and never animate a
+  glass view's opacity (fade a wrapper). `GlassPanel` and `CircleIconButton`'s
+  `glass` variant are the older blur surfaces; moving them over is part of the
+  proposed audit, not done.
+- **One viewer: `components/ui/photo-viewer.tsx`**, for "Your shots" and the
+  album. An overlay inside the screen that owns the grid (not a route, not a
+  `Modal`) so the tile's rect and the viewer share a coordinate space. It
+  opens from the tile and returns to the *current* photo's tile (`originFor`;
+  the grid scrolls it into view in `onIndexChange`). One pan picks its axis
+  after `Viewer.slop`: sideways pages, down drags away, on a zoomed photo it
+  pans. Release hands velocity to the spring and lands where the flick was
+  going (`lib/motion.ts`: `project`, `rubberband`). Gesture state lives in
+  shared values — a plain object captured by two gesture callbacks is two
+  private copies.
+- **Springs are tokens** (`Springs` in `theme.ts`): `settle` (critically
+  damped) by default, `momentum` only after a release, `press` for touch-down.
+- **`PhotoTile` + `useTileRegistry`** (`photo-tile.tsx`) are the grid half:
+  press-in feedback and the tile rects.
+- **The album is one route with two states**, decided by `isDeveloped()`:
+  `DevelopingFilm` (countdown, photo count from the roster's `shots_taken` —
+  the photo rows are hidden by RLS — and the host's "develop now"), then the
+  grid. It is reached from the camera's roll-empty state and from a live
+  poster's status capsule.
+- **The reveal** plays once per film and phone (`left:reveal-seen:{id}` in
+  AsyncStorage): the sheet waits dark until the first thumbnails are
+  prefetched, then `RevealVeil`s clear one after another, a haptic at the start
+  and at the end. Reduced motion: one cross-fade. Timings are `Album.reveal`.
+- **Save and share** go through `lib/album.ts`: the original is downloaded
+  once into the cache, saved with `MediaLibrary.Asset.create`, shared with RN's
+  own `Share` (iOS only — Android's `Share` cannot send a file; `expo-sharing`
+  would need adding). Owner or host can delete (`deletePhoto`, RLS).
+- **`(auth)/keep` is reached when an anonymous guest leaves a developed album**
+  (once, unless declined) — after the photos, never in front of them.
+- **Films is a carousel** (decided 2026-11-15, replacing the artboard's list):
+  a native horizontal scroll of `FilmPoster`s; neighbours recede with the
+  scroll position; the film in front is blurred into the backdrop. Covers come
+  from `lib/covers.ts` — your own latest shot while live, the album's first
+  photo once developed (RLS decides, not the client), the tint until then.
 
 ## The roll model
 
@@ -309,8 +375,8 @@ anonymous users. The session persists; `signInAnonymously()` is idempotent.
 **The sign-in prompt comes after the reveal, not before.** `linkIdentity()`
 attaches Google or Apple to the *same* user id. It lives in `(auth)/keep` with
 `keep-your-film.tsx` as the library fallback; both share one dismissal per user
-(`lib/prompt-dismissal.ts`). `(auth)/keep` is currently unreachable — M3 routes to
-it after the reveal.
+(`lib/prompt-dismissal.ts`). The album routes to `(auth)/keep` when a guest
+leaves it after the reveal.
 
 **A guest cannot host.** `create_event()` reads `auth.users.is_anonymous` and
 refuses with `hint = 'anonymous'`; the library's plus routes an anonymous session

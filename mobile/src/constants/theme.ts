@@ -1285,52 +1285,60 @@ export const Films = {
     joinHitSlop: 12,
   },
 
-  /** 16 · the scrolling list. */
-  list: {
+  /** The guest's "Keep your films" panel, above the carousel. */
+  prompt: {
     paddingX: 20,
-    paddingTop: 20,
-    paddingBottom: 32,
-    /** Between cards. */
-    gap: 14,
-  },
-
-  /** 16 · one event card. */
-  card: {
-    /** The artboard's `padding: 16px 16px 0` on the title block. */
-    titlePaddingX: 16,
-    titlePaddingTop: 16,
-    /** Title -> cover. */
-    coverGap: 12,
-    coverHeight: 160,
-    /** How long a film's poster takes to fade in over the card's tint. */
-    coverTransitionMs: 220,
-    /**
-     * The cover's bottom scrim — `linear-gradient(to top, rgba(0,0,0,0.45) 0%,
-     * transparent 45%)`, so the badges have something to sit against.
-     */
-    scrim: ['rgba(0,0,0,0.45)', 'transparent'] as const,
-    scrimLocations: [0, 0.45] as const,
-    /** Badge inset from the cover's bottom corners. */
-    badgeInset: 10,
-    badgePaddingY: 4,
-    badgePaddingX: 9,
-    /** Press feedback, matching FilmStripCard. */
-    pressScale: 0.97,
-    pressSpring: { damping: 18, stiffness: 260 },
+    paddingTop: 4,
+    paddingBottom: 12,
   },
 
   /**
-   * 16's ambient backdrop — a blurred, scaled-up wash of the first event's tint.
+   * 16 · the carousel — one poster per film, swiped sideways.
    *
-   * The artboard blurs the event's cover photo at `blur(60px) saturate(140%)`.
-   * Nothing in the app produces imagery yet (`compile_film()` is a stub and no
-   * thumbnail is ever extracted), so this is built from the same deterministic
-   * tint the card covers use — see lib/film-tint.ts. It *replaces* the ambient
-   * glow on this state rather than joining it, as drawn.
+   * Replaces the artboard's vertical list of cards (redesigned 2026-11-15). It
+   * is a native horizontal scroll, so tracking, momentum, rubber-banding and
+   * interruption are the system's own.
+   */
+  carousel: {
+    /** Poster inset from the screen edge — what lets the neighbours peek in. */
+    sideInset: 34,
+    gap: 12,
+    paddingTop: 8,
+    /** How far a poster one page away recedes. */
+    neighbourScale: 0.92,
+    neighbourOpacity: 0.55,
+    /** Carousel -> page dots -> the bottom of the screen. */
+    dotsGap: 18,
+    dotsBottom: 14,
+    dotSize: 6,
+    dotGap: 7,
+    dotActiveWidth: 18,
+  },
+
+  /** 16 · one film's poster. */
+  poster: {
+    radius: 30,
+    /** The photo's bottom scrim, so the title and capsules stay legible. */
+    scrim: ['rgba(8,8,10,0)', 'rgba(8,8,10,0.35)', 'rgba(8,8,10,0.82)'] as const,
+    scrimLocations: [0.35, 0.62, 1] as const,
+    padding: 20,
+    /** Title -> the capsule row. */
+    titleGap: 14,
+    capsuleGap: 8,
+    liveDot: 7,
+    pressScale: 0.975,
+    /** How long a cover takes to fade in over the poster's tint. */
+    coverTransitionMs: 260,
+  },
+
+  /**
+   * 16's ambient backdrop — the film in front, blurred and dimmed, so the
+   * screen reads as lit by its own content. Cross-fades as the carousel moves.
    */
   backdrop: {
-    opacity: 0.55,
-    scale: 1.1,
+    opacity: 0.5,
+    blurRadius: 60,
+    transitionMs: 420,
   },
 } as const;
 
@@ -1485,5 +1493,150 @@ export const Settings = {
     offKnob: Colors.text,
     /** Faster than `Motion.duration`: a switch must feel immediate. */
     duration: 180,
+  },
+} as const;
+
+/**
+ * Glass — floating chrome over imagery (viewfinder, album, viewer, film covers).
+ *
+ * Not in the prototype. On iOS 26+ this is the system's Liquid Glass
+ * (`expo-glass-effect`); everywhere else a blur with a tinted fill and a bright
+ * top edge, which is what the fallback values below describe. Never put glass
+ * on glass.
+ */
+export const Glass = {
+  /** Fallback blur, by how large the surface is — bigger reads as thicker. */
+  blur: { chip: 24, bar: 40 },
+  /** Fallback fill over the blur. */
+  fill: 'rgba(28,26,24,0.42)',
+  /** Fallback when the user asked for reduced transparency. */
+  solid: 'rgba(24,22,21,0.94)',
+  border: 'rgba(255,255,255,0.16)',
+  /** Round control. */
+  buttonSize: 44,
+  iconSize: 18,
+  /** Capsule with a label. */
+  capsuleHeight: 36,
+  capsulePaddingX: 14,
+  capsuleGap: 7,
+  /** Press feedback on a glass control. */
+  pressScale: 0.94,
+} as const;
+
+/**
+ * Springs, in Apple's two parameters: damping ratio and response.
+ *
+ * `settle` is the default (critically damped, no overshoot). `momentum` is only
+ * for motion a flick or a release carried into. `press` is touch-down feedback.
+ */
+export const Springs = {
+  settle: { dampingRatio: 1, duration: 380 },
+  momentum: { dampingRatio: 0.82, duration: 420 },
+  press: { dampingRatio: 1, duration: 180 },
+} as const;
+
+/**
+ * The full-screen photo viewer — own shots and the album share it.
+ *
+ * Not in the prototype.
+ */
+export const Viewer = {
+  backdrop: '#050506',
+  /** Between pages while swiping. */
+  pageGap: 16,
+  maxZoom: 4,
+  doubleTapZoom: 2.5,
+  /** Finger travel before a drag picks its axis. */
+  slop: 10,
+  /** Projected travel past which a drag down closes the viewer. */
+  dismissDistance: 140,
+  /** How far the photo shrinks while it is dragged down. */
+  dismissMinScale: 0.72,
+  /** `rubberband()`'s constant. */
+  rubber: 0.55,
+  /** Scroll-like deceleration used to project where a flick would land. */
+  deceleration: 0.998,
+  /** Chrome inset from the safe area. */
+  chromeInset: 12,
+  chromeGap: 10,
+  /** Cross-fade used instead of travel under reduced motion. */
+  fadeMs: 180,
+} as const;
+
+/** One thumbnail in a photo grid — "Your shots" and the album. */
+export const PhotoTile = {
+  /** The same 3:4 as the viewfinder. */
+  aspectRatio: 3 / 4,
+  radius: 4,
+  placeholder: '#141316',
+  pressScale: 0.96,
+  fadeMs: 150,
+} as const;
+
+/**
+ * 17 · Album — the event's photos: hidden while the film is still being shot,
+ * a shared grid once it is developed.
+ *
+ * Not in the prototype (17 was the clip player).
+ */
+export const Album = {
+  columns: 3,
+  gap: 3,
+  /** The title block above the grid. */
+  titlePaddingX: 24,
+  /** Room for the floating chrome above the title. */
+  titlePaddingTop: 64,
+  titleGap: 6,
+  titlePaddingBottom: 20,
+  listPaddingBottom: 48,
+  /** Floating glass controls, inset from the safe area. */
+  chromeInset: 12,
+  chromeGap: 10,
+  /** The soft edge where the grid scrolls under the chrome — no divider. */
+  topFade: 96,
+  /** The status capsule ("Saved", "Saving 12 / 124"). */
+  status: {
+    bottom: 76,
+    showMs: 2200,
+  },
+
+  /** Before the reveal: countdown, a count, nothing to see. */
+  developing: {
+    paddingX: 28,
+    eyebrowGap: 14,
+    countdownGap: 36,
+    unitGap: 18,
+    valueUnitGap: 6,
+    statGap: 20,
+    /** The strip of blank frames. */
+    frames: 5,
+    frameGap: 6,
+    frameRadius: 4,
+    frameFill: 'rgba(255,255,255,0.035)',
+    stripGap: 40,
+    actionsGap: 12,
+    actionsBottom: 12,
+    /** Under an hour the countdown shows seconds. */
+    fastTickMs: 1000,
+    slowTickMs: 20_000,
+  },
+
+  /**
+   * The reveal — the one choreographed moment in the app. Prints come up out
+   * of the dark one after another, like paper in a developer bath.
+   */
+  reveal: {
+    /** A warm near-black, the colour of a print before the image appears. */
+    veil: '#0d0806',
+    /** Between one print and the next. */
+    staggerMs: 70,
+    /** Prints beyond this come up together — nobody watches tile 200. */
+    maxStaggered: 18,
+    /** One print coming up. */
+    developMs: 1100,
+    /** Reduced motion: one cross-fade for the whole sheet. */
+    reducedMs: 400,
+    /** How long to wait for the first thumbnails before starting anyway. */
+    prefetchTimeoutMs: 2500,
   },
 } as const;

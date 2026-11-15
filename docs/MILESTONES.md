@@ -181,16 +181,72 @@ zurückerstattet.
   ersetzen; `developPhoto()` blockiert den JS-Thread kurz (bei Serienaufnahmen
   ggf. in eine Worklet-Runtime verlegen).
 
-## M3 · Entwickeln & Album
+## Upgrade auf Expo SDK 58 (15.11.2026, auf dem Gerät nicht geprüft)
 
-- „Entwickelt sich“-Zustand: Countdown, Anzahl Fotos, nichts sichtbar.
-- **Der Reveal** — der eine choreografierte Moment der App.
-- Album: Grid mit Thumbnails (`expo-image`), Vollbild-Viewer mit Swipe, Pinch und
-  Drag-to-dismiss (interruptible, 1:1, Velocity-Handoff), Fotograf-Badge.
-- Speichern (einzeln/alle) und Teilen; Host-Moderation; „Film jetzt entwickeln“
-  für den Host (`endEvent()`).
-- Gast-Upgrade `(auth)/keep` nach dem Reveal wieder anbinden.
-- Film-Karten in der Bibliothek mit echtem Cover; Platzhalter-Komponente löschen.
+- Auf Wunsch von SDK 54 direkt auf **SDK 58**: RN 0.88, React 19.3, TypeScript 6,
+  Reanimated 4.7, Worklets 0.13 (Pin auf 0.8.3 entfernt), Gesture Handler 3,
+  Skia 2.14, expo-router 58 (ohne React Navigation). Neu: `expo-glass-effect`.
+- Angepasst: Router-Importe, asynchrone Datei-Operationen in der Upload-Queue,
+  neue `expo-media-library`-API (QR speichern auf 09), Ref-Typen, ESLint-Regeln
+  (drei React-Compiler-Regeln aus, siehe `eslint.config.js`).
+- **Geprüft:** Typecheck, Lint, `expo-doctor` (20/20), iOS-Bundle-Export.
+- **Nicht geprüft:** kein nativer Build. Ob VisionCamera 5.2.4 mit Worklets 0.13
+  und RN 0.88 baut und läuft, ist offen; ebenso ob
+  `plugins/with-worklets-headers.js` noch nötig ist (bleibt vorerst drin).
+- **Für dich:** neuer Dev-Build nötig (laut Release-Notes iOS-27-SDK / Xcode 27;
+  Mindestversion iOS 16.4). Der alte Build lädt das neue Bundle nicht. Rückweg:
+  Commit `79b7413`.
+
+## M3 · Entwickeln & Album (gebaut, auf dem Gerät nicht geprüft)
+
+- **Glas:** `components/ui/glass.tsx` — Liquid Glass (iOS 26+), sonst Blur, bei
+  „Transparenz reduzieren" deckend. `GlassButton` reagiert beim Antippen.
+- **Viewer:** `components/ui/photo-viewer.tsx`, einer für „Your shots" und das
+  Album: öffnet aus der Kachel und kehrt zur Kachel des aktuellen Fotos zurück,
+  Wischen, Pinch, Doppeltipp, nach unten wegziehen, Federn mit
+  Geschwindigkeitsübergabe, Gummiband an den Rändern, Überblendung bei
+  „Bewegung reduzieren".
+- **Kamera-Kachel:** öffnet weiterhin zuerst das Grid „Your shots"; ein Foto
+  öffnet daraus den Viewer (so entschieden).
+- **Album** `(library)/album/[id]`: vor dem Ende Countdown, Anzahl Fotos,
+  nichts sichtbar, „Film jetzt entwickeln" für den Host (mit Rückfrage);
+  danach Grid, Viewer mit Fotograf, Speichern (einzeln/alle), Teilen,
+  Löschen (Host oder eigenes Foto). Zustände: Laden, Fehler mit „Try again",
+  leer.
+- **Reveal:** „Entwicklerbad" (so entschieden) — einmal pro Film und Gerät, die
+  Abzüge kommen gestaffelt aus dem Dunkel, Haptik am Anfang und am Ende.
+- **Your Films:** Karussell (so entschieden) mit einem Poster pro Film und
+  echtem Cover (eigenes letztes Foto, nach dem Entwickeln das erste des
+  Albums), Glas-Kapseln für Status und Personen, unscharfer Hintergrund aus
+  dem vorderen Film.
+- **`(auth)/keep`:** erscheint, wenn ein Gast ein entwickeltes Album verlässt.
+- Platzhalter-Komponente und `film-card.tsx` gelöscht.
+- **Geprüft:** Typecheck, Lint, iOS-Bundle-Export.
+- **Nicht geprüft (alles Sichtbare):** Aussehen und Gefühl von Viewer, Reveal,
+  Karussell und Glas; Liquid Glass auf iOS 26; Speichern/Teilen; Löschen gegen
+  die RLS; Cover-Abfragen gegen den Stack; Verhalten offline.
+- **Bekannte Lücken:** Teilen geht nur auf iOS (RN-`Share` kann auf Android
+  keine Datei senden); „offline" hat keinen eigenen Zustand, nur die
+  Fehlermeldung; der Viewer nutzt die in Gesture Handler 3 veraltete
+  Builder-API (wie die Kamera).
+
+### Vorschlag: Glas & Bewegung in den übrigen Screens (noch nicht umgesetzt)
+
+Bitte ankreuzen, was gebaut werden soll:
+
+1. **13 Kamera:** Zähler, Blitz, Kamerawechsel, Zoom-Leiste, Foto- und
+   Einladungs-Kachel als `Glass` über dem Sucher (zuerst auf dem Gerät prüfen,
+   dass Glas über dem Skia-Canvas sauber zeichnet).
+2. **`PillButton` / `CircleIconButton`:** Reaktion beim Antippen mit Feder
+   (Skalierung) statt Transparenz beim Loslassen — wirkt in der ganzen App.
+3. **01 Landing, 08 Join, Sheets:** `GlassPanel` auf `Glass` umstellen; Sheets
+   mit dem Finger ziehbar, Feder mit Geschwindigkeitsübergabe.
+4. **18 Toast:** `Glass` und Feder statt fester Kurve.
+5. **Popover (04):** wächst aus dem auslösenden Element.
+6. **09 Einladung / 10 Gruppe:** Chips federn beim Beitritt herein; QR-Karte
+   bleibt deckend (Glas würde das Scannen stören).
+7. **20 Einstellungen, 11/12, Onboarding:** kein Glas (kein Bild dahinter), nur
+   Punkt 2.
 
 ## M4 · Benachrichtigungen
 
