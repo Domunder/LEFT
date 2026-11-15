@@ -1,0 +1,340 @@
+---
+import '@fontsource-variable/newsreader/wght.css';
+import '@fontsource-variable/newsreader/wght-italic.css';
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource/dm-serif-display/400.css';
+import '../styles/global.css';
+import { Image } from 'astro:assets';
+import logo from '../assets/left-logo.png';
+import { NAV, SITE } from '../site';
+
+type Props = {
+  title: string;
+  description: string;
+  /** Path of the social card under /public. */
+  ogImage?: string;
+  noindex?: boolean;
+  jsonLd?: object[];
+  /** Hide the header's links and CTA (the invite page is one job only). */
+  bare?: boolean;
+};
+
+const {
+  title,
+  description,
+  ogImage = '/og.jpg',
+  noindex = false,
+  jsonLd = [],
+  bare = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, SITE.url).href;
+const ogUrl = new URL(ogImage, SITE.url).href;
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    <meta name="theme-color" content="#101010" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE.name} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogUrl} />
+
+    {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <nav class="bar glass" aria-label="Main">
+        <a class="brand" href="/" aria-label="LEFT, home">
+          <Image src={logo} alt="" width={22} height={22} densities={[1, 2, 3]} loading="eager" />
+          <span>LEFT</span>
+        </a>
+        {
+          !bare && (
+            <>
+              <ul class="links">
+                {NAV.map((item) => (
+                  <li>
+                    <a href={item.href}>{item.label}</a>
+                  </li>
+                ))}
+              </ul>
+              <a class="pill pill-primary cta" href="/#get">
+                Get the app
+              </a>
+              <details class="menu">
+                <summary aria-label="Menu">
+                  <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M3 6.5h14M3 13.5h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                  </svg>
+                </summary>
+                <ul class="glass">
+                  {NAV.map((item) => (
+                    <li>
+                      <a href={item.href}>{item.label}</a>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            </>
+          )
+        }
+      </nav>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap inner">
+        <div class="about">
+          <a class="brand" href="/" aria-label="LEFT, home">
+            <Image src={logo} alt="" width={22} height={22} densities={[1, 2, 3]} />
+            <span>LEFT</span>
+          </a>
+          <p>A disposable camera for events. Photos only, developed together.</p>
+        </div>
+        <nav aria-label="Footer">
+          <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/use-cases/">Use cases</a></li>
+            <li><a href="/wedding/">Weddings</a></li>
+            <li><a href="/#pricing">Pricing</a></li>
+            <li><a href="/#faq">FAQ</a></li>
+          </ul>
+          <ul>
+            <li><a href="/terms/">Terms</a></li>
+            <li><a href="/privacy/">Privacy</a></li>
+          </ul>
+        </nav>
+      </div>
+      <p class="wrap legal">© {year} LEFT</p>
+    </footer>
+
+    <script is:inline>
+      (() => {
+        const items = document.querySelectorAll('.reveal');
+        if (!('IntersectionObserver' in window)) {
+          items.forEach((el) => el.classList.add('in'));
+          return;
+        }
+        const io = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('in');
+                io.unobserve(entry.target);
+              }
+            }
+          },
+          { rootMargin: '0px 0px -8% 0px' },
+        );
+        items.forEach((el) => io.observe(el));
+      })();
+    </script>
+  </body>
+</html>
+
+<style>
+  .skip {
+    position: absolute;
+    left: 16px;
+    top: -60px;
+    z-index: 100;
+    background: var(--ink);
+    color: var(--ink-dark);
+    padding: 10px 16px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .skip:focus {
+    top: 12px;
+  }
+
+  .site-header {
+    position: fixed;
+    inset: 14px 0 auto 0;
+    z-index: 50;
+    display: flex;
+    justify-content: center;
+    padding-inline: 14px;
+    pointer-events: none;
+  }
+
+  .bar {
+    pointer-events: auto;
+    width: min(1160px, 100%);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 8px 8px 8px 20px;
+    border-radius: 999px;
+    min-height: 56px;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    text-decoration: none;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    margin-right: auto;
+  }
+
+  .links {
+    display: flex;
+    gap: 28px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .links a {
+    text-decoration: none;
+    font-size: 0.9rem;
+    color: var(--ink-70);
+    transition: color 0.2s var(--ease);
+  }
+
+  .links a:hover {
+    color: var(--ink);
+  }
+
+  .cta {
+    min-height: 40px;
+    padding: 10px 18px;
+    font-size: 0.875rem;
+  }
+
+  .menu {
+    display: none;
+    position: relative;
+  }
+
+  .menu summary {
+    list-style: none;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+
+  .menu summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .menu ul {
+    position: absolute;
+    right: -8px;
+    top: 54px;
+    width: min(260px, 80vw);
+    list-style: none;
+    margin: 0;
+    padding: 10px;
+    border-radius: 22px;
+    background: rgba(20, 18, 16, 0.92);
+  }
+
+  .menu a {
+    display: block;
+    padding: 12px 14px;
+    text-decoration: none;
+    border-radius: 12px;
+  }
+
+  @media (max-width: 760px) {
+    .links {
+      display: none;
+    }
+    .menu {
+      display: block;
+    }
+    .bar {
+      gap: 8px;
+    }
+  }
+
+  .site-footer {
+    border-top: 1px solid var(--line);
+    padding-block: 56px 36px;
+    color: var(--ink-70);
+    font-size: 0.9rem;
+  }
+
+  .inner {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 36px;
+  }
+
+  .about {
+    display: grid;
+    gap: 14px;
+    max-width: 30ch;
+  }
+
+  .about .brand {
+    color: var(--ink);
+    margin-right: 0;
+  }
+
+  .site-footer nav {
+    display: flex;
+    gap: 64px;
+  }
+
+  .site-footer ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 4px;
+    align-content: start;
+  }
+
+  .site-footer nav a {
+    display: inline-block;
+    padding-block: 6px;
+    text-decoration: none;
+  }
+
+  .site-footer nav a:hover {
+    color: var(--ink);
+  }
+
+  .legal {
+    margin-top: 48px;
+    color: var(--ink-55);
+    font-size: 0.8rem;
+  }
+</style>

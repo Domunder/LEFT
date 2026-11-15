@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /j/
+
+Sitemap: https://leftmoment.com/sitemap-index.xml

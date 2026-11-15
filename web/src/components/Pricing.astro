@@ -1,0 +1,111 @@
+---
+import { TIERS } from '../site';
+
+type Props = { highlight?: string };
+const { highlight } = Astro.props;
+---
+
+<section id="pricing" class="pricing">
+  <div class="wrap">
+    <div class="section-head center reveal">
+      <p class="eyebrow">Pricing</p>
+      <h2>Free for most parties. <em>A few francs for the big ones.</em></h2>
+      <p class="lede">The host pays once per event. Guests never pay.</p>
+    </div>
+    <ul class="tiers reveal">
+      {
+        TIERS.map((tier) => (
+          <li class:list={[{ on: tier.id === highlight }]}>
+            <p class="price">
+              {tier.price === 0 ? (
+                <b>Free</b>
+              ) : (
+                <>
+                  <small>CHF</small>
+                  <b>{tier.price}</b>
+                </>
+              )}
+            </p>
+            <p class="guests">Up to {tier.guests} guests</p>
+            <p class="roll">{tier.roll}</p>
+            <p class="note">{tier.note}</p>
+          </li>
+        ))
+      }
+    </ul>
+    <p class="fine reveal">
+      One-time, per event. No subscription. Prices are charged in the app and may vary slightly by store and
+      country.
+    </p>
+  </div>
+</section>
+
+<style>
+  .tiers {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 26px 24px 24px;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+  }
+
+  li.on {
+    border-color: var(--ink-30);
+    background: linear-gradient(180deg, rgba(240, 190, 140, 0.1), transparent 70%), var(--card);
+  }
+
+  .price {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .price b {
+    font-family: var(--numeral);
+    font-weight: 400;
+    font-size: 3rem;
+    line-height: 1;
+  }
+
+  .price small {
+    font-size: 0.75rem;
+    letter-spacing: 0.14em;
+    color: var(--ink-55);
+  }
+
+  .guests {
+    font-weight: 600;
+  }
+
+  .roll {
+    color: var(--ink-70);
+    font-size: 0.92rem;
+  }
+
+  .note {
+    margin-top: 12px;
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-55);
+  }
+
+  .fine {
+    margin-top: 28px;
+    text-align: center;
+    color: var(--ink-55);
+    font-size: 0.875rem;
+  }
+</style>

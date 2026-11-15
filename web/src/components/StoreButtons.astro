@@ -1,0 +1,89 @@
+---
+/**
+ * The two store buttons. Until the app is listed (`SITE.appStoreUrl` /
+ * `SITE.playStoreUrl` are null) they are plain labels saying "Coming soon" —
+ * a button that leads nowhere would be a lie.
+ */
+import { SITE } from '../site';
+
+const stores = [
+  { id: 'ios', name: 'App Store', url: SITE.appStoreUrl },
+  { id: 'android', name: 'Google Play', url: SITE.playStoreUrl },
+];
+---
+
+<div class="stores">
+  {
+    stores.map((store) => {
+      const Tag = store.url ? 'a' : 'span';
+      return (
+        <Tag class:list={['store', { soon: !store.url }]} href={store.url ?? undefined} data-store={store.id}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 4v11M7 10.500l5 5 5-5M5 20h14" />
+          </svg>
+          <span>
+            <small>{store.url ? 'Download on' : 'Coming soon to'}</small>
+            {store.name}
+          </span>
+        </Tag>
+      );
+    })
+  }
+</div>
+
+<style>
+  .stores {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .store {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    padding: 9px 22px 9px 18px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--ink-dark);
+    text-decoration: none;
+    font: 600 1.02rem/1.15 var(--sans);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      0 2px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.25s var(--ease);
+  }
+
+  a.store:active {
+    transform: scale(0.97);
+  }
+
+  .store.soon {
+    background: transparent;
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--ink-30);
+  }
+
+  .store svg {
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex: none;
+  }
+
+  .store span {
+    display: grid;
+  }
+
+  .store small {
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    opacity: 0.7;
+  }
+</style>

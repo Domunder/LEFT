@@ -279,9 +279,56 @@ Vom Nutzer komplett freigegeben. Nur JS — **kein neuer nativer Build nötig**.
 
 ## M5 · Web & Einladungen
 
-- `leftmoment.com`: Landingpage, `/j/{CODE}` → Store-Weiterleitung,
-  `apple-app-site-association` und `assetlinks.json` für Universal/App Links.
-- Terms/Privacy öffentlich hosten.
+Stand 2026-11-15: **gebaut in `web/`, nicht deployt** (Domain fehlt). Astro,
+statisch, für Cloudflare Pages; nur Englisch. Details und Befehle:
+`web/README.md`.
+
+**Fertig (lokal gebaut und im Browser geprüft, Desktop und Mobile):**
+
+- `/` Home (Hero, So funktioniert es, Looks, Album, Anlässe, Preise, FAQ),
+  `/use-cases/` (Hochzeit zuerst, dann Party, Reise, Geburtstag, weitere) und
+  `/wedding/` als eigene Hochzeitsseite; alle gegenseitig verlinkt.
+- App-Mocks als HTML/CSS aus den Design-Tokens (Kamera mit „17 left“,
+  Look-Auswahl, Your Moments, Album, Beitritt, Entwickeln) — keine Screenshots.
+- 11 Stockfotos von Unsplash plus die 6 Samples der App; Quelle und Lizenz in
+  `web/CREDITS.md`.
+- SEO: eigene Titles/Descriptions, Canonicals, Open Graph/Twitter-Karten,
+  JSON-LD (`SoftwareApplication`, `FAQPage`, `BreadcrumbList`), Sitemap,
+  `robots.txt`, AVIF/WebP mit Breite/Höhe und Lazy Loading. Lighthouse mobil
+  (lokal): Home 92 / 100 / 100 / 100, Use cases 96 / 100 / 100 / 100, Wedding
+  95 / 100 / 100 / 100 (Performance / Accessibility / Best Practices / SEO).
+- `/j/{CODE}`: eine statische Seite für alle Codes (Rewrite in
+  `public/_redirects`), zeigt den Code, „Open in LEFT“ (`left://j/CODE`) und
+  die Store-Buttons; lokal mit `wrangler pages dev` geprüft.
+- `apple-app-site-association` und `assetlinks.json` für `com.leftmoment.app`,
+  Pfad `/j/*`, als JSON ausgeliefert (`public/_headers`).
+- `/terms/` und `/privacy/` als Platzhalter (`noindex`, nicht in der Sitemap).
+
+**Wartet auf die Domain:**
+
+- Cloudflare-Pages-Projekt anlegen (Root `web`, `npm run build`, Output `dist`)
+  und `leftmoment.com` aufschalten; danach die drei Prüfungen aus
+  `web/README.md` (Association-Dateien erreichbar, Link öffnet die App).
+
+**Wartet auf Store-Eintrag und Konten:**
+
+- Store-Links in `web/src/site.ts` — bis dahin steht auf den Buttons „Coming
+  soon“ und `/j/{CODE}` leitet nicht in den Store weiter (Logik ist gebaut,
+  mangels Links ungetestet).
+- Apple Team-ID in `apple-app-site-association`, SHA-256-Fingerprint des
+  Android-Signaturschlüssels in `assetlinks.json` (beide als `REPLACE_WITH_…`
+  markiert).
+
+**Wartet auf M6:** die geprüften Rechtstexte für `/terms/` und `/privacy/`.
+
+**Offen / nicht gebaut:**
+
+- Der Invite-Code überlebt die Store-Installation nicht; die Seite bittet den
+  Gast, den Link danach nochmals zu tippen. Ein Deferred Deep Link wäre ein
+  eigener Schritt.
+- Deutsch (`/de/` mit `hreflang`) — bewusst weggelassen, später ergänzbar.
+- Die Fotos zeigen erkennbare Fremde (Unsplash-Lizenz, keine Model-Releases) —
+  durch eigene ersetzen, sobald es echte Events gibt.
 - Web-Album: vorerst nicht (entschieden 15.11.2026).
 
 ## M6 · Launch-Reife

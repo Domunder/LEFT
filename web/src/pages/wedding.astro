@@ -1,0 +1,409 @@
+---
+import { Picture } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Phone from '../components/Phone.astro';
+import StoreButtons from '../components/StoreButtons.astro';
+import Pricing from '../components/Pricing.astro';
+import Faq from '../components/Faq.astro';
+import GetApp from '../components/GetApp.astro';
+import { SITE, type Faq as FaqItem } from '../site';
+
+import weddingDance from '../assets/photos/wedding-dance.jpg';
+import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
+import weddingFriends from '../assets/photos/wedding-friends.jpg';
+import weddingLaugh from '../assets/photos/wedding-laugh.jpg';
+import weddingMono from '../assets/photos/wedding-mono.jpg';
+
+const title = 'Wedding disposable camera app — LEFT for weddings';
+const description =
+  'A disposable camera for every wedding guest, on their own phone. Guests scan a QR code, shoot a limited roll, and the whole album is revealed the morning after.';
+
+const reasons = [
+  {
+    title: 'The photographer can’t be everywhere',
+    text: 'They follow the two of you. Your guests are at the bar, at the kids’ table and on the dance floor at one in the morning. LEFT collects what they see.',
+  },
+  {
+    title: 'A limited roll makes better photos',
+    text: 'With 24 shots, people stop filming the whole first dance and start waiting for the moment. You get fewer photos, and far more keepers.',
+  },
+  {
+    title: 'Nobody is on their phone',
+    text: 'There is nothing to scroll and nothing to post. Take the picture, put the phone away. The album only exists once the party is over.',
+  },
+];
+
+const setup = [
+  {
+    title: 'Create the event',
+    text: 'Name it, pick the film look and the roll size, and choose how many guests you expect.',
+  },
+  {
+    title: 'Set the reveal',
+    text: 'Choose the day and time the film is developed — the morning after is a favourite.',
+  },
+  {
+    title: 'Put the QR code on the tables',
+    text: 'Save the QR code from the app and print it on table cards or the menu. Or send the link in your group chat.',
+  },
+  {
+    title: 'Wake up to the album',
+    text: 'When the film is developed, every guest’s photos appear for everyone at once. Save them, share them, keep them.',
+  },
+];
+
+const faq: FaqItem[] = [
+  {
+    q: 'How do wedding guests join?',
+    a: 'They scan the QR code on the table or open the invite link, install LEFT, type their name and start shooting. Guests never create an account.',
+  },
+  {
+    q: 'How many guests can join a wedding?',
+    a: 'Up to 200. Events with up to 50 guests and a limited roll are free; up to 100 guests is CHF 15, up to 150 is CHF 20 and up to 200 is CHF 25, paid once by the host.',
+  },
+  {
+    q: 'What if the venue has bad Wi-Fi or no signal?',
+    a: 'Guests can keep shooting. Photos are stored safely on the phone and uploaded on their own as soon as there is a connection again.',
+  },
+  {
+    q: 'Can we see the photos during the wedding?',
+    a: 'Everyone can look at their own shots. The shared album stays hidden until the film is developed, at the time the host chose. The host can also develop the film early.',
+  },
+  {
+    q: 'Which roll size and look work best for a wedding?',
+    a: 'Most couples pick 24 or 36 photos per guest, or the unlimited roll for a long day. Golden is warm and flattering for evening light; Mono gives a classic black-and-white album.',
+  },
+  {
+    q: 'Does LEFT replace our wedding photographer?',
+    a: 'No. Your photographer makes the portraits and the pictures you planned. LEFT adds the hundreds of small, unplanned moments only your guests are close enough to see.',
+  },
+  {
+    q: 'Can we remove photos we don’t like?',
+    a: 'Yes. The host can remove any photo from the album, and every guest can remove their own.',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'LEFT', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: 'Use cases', item: SITE.url + '/use-cases/' },
+      { '@type': 'ListItem', position: 3, name: 'Weddings', item: SITE.url + '/wedding/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} jsonLd={jsonLd} ogImage="/og-wedding.jpg">
+  <section class="hero">
+    <Picture
+      src={weddingFriends}
+      alt="A bride raising her bouquet on the dance floor, surrounded by cheering friends"
+      formats={['avif', 'webp']}
+      widths={[480, 800, 1200, 1920]}
+      sizes="100vw"
+      loading="eager"
+      fetchpriority="high"
+      class="hero-bg look-golden"
+    />
+    <div class="wrap hero-copy">
+      <p class="eyebrow">LEFT for weddings</p>
+      <h1>Your wedding, <em>through every guest’s eyes.</em></h1>
+      <p class="lede">
+        A disposable camera on every table — without the cameras. Guests scan a QR code, get one roll of photos
+        each, and the whole album is revealed the morning after.
+      </p>
+      <StoreButtons />
+    </div>
+  </section>
+
+  <section class="reasons">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">Why couples use it</p>
+        <h2>The photos <em>you never knew were taken.</em></h2>
+      </div>
+      <ul class="reason-list reveal">
+        {
+          reasons.map((reason) => (
+            <li>
+              <h3>{reason.title}</h3>
+              <p>{reason.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="gallery" aria-label="Wedding photos taken by guests">
+    <div class="wrap mosaic reveal">
+      <Picture src={weddingCrowd} alt="Guests waving sparklers around the couple at night" formats={['avif', 'webp']} widths={[400, 800, 1200]} sizes="(min-width: 900px) 760px, 100vw" class="look-golden wide" />
+      <Picture src={weddingLaugh} alt="The bride and groom laughing among their guests" formats={['avif', 'webp']} widths={[320, 640]} sizes="(min-width: 900px) 380px, 50vw" width={640} height={800} fit="cover" class="look-golden" />
+      <Picture src={weddingMono} alt="A packed wedding dance floor in black and white" formats={['avif', 'webp']} widths={[320, 640]} sizes="(min-width: 900px) 380px, 50vw" width={640} height={800} fit="cover" class="look-mono" />
+      <Picture src={weddingDance} alt="A couple dancing in the middle of their guests, lit by flash" formats={['avif', 'webp']} widths={[400, 800, 1200]} sizes="(min-width: 900px) 760px, 100vw" class="look-golden wide" />
+    </div>
+  </section>
+
+  <section class="setup">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="wrap setup-grid">
+      <div class="setup-phones reveal">
+        <Phone
+          screen="camera"
+          photo={weddingDance}
+          shotsLeft={23}
+          class="tilt-left"
+          label="The LEFT camera at a wedding with a counter that reads 23 left"
+        />
+        <Phone
+          screen="album"
+          class="tilt-right"
+          label="The developed wedding album in LEFT: 412 photos from 38 guests"
+        />
+      </div>
+      <div class="setup-copy reveal">
+        <p class="eyebrow">Set it up in a minute</p>
+        <h2>Four steps <em>before the big day.</em></h2>
+        <ol>
+          {
+            setup.map((step, index) => (
+              <li>
+                <span class="num" aria-hidden="true">
+                  {index + 1}
+                </span>
+                <div>
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                </div>
+              </li>
+            ))
+          }
+        </ol>
+        <p>
+          <a class="text-link" href="/#how">How LEFT works in detail →</a>
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <Pricing highlight="left_medium" />
+  <Faq items={faq} />
+
+  <section class="other">
+    <div class="wrap other-inner reveal">
+      <p class="lede">Not only weddings: LEFT works for parties, trips and birthdays too.</p>
+      <a class="pill pill-ghost" href="/use-cases/">All use cases →</a>
+    </div>
+  </section>
+
+  <GetApp lede="Create your wedding’s event now and print the QR code whenever you’re ready." />
+</Base>
+
+<style>
+  .hero {
+    min-height: min(100svh, 900px);
+    display: grid;
+    align-items: end;
+    padding-top: 140px;
+    padding-bottom: clamp(40px, 7vw, 80px);
+    overflow: hidden;
+  }
+
+  .hero :global(picture),
+  .hero :global(.hero-bg) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 75%;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(6, 6, 8, 0.35), rgba(16, 16, 16, 0.55) 40%, #101010 96%);
+  }
+
+  @media (max-width: 700px) {
+    .hero :global(picture),
+    .hero :global(.hero-bg) {
+      height: 62%;
+      object-position: 42% 40%;
+    }
+    .hero::after {
+      background: linear-gradient(rgba(6, 6, 8, 0.3), rgba(16, 16, 16, 0.2) 25%, #101010 60%);
+    }
+  }
+
+  .hero-copy {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 22px;
+    justify-items: start;
+  }
+
+  .hero-copy .lede {
+    color: rgba(240, 237, 232, 0.86);
+  }
+
+  .reason-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+  }
+
+  .reason-list li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 30px 28px;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+  }
+
+  .reason-list p {
+    color: var(--ink-70);
+  }
+
+  .gallery {
+    padding-block: 0;
+  }
+
+  .mosaic {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .mosaic :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 20px;
+  }
+
+  .mosaic :global(picture:has(.wide)) {
+    grid-column: span 2;
+  }
+
+  @media (min-width: 900px) {
+    .mosaic {
+      grid-template-columns: 2fr 1fr;
+      gap: 14px;
+    }
+    .mosaic :global(picture:has(.wide)) {
+      grid-column: auto;
+    }
+    .mosaic :global(picture:nth-child(3)) {
+      order: 4;
+    }
+    .mosaic :global(img) {
+      aspect-ratio: auto;
+      height: 420px;
+    }
+  }
+
+  .setup {
+    overflow: hidden;
+  }
+
+  .setup .glow {
+    left: -20%;
+    top: 5%;
+  }
+
+  .setup-grid {
+    display: grid;
+    gap: 64px;
+    align-items: center;
+  }
+
+  .setup-phones {
+    display: flex;
+    justify-content: center;
+  }
+
+  .setup-phones :global(.phone) {
+    max-width: min(240px, 44vw);
+  }
+
+  .setup-phones :global(.tilt-left) {
+    transform: rotate(-5deg) translateX(6%);
+  }
+
+  .setup-phones :global(.tilt-right) {
+    transform: rotate(4deg) translate(-6%, 8%);
+  }
+
+  .setup-copy {
+    display: grid;
+    gap: 22px;
+  }
+
+  .setup-copy ol {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 22px;
+  }
+
+  .setup-copy li {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 12px;
+  }
+
+  .num {
+    font-family: var(--numeral);
+    font-size: 1.7rem;
+    line-height: 1.1;
+    color: var(--amber);
+  }
+
+  .setup-copy li p {
+    color: var(--ink-70);
+    margin-top: 4px;
+  }
+
+  @media (min-width: 900px) {
+    .setup-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .other {
+    padding-block: 0;
+  }
+
+  .other-inner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 28px clamp(22px, 4vw, 40px);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--card);
+  }
+</style>
