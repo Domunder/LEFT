@@ -430,9 +430,9 @@ and upload queue that use it are described above.
   the app only.
 
 - **Pricing (final, decided 2026-11-15, replacing "free up to 100, one SKU"):** free
-  up to 50 guests on a finite roll; `left_small` (~10 CHF) for the unlimited
-  roll in a group up to 50; `left_medium` (~15 CHF) up to 100 guests;
-  `left_large` (~20 CHF) up to 150; `left_unlimited` (~25 CHF) up to 200. One purchase per event, paid by the
+  up to 50 guests on a finite roll; `left_small` (US$9.99) for the unlimited
+  roll in a group up to 50; `left_medium` (US$14.99) up to 100 guests;
+  `left_large` (US$19.99) up to 150; `left_unlimited` (US$24.99) up to 200. One purchase per event, paid by the
   host at creation. A purchase unlocks a group size; `create_event()` is the
   authority (`free_max_members()`, `unlock_max_members()` — migration
   `20261115010000_price_tiers.sql`), `lib/tiers.ts` mirrors it for the button,

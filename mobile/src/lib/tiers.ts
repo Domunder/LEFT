@@ -4,10 +4,10 @@
  * Decided 2026-11-15 (replacing "free up to 100, one SKU"):
  *
  *   up to 50 guests, a finite roll       free
- *   up to 50 guests, the unlimited roll  CHF 10  left_small
- *   up to 100 guests, any roll           CHF 15  left_medium
- *   up to 150 guests, any roll           CHF 20  left_large
- *   up to 200 guests, any roll           CHF 25  left_unlimited
+ *   up to 50 guests, the unlimited roll  $9.99   left_small
+ *   up to 100 guests, any roll           $14.99  left_medium
+ *   up to 150 guests, any roll           $19.99  left_large
+ *   up to 200 guests, any roll           $24.99  left_unlimited
  *
  * A display mirror: `create_event()` decides whether an event needs a purchase
  * (`free_max_members()`, and `roll_size is null`), and
@@ -38,10 +38,10 @@ export type EventTier = {
  * stranded.
  */
 export const TIERS: readonly EventTier[] = [
-  { productId: 'left_small', maxMembers: 50, price: 'CHF 10' },
-  { productId: 'left_medium', maxMembers: 100, price: 'CHF 15' },
-  { productId: 'left_large', maxMembers: 150, price: 'CHF 20' },
-  { productId: 'left_unlimited', maxMembers: 200, price: 'CHF 25' },
+  { productId: 'left_small', maxMembers: 50, price: '$9.99' },
+  { productId: 'left_medium', maxMembers: 100, price: '$14.99' },
+  { productId: 'left_large', maxMembers: 150, price: '$19.99' },
+  { productId: 'left_unlimited', maxMembers: 200, price: '$24.99' },
 ];
 
 /**

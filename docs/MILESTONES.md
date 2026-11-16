@@ -13,7 +13,7 @@ Einwegkamera-App für Events umgebaut (Vorbild: ONCE, aber deutlich günstiger).
 | Look | Host wählt **einen Film/Look pro Event** (ersetzt Screen 03 „Format“). Wird beim Auslösen aufs Gerät eingebrannt. |
 | Entwicklung | Fotos sind bis Event-Ende für niemanden ausser dem Fotografen sichtbar; danach für alle. |
 | Gäste | Kein Konto — Link/QR → Name → drin (anonyme Supabase-Session, existiert bereits). |
-| Preis | **Vier Stufen, final (15.11.2026):** gratis bis 50 Gäste mit endlicher Rolle; ∞-Rolle bis 50 Gäste 10 CHF (`left_small`); bis 100 Gäste 15 CHF (`left_medium`); bis 150 Gäste 20 CHF (`left_large`); bis 200 Gäste 25 CHF (`left_unlimited`). Consumables, ein Kauf = ein Event, der Host zahlt beim Erstellen. Fair-Use-Deckel für ∞: 150 Fotos pro Gast; harte Obergrenze 200 Gäste. |
+| Preis | **Vier Stufen, final (15.11.2026):** gratis bis 50 Gäste mit endlicher Rolle; ∞-Rolle bis 50 Gäste 9.99 USD (`left_small`); bis 100 Gäste 14.99 USD (`left_medium`); bis 150 Gäste 19.99 USD (`left_large`); bis 200 Gäste 24.99 USD (`left_unlimited`) — in US-Dollar seit 16.11.2026. Consumables, ein Kauf = ein Event, der Host zahlt beim Erstellen. Fair-Use-Deckel für ∞: 150 Fotos pro Gast; harte Obergrenze 200 Gäste. |
 | Aufbewahrung | **6 Monate** nach dem Entwickeln (15.11.2026, vorher 12). Der Lösch-Job läuft täglich (Migration `20261115040000_retention.sql`). |
 | Event starten | Bleibt: der Host tippt „Start the Event“, erst dann gehen die Kameras auf (15.11.2026). |
 | Web-Album | Vorerst keines (15.11.2026). Für den Fotobuch-Verkauf in Phase 2 wieder prüfen. |
@@ -318,15 +318,21 @@ statisch, für Cloudflare Pages; nur Englisch. Details und Befehle:
 - `/` Home (Hero, So funktioniert es, Looks, Album, Anlässe, Preise, FAQ),
   `/use-cases/` (Hochzeit zuerst, dann Party, Reise, Geburtstag, weitere) und
   `/wedding/` als eigene Hochzeitsseite; alle gegenseitig verlinkt.
-- App-Mocks als HTML/CSS aus den Design-Tokens (Kamera mit „17 left“,
-  Look-Auswahl, Your Moments, Album, Beitritt, Entwickeln) — keine Screenshots.
-- 11 Stockfotos von Unsplash plus die 6 Samples der App; Quelle und Lizenz in
+- App-Mocks als HTML/CSS in einem iPhone-Rahmen, nach den echten Screen-Layouts
+  der App nachgebaut (Kamera mit „17 left“, Look-Auswahl, Your Moments, Album,
+  Name, Entwickeln) — keine Screenshots. Seit 16.11.2026 mit Bewegung:
+  Hero-Einstieg, Einblenden beim Scrollen, ein Fotoband, das mit dem Scrollen
+  läuft, und kleine Abläufe in den Mocks; „Bewegung reduzieren“ schaltet alles ab.
+- 10 Stockfotos von Unsplash plus die 6 Samples der App; Quelle und Lizenz in
   `web/CREDITS.md`.
 - SEO: eigene Titles/Descriptions, Canonicals, Open Graph/Twitter-Karten,
   JSON-LD (`SoftwareApplication`, `FAQPage`, `BreadcrumbList`), Sitemap,
   `robots.txt`, AVIF/WebP mit Breite/Höhe und Lazy Loading. Lighthouse mobil
-  (lokal): Home 92 / 100 / 100 / 100, Use cases 96 / 100 / 100 / 100, Wedding
-  95 / 100 / 100 / 100 (Performance / Accessibility / Best Practices / SEO).
+  (lokal, 16.11.2026): Home 89–92 / 100 / 100 / 100, Use cases 96 / 100 / 100 /
+  100, Wedding 96 / 100 / 100 / 100 (Performance / Accessibility / Best
+  Practices / SEO). Gemessen ohne Chromes eigene Seiteninhalts-Auswertung
+  (`AIPageContentGeneration`), die lokal ein zusätzliches Voll-Layout auslöst;
+  mit ihr lag Home bei 78–83.
 - `/j/{CODE}`: eine statische Seite für alle Codes (Rewrite in
   `public/_redirects`), zeigt den Code, „Open in LEFT“ (`left://j/CODE`) und
   die Store-Buttons; lokal mit `wrangler pages dev` geprüft.

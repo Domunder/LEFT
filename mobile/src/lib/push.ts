@@ -23,6 +23,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { requireOptionalNativeModule } from 'expo';
 import { Platform } from 'react-native';
 
 import { readPrefs } from '@/lib/notification-prefs';
@@ -50,6 +51,14 @@ let cachedModule: NotificationsModule | null | undefined;
 
 function loadNotifications(): NotificationsModule | null {
   if (cachedModule !== undefined) return cachedModule;
+
+  // Ask for the native half first. Requiring the package in a build without it
+  // throws while its modules are evaluated, and although the catch below holds,
+  // the dev runtime still prints that as an error on every launch.
+  if (!requireOptionalNativeModule('ExpoPushTokenManager')) {
+    cachedModule = null;
+    return cachedModule;
+  }
 
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports

@@ -153,10 +153,10 @@ Details und Fallstricke: `mobile/docs/payments.md`.
 
    | Produkt-ID | Preis | deckt |
    |---|---|---|
-   | `left_small` | CHF 10 | bis 50 Gäste, ∞-Rolle |
-   | `left_medium` | CHF 15 | bis 100 Gäste |
-   | `left_large` | CHF 20 | bis 150 Gäste |
-   | `left_unlimited` | CHF 25 | bis 200 Gäste |
+   | `left_small` | US$ 9.99 | bis 50 Gäste, ∞-Rolle |
+   | `left_medium` | US$ 14.99 | bis 100 Gäste |
+   | `left_large` | US$ 19.99 | bis 150 Gäste |
+   | `left_unlimited` | US$ 24.99 | bis 200 Gäste |
 
    Anzeigename z. B. „Event up to 100 guests"; IDs nach dem Livegang nie umbenennen.
 2. ☐ RevenueCat: Projekt, iOS- und Android-App (`com.leftmoment.app`),
