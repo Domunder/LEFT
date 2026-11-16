@@ -1,0 +1,668 @@
+/*
+ * The web camera (src/pages/j/index.astro). The app's visual language on the
+ * site's tokens (global.css): #101010, off-white, Newsreader with italic
+ * emphasis, DM Serif numerals, pills, glass over imagery only.
+ *
+ * One screen at a time: `.shoot[data-view=X]` shows `[data-screen=X]`.
+ */
+
+.shoot {
+  /* Tokens for this page only. */
+  --shutter: 78px;
+  --tile: 54px;
+  --round: 46px;
+  --gutter: 16px;
+  --frame-radius: 22px;
+  --print-radius: 14px;
+  --press: scale(0.94);
+  --press-ease: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden;
+}
+
+.shoot-glow {
+  left: 50%;
+  top: 34%;
+  transform: translate(-50%, -50%);
+}
+
+.shoot .screen {
+  display: none;
+  position: relative;
+  z-index: 1;
+  padding: calc(var(--safe-top) + 28px) var(--gutter) calc(var(--safe-bottom) + 28px);
+  min-height: 100svh;
+}
+
+.shoot[data-view='loading'] [data-screen='loading'],
+.shoot[data-view='join'] [data-screen='join'],
+.shoot[data-view='waiting'] [data-screen='waiting'],
+.shoot[data-view='camera'] [data-screen='camera'],
+.shoot[data-view='developing'] [data-screen='developing'],
+.shoot[data-view='album'] [data-screen='album'],
+.shoot[data-view='error'] [data-screen='error'] {
+  display: grid;
+}
+
+/* The camera and the album draw their own dark; the glow is for the rest. */
+.shoot[data-view='camera'] .shoot-glow,
+.shoot[data-view='album'] .shoot-glow {
+  display: none;
+}
+
+.screen-center {
+  align-content: center;
+  justify-items: center;
+  text-align: center;
+  gap: 20px;
+}
+
+.screen-center h1 {
+  font-size: clamp(2.4rem, 9vw, 3.4rem);
+  max-width: 12em;
+}
+
+.screen-center .lede {
+  max-width: 26em;
+}
+
+.shoot [hidden] {
+  display: none !important;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.fine {
+  color: var(--ink-55);
+  font-size: 0.875rem;
+}
+
+.fine a {
+  color: var(--ink-70);
+}
+
+/* Press-in: everything touchable gives on touch-down and commits on release. */
+.press {
+  transition: transform 0.32s var(--press-ease), opacity 0.2s var(--ease);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.press:active:not(:disabled) {
+  transform: var(--press);
+  transition-duration: 0.08s;
+}
+
+.press:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pill-glass {
+  background: rgba(240, 237, 232, 0.1);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.round {
+  display: grid;
+  place-items: center;
+  width: var(--round);
+  height: var(--round);
+  border-radius: 50%;
+  color: var(--ink);
+  padding: 0;
+  cursor: pointer;
+}
+
+.round svg,
+.tile svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.round-spacer {
+  width: var(--round);
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--ink-30);
+  border-top-color: var(--ink);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+/* ------------------------------------------------------------------ Join */
+
+.join {
+  width: min(440px, 100%);
+  padding: 32px clamp(20px, 5vw, 32px) 26px;
+  border-radius: var(--radius);
+  display: grid;
+  gap: 16px;
+  text-align: left;
+  justify-items: stretch;
+}
+
+.join h1 {
+  font-size: clamp(2.4rem, 9vw, 3.2rem);
+}
+
+.join .lede {
+  font-size: 1rem;
+}
+
+.field input {
+  width: 100%;
+  min-height: 56px;
+  padding: 0 20px;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  background: rgba(240, 237, 232, 0.07);
+  color: var(--ink);
+  font: 400 1.125rem var(--sans);
+  outline: none;
+}
+
+.field input:focus {
+  border-color: var(--ink-30);
+}
+
+.field input::placeholder {
+  color: var(--ink-30);
+}
+
+.helper {
+  color: var(--ink-55);
+  font-size: 0.875rem;
+  margin-top: -6px;
+}
+
+.error {
+  min-height: 1.4em;
+  color: var(--amber);
+  font-size: 0.9rem;
+}
+
+.have-app {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.shoot .have-app .stores,
+.shoot .album-foot .stores {
+  justify-content: center;
+}
+
+/* ---------------------------------------------------------------- Camera */
+
+.camera {
+  background: var(--bg);
+  grid-template-rows: auto 1fr auto auto;
+  gap: 14px;
+  padding-top: calc(var(--safe-top) + 14px);
+  padding-bottom: calc(var(--safe-bottom) + 18px);
+  height: 100svh;
+  min-height: 0;
+}
+
+.cam-head {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.cam-title {
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-55);
+  max-width: 80vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cam-count {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--ink-55);
+}
+
+.cam-count b {
+  font-family: var(--numeral);
+  font-weight: 400;
+  font-size: 1.9rem;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.frame {
+  position: relative;
+  align-self: center;
+  justify-self: center;
+  /* As large as fits, always 3:4. */
+  width: min(100%, (100svh - 300px) * 0.75);
+  aspect-ratio: 3 / 4;
+  border-radius: var(--frame-radius);
+  overflow: hidden;
+  background: #000;
+}
+
+.frame canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.veil.fire {
+  animation: shutter 0.36s ease-out;
+}
+
+@keyframes shutter {
+  0% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.frame-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+  color: var(--ink-70);
+  background: rgba(16, 16, 16, 0.86);
+}
+
+.cam-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100%, 420px);
+  justify-self: center;
+}
+
+/* Flash and flip keep their place when the phone has neither. */
+.cam-row .absent {
+  visibility: hidden;
+}
+
+.cam-ends {
+  min-height: 40px;
+  padding: 10px 18px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+#flash[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--ink-dark);
+}
+
+#flash[aria-pressed='true'] svg {
+  fill: currentColor;
+}
+
+.cam-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(100%, 360px);
+  justify-self: center;
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  width: var(--tile);
+  height: var(--tile);
+  border-radius: 14px;
+  overflow: hidden;
+  color: var(--ink);
+  padding: 0;
+  cursor: pointer;
+}
+
+.tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shutter {
+  width: var(--shutter);
+  height: var(--shutter);
+  border-radius: 50%;
+  border: 3px solid var(--ink);
+  background: transparent;
+  padding: 5px;
+  cursor: pointer;
+}
+
+.shutter span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.front-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.front-flash.on {
+  opacity: 1;
+}
+
+/* ------------------------------------------------------------ Developing */
+
+.countdown {
+  font-family: var(--numeral);
+  font-size: clamp(3rem, 14vw, 4.6rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: grid;
+  gap: 12px;
+  width: min(340px, 100%);
+  margin-top: 8px;
+}
+
+/* ----------------------------------------------------------------- Album */
+
+.album {
+  padding: 0 0 calc(var(--safe-bottom) + 40px);
+  align-content: start;
+  background: var(--bg);
+}
+
+.hero {
+  position: relative;
+  height: min(78svh, 680px);
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+.hero img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Going dark towards the event's name. */
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(16, 16, 16, 0) 45%, var(--bg) 100%);
+}
+
+.hero.empty {
+  height: 46svh;
+  cursor: default;
+}
+
+.hero-text {
+  position: absolute;
+  z-index: 1;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.hero-text h1 {
+  font-size: clamp(2.4rem, 10vw, 3.6rem);
+}
+
+.hero-text p {
+  color: var(--ink-70);
+}
+
+.prints {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0 var(--gutter);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .prints {
+    grid-template-columns: repeat(3, 1fr);
+    width: min(1100px, 100%);
+    margin-inline: auto;
+  }
+}
+
+.print {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-55);
+  font: 400 0.8125rem var(--sans);
+  text-align: left;
+  cursor: zoom-in;
+}
+
+.print img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: var(--print-radius);
+  background: var(--card);
+}
+
+.print span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The reveal: each print clears out of the dark, one after another. */
+.print.developing img {
+  animation: develop 1.6s var(--ease) both;
+  animation-delay: calc(var(--i) * 90ms + 200ms);
+}
+
+@keyframes develop {
+  0% {
+    filter: brightness(0) blur(8px);
+  }
+  60% {
+    filter: brightness(0.7) sepia(0.4) blur(2px);
+  }
+  100% {
+    filter: none;
+  }
+}
+
+/* Reduced motion: one cross-fade. */
+.print.fading img {
+  animation: fade 0.6s ease both;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.album-empty {
+  text-align: center;
+  padding: 24px var(--gutter);
+}
+
+.album-foot {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin-top: 48px;
+  padding: 0 var(--gutter);
+}
+
+/* ---------------------------------------------------------------- Viewer */
+
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: #000;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  animation: fade 0.22s ease both;
+}
+
+.viewer-bar,
+.viewer-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(var(--safe-top) + 10px) var(--gutter) 10px;
+}
+
+.viewer-actions {
+  justify-content: center;
+  padding: 10px var(--gutter) calc(var(--safe-bottom) + 14px);
+}
+
+.viewer-bar p {
+  color: var(--ink-70);
+  font-size: 0.875rem;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer-track {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.viewer-track::-webkit-scrollbar {
+  display: none;
+}
+
+.slide {
+  flex: 0 0 100%;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+}
+
+.slide img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* ----------------------------------------------------------------- Toast */
+
+.toast {
+  position: fixed;
+  z-index: 60;
+  left: 50%;
+  bottom: calc(var(--safe-bottom) + 120px);
+  max-width: calc(100% - 2 * var(--gutter));
+  padding: 12px 18px;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  opacity: 0;
+  transform: translate(-50%, 12px);
+  pointer-events: none;
+  transition:
+    opacity 0.3s var(--ease),
+    transform 0.45s var(--press-ease);
+}
+
+.toast.in {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press,
+  .toast {
+    transition: opacity 0.2s ease;
+  }
+
+  .press:active:not(:disabled) {
+    transform: none;
+    opacity: 0.7;
+  }
+
+  .toast,
+  .toast.in {
+    transform: translate(-50%, 0);
+  }
+
+  .veil.fire {
+    animation-duration: 0.2s;
+  }
+}

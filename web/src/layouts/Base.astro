@@ -23,6 +23,11 @@ type Props = {
   jsonLd?: object[];
   /** Hide the header's links and CTA (the invite page is one job only). */
   bare?: boolean;
+  /**
+   * A full-screen app page (the web camera): no header, no footer, no scroll
+   * reveal. The page draws all of its own chrome.
+   */
+  app?: boolean;
 };
 
 const {
@@ -32,6 +37,7 @@ const {
   noindex = false,
   jsonLd = [],
   bare = false,
+  app = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, SITE.url).href;
@@ -96,7 +102,8 @@ const year = new Date().getFullYear();
         setTimeout(show, 350);
       })();
     </script>
-    <a class="skip" href="#main">Skip to content</a>
+    {!app && <a class="skip" href="#main">Skip to content</a>}
+    {!app && (
     <header class="site-header">
       <nav class="bar glass" aria-label="Main">
         <a class="brand" href="/" aria-label="LEFT, home">
@@ -135,11 +142,13 @@ const year = new Date().getFullYear();
         }
       </nav>
     </header>
+    )}
 
     <main id="main">
       <slot />
     </main>
 
+    {!app && (
     <footer class="site-footer">
       <div class="wrap inner">
         <div class="about">
@@ -165,6 +174,7 @@ const year = new Date().getFullYear();
       </div>
       <p class="wrap legal">© {year} LEFT</p>
     </footer>
+    )}
 
     <script is:inline>
       (() => {

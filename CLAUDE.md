@@ -59,6 +59,9 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   HTTP, client half not run on a device: the security review.** See "Security
   review (2026-11-16)" below. **`linkIdentity` was rewritten and has never run
   on a device.**
+- **Built (2026-11-16), branch `feature/web-camera`, run against the local
+  stack in a desktop browser with a synthetic camera — never on a phone: the
+  web camera.** See "The web camera" below. The App Clip is a follow-up.
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -471,8 +474,9 @@ and upload queue that use it are described above.
   younger than `retention_period()`, or still has objects in the bucket.
 - **"Start the Event" stays** (decided 2026-11-15): the host's tap on 10 moves
   the event from `setup` to `live`; guests wait on 12 until then.
-- **No web album for now** (decided 2026-11-15). Developed albums are seen in
-  the app only.
+- **A browser guest sees the album on the web** (decided 2026-11-16,
+  replacing "no web album" of 2026-11-15) — only through `/j/{CODE}`, only for
+  members, by the same RLS. There is still no public or host web album.
 
 - **Pricing (final, decided 2026-11-15, replacing "free up to 100, one SKU"):** free
   up to 50 guests on a finite roll; `left_small` (US$9.99) for the unlimited
@@ -489,6 +493,29 @@ Statuses: `setup → live → developed`. Clients cannot write `status`, `ends_a
 `roll_size`, `max_members` or `shots_taken`, cannot INSERT events or photos, and
 cannot UPDATE a photo row or DELETE a roster row — `create_event()`,
 `claim_shot()` and `mark_photo_uploaded()` are the doors.
+
+## The web camera (2026-11-16)
+
+- **`leftmoment.com/j/{CODE}` is a camera for guests without the app**
+  (`web/src/pages/j/index.astro`, `web/src/shoot/`): name → (waiting) →
+  camera → developing → album. Phones with the app never see it (universal
+  links). It no longer forwards to a store. Details: `web/README.md`.
+- **Same server doors, no migration:** anonymous sign-in, `join_event()`,
+  `claim_shot()`, the pinned storage paths, `mark_photo_uploaded()`, RLS for
+  the reveal. A door that changes for the app changes in `web/src/shoot/api.ts`
+  too.
+- **The look is a WebGL port of the SkSL** (`web/src/shoot/look-gl.ts`) fed by
+  the app's own recipes (copied by `web/scripts/sync-legal.mjs`). Change the
+  shader in both files.
+- **Upload queue on IndexedDB** (`web/src/shoot/queue.ts`), the app's order and
+  refusal handling. The counter is the server's minus unclaimed queued frames.
+- **No push on the web**: a calendar reminder and a 15 s poll.
+- **The App Clip is a follow-up** (decided 2026-11-16): a QR-invoked App Clip
+  must stay under 15 MB, which the RN app with Skia and VisionCamera cannot,
+  so it will be a small native SwiftUI target. Web first.
+- **Not seen on a phone:** real camera resolution in Safari/Chrome, the torch
+  (only Chrome on Android exposes it), the white front flash, save via the
+  share sheet, in-app browsers.
 
 ## Notifications (M4)
 

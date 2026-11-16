@@ -57,7 +57,7 @@ export const HOME_FAQ: Faq[] = [
   },
   {
     q: 'Do guests need an account?',
-    a: 'No. A guest opens the invite link or scans the QR code, types a name, and starts shooting. There is no sign-up, no email and no password. Only the host signs in, with Apple or Google.',
+    a: 'No, and they do not even need the app. A guest opens the invite link or scans the QR code, types a name, and starts shooting — in LEFT or right in the browser. There is no sign-up, no email and no password. Only the host signs in, with Apple or Google.',
   },
   {
     q: 'When can we see the photos?',
