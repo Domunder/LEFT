@@ -315,14 +315,30 @@ async function upload(item: QueuedShot) {
   const original = await originalFile(item.id).bytes();
   const thumb = await thumbFile(item.id).bytes();
 
-  await uploadJpeg(storagePath, original.buffer);
-  await uploadJpeg(thumbStoragePath, thumb.buffer);
-  await markPhotoUploaded(item.id, {
-    storagePath,
-    thumbPath: thumbStoragePath,
-    width: item.width,
-    height: item.height,
-  });
+  const size = { width: item.width, height: item.height };
+
+  try {
+    await uploadJpeg(storagePath, original.buffer);
+    await uploadJpeg(thumbStoragePath, thumb.buffer);
+  } catch (e) {
+    /*
+      Once a frame is attached the bucket refuses to replace its files. That is
+      what a retry meets when the app died between the attach and `remove()`
+      below — so before treating a refused upload as a failure, ask the server:
+      attaching again succeeds only if both files are there, and changes nothing
+      if the row is already attached. Anything else rethrows the upload's error.
+    */
+    try {
+      await markPhotoUploaded(item.id, size);
+    } catch {
+      throw e;
+    }
+    await remove(item.id);
+    return;
+  }
+
+  // The server writes the paths itself; it only needs to be told the size.
+  await markPhotoUploaded(item.id, size);
 
   await remove(item.id);
 }

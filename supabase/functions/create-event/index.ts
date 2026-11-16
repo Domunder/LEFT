@@ -15,7 +15,8 @@
  *
  * The client's transaction id is only ever a *lookup key*. RevenueCat's own API
  * is what confirms the purchase exists and belongs to this user, so a modified
- * client inventing an id gets nothing.
+ * client inventing an id gets nothing — and the row is recorded under the
+ * store's id, the same key the webhook uses, never under the client's string.
  *
  * **Free events never reach the paid path.** Up to 50 guests on a finite roll
  * the client sends no transaction id and `create_event()` skips the claim — the
@@ -93,9 +94,15 @@ Deno.serve(async (req) => {
     something. A free-tier event sends nothing, and a retry where the webhook has
     already landed skips this too — `create_event()` finds the row on its own.
   */
-  if (transactionId) {
+  /*
+    What create_event() is told to spend. The client names RevenueCat's id; the
+    ledger is keyed by the store's, which only the reconcile can tell us.
+  */
+  let ledgerId: string | null = null;
+
+  if (typeof transactionId === 'string' && transactionId) {
     try {
-      await reconcileTransaction(userId, transactionId, supabaseUrl);
+      ledgerId = await reconcileTransaction(userId, transactionId, supabaseUrl);
     } catch (e) {
       // Non-fatal: the row may already exist from the webhook, in which case
       // creation succeeds anyway. Only a genuinely missing purchase fails, and it
@@ -111,7 +118,13 @@ Deno.serve(async (req) => {
     p_ends_at: endsAt,
     p_max_members: maxMembers,
     p_roll_size: rollSize ?? null,
-    p_transaction_id: transactionId ?? null,
+    /*
+      Only an ORDER BY preference among this user's unspent purchases, never
+      proof of payment — so when the reconcile failed, the client's id is still
+      the better hint than none (on a store where both ids agree it matches).
+    */
+    p_transaction_id:
+      ledgerId ?? (typeof transactionId === 'string' && transactionId ? transactionId : null),
   });
 
   if (error) {

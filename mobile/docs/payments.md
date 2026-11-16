@@ -132,14 +132,20 @@ increasing delay — the first retry is about five minutes out.
    entirely.
 2. `Purchases.logIn(<supabase user id>)` runs before anything is bought, or the
    receipt lands on an anonymous RevenueCat id and the ledger row matches nobody.
-3. The store sheet takes the money. `purchaseTier()` returns a transaction id.
+3. The store sheet takes the money. `purchaseTier()` returns a transaction id —
+   RevenueCat's own, not the store's.
 4. The app calls the `create-event` function, which asks RevenueCat's REST API
-   whether that transaction exists for that user, writes the ledger row, and calls
-   `create_event()` — all in one request.
+   whether that transaction exists for that user, writes the ledger row **under
+   the store's transaction id** (`ledgerIdOf()` in `_shared/revenuecat.ts`), and
+   calls `create_event()` — all in one request.
 5. `create_event()` claims an unconsumed purchase and marks it consumed **in the same transaction** as the insert,
    so it can never be spent twice and a failed insert never burns a receipt.
 6. RevenueCat's webhook arrives later and hits the unique index on
-   `store_transaction_id`, which is a no-op.
+   `store_transaction_id`, which is a no-op — but only because every writer keys
+   the row by the store's id. Until 2026-11-16 step 4 stored the client's
+   (RevenueCat) id, so the webhook wrote a second, unspent row for the same
+   purchase. **Before launch, confirm with one sandbox purchase** that
+   `public.purchases` holds exactly one row afterwards.
 
 Step 4 exists because the webhook is asynchronous and the app reaches step 5
 within milliseconds. Waiting for the webhook would mean a visible stall on every

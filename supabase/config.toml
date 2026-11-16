@@ -225,6 +225,10 @@ web3 = 30
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
+# LEFT: on locally only for the seeded devhost@left.local password sign-in.
+# The hosted project must have the Email provider OFF (docs/LAUNCH.md §2.7) —
+# the app has no email flow, and an open signup is a way around "a guest
+# cannot host".
 enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.

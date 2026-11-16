@@ -131,7 +131,13 @@ function configureGoogle(google: GoogleSigninModule): void {
   googleConfigured = true;
 }
 
-export async function signInWithGoogle(): Promise<Session> {
+/**
+ * The native Google sheet, down to a signed ID token.
+ *
+ * Shared by sign-in and by `linkIdentity`, which must present the same sheet
+ * and differ only in what Supabase is asked to do with the token.
+ */
+async function acquireGoogleIdToken(): Promise<string> {
   const google = loadGoogle();
   configureGoogle(google);
 
@@ -147,19 +153,18 @@ export async function signInWithGoogle(): Promise<Session> {
     throw new Error('Google returned no ID token — check the client IDs in your .env');
   }
 
-  // No nonce: GoogleSignin.signIn() does not issue one, and the `aud` check
-  // against the web client ID is what binds the token to this app.
-  const { data, error } = await getSupabase().auth.signInWithIdToken({
-    provider: 'google',
-    token: idToken,
-  });
-  if (error) throw error;
-  if (!data.session) throw new Error('Google sign-in returned no session');
-
-  return data.session;
+  return idToken;
 }
 
-export async function signInWithApple(): Promise<Session> {
+/**
+ * The native Apple sheet: the identity token, the raw nonce Supabase needs to
+ * check it, and the name Apple sends exactly once.
+ */
+async function acquireAppleCredential(): Promise<{
+  token: string;
+  rawNonce: string;
+  name: string;
+}> {
   // Apple signs the *hashed* nonce into the token; Supabase hashes the raw one
   // itself and compares. Sending the same value to both would never match.
   const rawNonce = Crypto.randomUUID();
@@ -189,10 +194,36 @@ export async function signInWithApple(): Promise<Session> {
 
   if (!credential.identityToken) throw new Error('Apple returned no identity token');
 
+  const name = [credential.fullName?.givenName, credential.fullName?.familyName]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  return { token: credential.identityToken, rawNonce, name };
+}
+
+export async function signInWithGoogle(): Promise<Session> {
+  const idToken = await acquireGoogleIdToken();
+
+  // No nonce: GoogleSignin.signIn() does not issue one, and the `aud` check
+  // against the web client ID is what binds the token to this app.
+  const { data, error } = await getSupabase().auth.signInWithIdToken({
+    provider: 'google',
+    token: idToken,
+  });
+  if (error) throw error;
+  if (!data.session) throw new Error('Google sign-in returned no session');
+
+  return data.session;
+}
+
+export async function signInWithApple(): Promise<Session> {
+  const apple = await acquireAppleCredential();
+
   const { data, error } = await getSupabase().auth.signInWithIdToken({
     provider: 'apple',
-    token: credential.identityToken,
-    nonce: rawNonce,
+    token: apple.token,
+    nonce: apple.rawNonce,
   });
   if (error) throw error;
   if (!data.session) throw new Error('Apple sign-in returned no session');
@@ -205,13 +236,8 @@ export async function signInWithApple(): Promise<Session> {
     the credential carries nothing: without it a re-install would blank a name
     the user already has.
   */
-  const name = [credential.fullName?.givenName, credential.fullName?.familyName]
-    .filter(Boolean)
-    .join(' ')
-    .trim();
-
-  if (name && !data.session.user.user_metadata?.name) {
-    await setDisplayName(name);
+  if (apple.name && !data.session.user.user_metadata?.name) {
+    await setDisplayName(apple.name);
   }
 
   return data.session;
@@ -310,10 +336,71 @@ export function isAnonymous(user: User): boolean {
  * Called by `(auth)/keep` — the screen a guest is shown once their film is
  * ready — and by the library's fallback panel. The ordering is the point: a
  * finished film is what gives someone a reason to sign in.
+ *
+ * **It links with the provider's ID token, from the same native sheet as
+ * sign-in.** `auth.linkIdentity({ provider })` alone is the browser OAuth flow:
+ * in React Native it fetches a URL, opens nothing and reports no error, so
+ * until 2026-11-16 this function returned success for a guest who was still
+ * anonymous — and who then lost their albums with the phone. Hence the check at
+ * the end: success is only claimed for an account that is no longer anonymous
+ * and still has the same id.
+ *
+ * Needs "manual linking" enabled on the Supabase project
+ * (`enable_manual_linking` in config.toml; Authentication settings when hosted).
  */
 export async function linkIdentity(provider: 'google' | 'apple'): Promise<void> {
-  const { error } = await getSupabase().auth.linkIdentity({ provider });
-  if (error) throw error;
+  const auth = getSupabase().auth;
+
+  const before = (await getSession())?.user.id;
+  if (!before) throw new Error('There is no session to link');
+
+  let appleName = '';
+  let result;
+
+  if (provider === 'google') {
+    const token = await acquireGoogleIdToken();
+    result = await auth.linkIdentity({ provider: 'google', token });
+  } else {
+    const apple = await acquireAppleCredential();
+    appleName = apple.name;
+    result = await auth.linkIdentity({
+      provider: 'apple',
+      token: apple.token,
+      nonce: apple.rawNonce,
+    });
+  }
+
+  let user = result.data.user;
+
+  if (result.error) {
+    /*
+      A second attempt after one whose answer was lost (venue Wi-Fi) is told the
+      identity "already" exists — on this very account. Ask the server who we
+      are before calling that a failure.
+    */
+    const { data: refreshed } = await auth.refreshSession();
+    const now = refreshed.user;
+    const linkedHere =
+      !!now &&
+      now.id === before &&
+      !now.is_anonymous &&
+      (now.identities ?? []).some((identity) => identity.provider === provider);
+    if (!linkedHere) throw result.error;
+    user = now;
+  }
+
+  if (!user || user.id !== before || user.is_anonymous) {
+    throw new Error('Linking did not complete');
+  }
+
+  // The link stands whether or not the name could be written.
+  if (appleName && !user.user_metadata?.name) {
+    try {
+      await setDisplayName(appleName);
+    } catch {
+      // `(auth)/name` asks for one when it is missing.
+    }
+  }
 }
 
 export async function signOut() {

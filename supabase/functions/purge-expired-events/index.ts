@@ -16,6 +16,11 @@
  * again tomorrow. Nothing is ever half-deleted on the row side: rows only go
  * once the bucket is empty.
  *
+ * Afterwards it sweeps files whose event no longer exists
+ * (`orphaned_storage_paths()`): left by an account deletion that could not
+ * remove a file, or by a host deleting an event row. An upload can only land
+ * under an existing event, so such a file belongs to nobody.
+ *
  * Auth: the service-role key, as for send-notifications.
  */
 
@@ -70,6 +75,31 @@ async function purge(admin: SupabaseClient, eventId: string) {
   return { eventId, files: removed, purged: purged === true };
 }
 
+/** Passes over the orphan list per run; each reads up to PATHS_PAGE files. */
+const ORPHAN_PASSES = 10;
+
+async function sweepOrphans(admin: SupabaseClient) {
+  let removed = 0;
+
+  for (let pass = 0; pass < ORPHAN_PASSES; pass++) {
+    const { data, error } = await admin.rpc('orphaned_storage_paths', { p_limit: PATHS_PAGE });
+    if (error) throw error;
+
+    const paths = ((data ?? []) as { path: string }[]).map((row) => row.path);
+    if (paths.length === 0) break;
+
+    for (let i = 0; i < paths.length; i += REMOVE_BATCH) {
+      const batch = paths.slice(i, i + REMOVE_BATCH);
+      const { data: gone, error: removeError } = await admin.storage.from(BUCKET).remove(batch);
+      if (removeError) throw removeError;
+      if (!gone || gone.length === 0) throw new Error('storage removed nothing');
+      removed += gone.length;
+    }
+  }
+
+  return removed;
+}
+
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
 
@@ -97,7 +127,15 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json({ processed: results.length, results }, 200);
+    // Independent of the events above: a failure here is tomorrow's work too.
+    let orphans = 0;
+    try {
+      orphans = await sweepOrphans(admin);
+    } catch (e) {
+      console.error('orphan sweep failed', e);
+    }
+
+    return json({ processed: results.length, results, orphans }, 200);
   } catch (e) {
     console.error('purge-expired-events failed', e);
     return json({ error: 'purge failed' }, 500);

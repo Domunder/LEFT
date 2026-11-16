@@ -59,16 +59,40 @@ export type RcPurchase = {
 };
 
 /**
- * The store's transaction id for one entry.
+ * Every id one entry answers to — for *finding* a purchase, never for keying it.
  *
- * v1 has carried this under more than one name, and RevenueCat's own docs note
- * `id` is a RevenueCat-side identifier while `store_transaction_id` is the
- * store's. Accept either rather than pinning to a spelling that may differ by
- * store or API version — a missed match here would charge a user and then refuse
- * to create their event.
+ * RevenueCat gives a consumable two ids: `id` is its own, and is what the SDK
+ * hands the app as `transactionIdentifier`; `store_transaction_id` is the
+ * store's, and is what the webhook carries. A client names the first, so both
+ * have to match here — a missed match would charge a user and then refuse to
+ * create their event.
  */
 export function transactionIdsOf(p: RcPurchase): string[] {
   return [p.store_transaction_id, p.id].filter((v): v is string => typeof v === 'string' && !!v);
+}
+
+/**
+ * The one id a purchase is recorded under: the store's.
+ *
+ * **Every writer must use this, or one purchase becomes two rows.** The ledger's
+ * only guard against recording a purchase twice is the unique index on
+ * `store_transaction_id`. Until 2026-11-16 `reconcileTransaction` stored whatever
+ * id the client had sent (RevenueCat's) while the webhook stored the store's, so
+ * every purchase ended up in the ledger twice — and the second row paid for a
+ * second event.
+ *
+ * RevenueCat's own id is the fallback only for an entry that carries no store id
+ * at all; that is logged, because the webhook could then disagree.
+ */
+export function ledgerIdOf(p: RcPurchase): string | null {
+  if (typeof p.store_transaction_id === 'string' && p.store_transaction_id) {
+    return p.store_transaction_id;
+  }
+  if (typeof p.id === 'string' && p.id) {
+    console.warn('purchase without store_transaction_id, keyed by RevenueCat id');
+    return p.id;
+  }
+  return null;
 }
 
 /** Every non-subscription purchase RevenueCat holds for this user, by product id. */
@@ -126,12 +150,15 @@ export async function recordPurchase(
  * the webhook has almost certainly not landed yet. Throws when RevenueCat has no
  * such transaction for this user — which is what stops a modified client from
  * inventing an id.
+ *
+ * The client's id only finds the purchase. Returns the id it is recorded under
+ * (`ledgerIdOf`), which is what `create_event()` must be told to spend.
  */
 export async function reconcileTransaction(
   userId: string,
   transactionId: string,
   supabaseUrl: string
-): Promise<void> {
+): Promise<string> {
   const byProduct = await fetchPurchases(userId);
 
   for (const [productId, purchases] of Object.entries(byProduct)) {
@@ -148,8 +175,11 @@ export async function reconcileTransaction(
     const maxMembers = await maxMembersFor(supabaseUrl, productId);
     if (!maxMembers) continue;
 
-    await recordPurchase(supabaseUrl, userId, productId, transactionId, maxMembers, match);
-    return;
+    const ledgerId = ledgerIdOf(match);
+    if (!ledgerId) continue;
+
+    await recordPurchase(supabaseUrl, userId, productId, ledgerId, maxMembers, match);
+    return ledgerId;
   }
 
   throw new Error('RevenueCat has no such transaction for this user');
@@ -180,7 +210,7 @@ export async function restoreAllPurchases(
     if (!maxMembers) continue;
 
     for (const purchase of purchases) {
-      const [transactionId] = transactionIdsOf(purchase);
+      const transactionId = ledgerIdOf(purchase);
       if (!transactionId) continue;
 
       if (await recordPurchase(supabaseUrl, userId, productId, transactionId, maxMembers, purchase)) {
