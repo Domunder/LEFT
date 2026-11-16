@@ -30,5 +30,9 @@ a promo video.
 - **The photos are the website's Unsplash pictures** (`web/CREDITS.md`).
   `docs/LAUNCH.md` §10 asks for own photos with the consent of the people in
   them. Swap the files in `web/src/assets/photos/` and render again.
-- The Android set shows the same screens in a plain handset instead of the
-  iPhone frame; the screens themselves are the iOS layout.
+- The Android set and the feature graphic use an Android handset drawn in CSS
+  (the mock library only has iPhones) with Android's status bar; the screens
+  themselves are the same layouts as on iOS.
+- No photo appears twice across a set of six. With sixteen photos that leaves
+  the album with two prints and the birthday card with two frames; more
+  photos in `web/src/assets/photos/` would fill them.

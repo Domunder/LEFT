@@ -6,7 +6,8 @@
  * each page into ../store-assets/.
  *
  * Everything is sized in vw/vh, so one page serves every screenshot size;
- * the script picks the size through the viewport. No script runs here: the
+ * the script picks the size through the viewport. Google Play's pictures use
+ * the Android handset (Phone's `device`). No script runs here: the
  * phones use their no-JS path (container units) and stay still.
  */
 import '@fontsource-variable/newsreader/wght.css';
@@ -18,6 +19,61 @@ import { Image } from 'astro:assets';
 import Phone from '../components/Phone.astro';
 import logo from '../assets/left-logo.png';
 import weddingFriends from '../assets/photos/wedding-friends.jpg';
+import weddingDance from '../assets/photos/wedding-dance.jpg';
+import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
+import weddingMono from '../assets/photos/wedding-mono.jpg';
+import partyFlash from '../assets/photos/party-flash.jpg';
+import partyWine from '../assets/photos/party-wine.jpg';
+import birthdayCandle from '../assets/photos/birthday-candle.jpg';
+import dinnerCandle from '../assets/photos/dinner-candle.jpg';
+import tripTrunk from '../assets/photos/trip-trunk.jpg';
+import tripVan from '../assets/photos/trip-van.jpg';
+import sample1 from '../assets/photos/sample-1.jpg';
+import sample2 from '../assets/photos/sample-2.jpg';
+import sample3 from '../assets/photos/sample-3.jpg';
+import sample4 from '../assets/photos/sample-4.jpg';
+import sample5 from '../assets/photos/sample-5.jpg';
+import sample6 from '../assets/photos/sample-6.jpg';
+
+/**
+ * No photo appears twice across the six screenshots: sixteen photos, each
+ * used once (the film picker shows its one photo in the four looks — that is
+ * the point of that screen). That is why the album shows two prints and the
+ * birthday two frames; a third card's worth of photos does not exist.
+ */
+const PRINTS = [
+  { src: partyFlash, by: 'Tom' },
+  { src: partyWine, by: 'Aylin' },
+];
+const MOMENTS = [
+  {
+    title: 'Road trip',
+    photos: 96,
+    people: 7,
+    status: 'Developed',
+    live: false,
+    more: 93,
+    strip: [tripTrunk, tripVan, sample6, sample5],
+  },
+  {
+    title: 'Lena’s 30th',
+    photos: 57,
+    people: 14,
+    status: '1d 4h left',
+    live: true,
+    more: 0,
+    strip: [birthdayCandle, dinnerCandle, null, null],
+  },
+  {
+    title: 'Summer ’26',
+    photos: 128,
+    people: 21,
+    status: 'Developed',
+    live: false,
+    more: 125,
+    strip: [sample3, sample4, sample2, weddingMono],
+  },
+];
 
 /** The six screenshots, in listing order (docs/LAUNCH.md §10). */
 /**
@@ -27,12 +83,13 @@ import weddingFriends from '../assets/photos/wedding-friends.jpg';
  * screen's upper part and 'bottom' its lower part.
  */
 const SHOTS = [
-  { screen: 'camera', line: 'top', lines: ['Every guest gets', 'a roll of film.'], glow: '12% 4%' },
+  { screen: 'camera', line: 'top', lines: ['Every guest gets', 'a roll of film.'], glow: '12% 4%', photo: weddingDance },
   { screen: 'looks', line: 'bottom', lines: ['Pick the film', 'for your event.'], glow: '88% 96%', photo: weddingFriends },
   { screen: 'join', line: 'top', lines: ['Join by link.', 'No sign-up.'], glow: '50% -4%' },
   // 9:16 cuts deeper: from below, this screen's own headline would be halved.
   { screen: 'developing', line: 'bottom', android: 'top', lines: ['Hidden until', 'it’s over.'], glow: '10% 98%' },
-  { screen: 'album', line: 'bottom', lines: ['The whole night,', 'developed together.'], glow: '90% 96%' },
+  // …and here it would cut the hero through the faces.
+  { screen: 'album', line: 'bottom', android: 'top', lines: ['The whole night,', 'developed together.'], glow: '90% 96%', photo: weddingCrowd },
   { screen: 'moments', line: 'top', lines: ['Every event,', 'one album.'], glow: '50% 2%' },
 ] as const;
 
@@ -46,9 +103,10 @@ export function getStaticPaths() {
 const { id } = Astro.params;
 const [platform, number] = String(id).split('-');
 const shot = platform === 'feature' ? null : SHOTS[Number(number) - 1];
+const device = platform === 'ios' ? 'iphone' : 'android';
 const flipped = shot && platform === 'android' && 'android' in shot;
 const line = shot && (flipped ? shot.android : shot.line);
-const glow = shot && (flipped ? '10% 2%' : shot.glow);
+const glow = shot && (flipped ? `${shot.glow.split(' ')[0]} 2%` : shot.glow);
 /** Three device pixels per point, and the phone fills most of the picture. */
 const DETAIL = 1.2;
 ---
@@ -71,7 +129,17 @@ const DETAIL = 1.2;
             <em>{shot.lines[1]}</em>
           </h1>
           <div class="stage">
-            <Phone screen={shot.screen} photo={'photo' in shot ? shot.photo : undefined} label="" eager detail={DETAIL} />
+            <Phone
+              screen={shot.screen}
+              photo={'photo' in shot ? shot.photo : undefined}
+              tile={sample1}
+              prints={PRINTS}
+              moments={MOMENTS}
+              device={device}
+              label=""
+              eager
+              detail={DETAIL}
+            />
           </div>
         </main>
       )
@@ -92,8 +160,8 @@ const DETAIL = 1.2;
             <p class="sub">The disposable camera for events</p>
           </div>
           <div class="phones">
-            <Phone screen="album" label="" eager detail={DETAIL} class="back" />
-            <Phone screen="camera" label="" eager detail={DETAIL} class="front" />
+            <Phone screen="album" photo={weddingCrowd} prints={PRINTS} device="android" label="" eager detail={DETAIL} class="back" />
+            <Phone screen="camera" photo={weddingDance} tile={sample1} device="android" label="" eager detail={DETAIL} class="front" />
           </div>
         </main>
       )
@@ -118,20 +186,6 @@ const DETAIL = 1.2;
     display: none;
   }
 
-  /*
-    Google Play: no iPhone in the picture. The frame is dropped and the body
-    under it (the phone's ::before) becomes a plain dark handset.
-  */
-  .android .phone .frame {
-    display: none;
-  }
-
-  .android .phone::before {
-    background: #050505;
-    box-shadow:
-      inset 0 0 0 0.35vw rgba(255, 255, 255, 0.14),
-      0 5vw 9vw -3vw rgba(0, 0, 0, 0.85);
-  }
 </style>
 
 <style>
