@@ -21,6 +21,7 @@
     "sharp": "^0.35.5"
   },
   "devDependencies": {
+    "@mockifydev/react": "^0.1.0",
     "wrangler": "^4.162.0"
   }
 }
