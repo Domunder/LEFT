@@ -21,7 +21,7 @@ npm run assets       # regenerate public/og*.jpg and the icons
 | `/use-cases/` | `src/pages/use-cases.astro` | Weddings first, then parties, trips, birthdays, more |
 | `/wedding/` | `src/pages/wedding.astro` | The wedding landing page, own FAQ |
 | `/j/{CODE}` | `src/pages/j/index.astro` | Invite landing; one page for every code via `public/_redirects` |
-| `/terms/`, `/privacy/` | `src/components/LegalDocument.astro` | Rendered from `../mobile/src/constants/legal.ts` (the app's own source). **Unreviewed draft**: `noindex` and a notice while `LEGAL_DRAFT` is true |
+| `/terms/`, `/privacy/` | `src/components/LegalDocument.astro` | Rendered from `../mobile/src/constants/legal.ts` (the app's own source), which `scripts/sync-legal.mjs` copies to `src/generated/` before every dev, build and check. **Unreviewed draft**: `noindex` and a notice while `LEGAL_DRAFT` is true |
 | `/.well-known/apple-app-site-association` | `public/.well-known/` | Universal links (iOS) |
 | `/.well-known/assetlinks.json` | `public/.well-known/` | App links (Android) |
 

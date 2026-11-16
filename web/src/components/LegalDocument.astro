@@ -2,10 +2,11 @@
 /**
  * Terms and Privacy, rendered from the app's own source.
  *
- * The text is not written here: it is imported from
- * `mobile/src/constants/legal.ts`, the same file the app's screens read, so the
- * two can never say different things. That file imports nothing, which is what
- * makes it loadable from this build.
+ * The text is not written here: it comes from `mobile/src/constants/legal.ts`,
+ * the same file the app's screens read, so the two can never say different
+ * things. `scripts/sync-legal.mjs` copies it to `src/generated/` before every
+ * build (why a copy: see that script); the file imports nothing, which is what
+ * makes it usable here.
  *
  * While `LEGAL_DRAFT` is true the page says so above the text and stays
  * `noindex` (and out of the sitemap — see astro.config.mjs). Flip the flag in
@@ -20,7 +21,7 @@ import {
   PRIVACY_SECTIONS,
   TERMS_INTRO,
   TERMS_SECTIONS,
-} from '../../../mobile/src/constants/legal';
+} from '../generated/legal';
 
 type Props = { kind: 'terms' | 'privacy' };
 const { kind } = Astro.props;

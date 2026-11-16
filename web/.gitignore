@@ -2,3 +2,5 @@ node_modules/
 dist/
 .astro/
 .wrangler/
+# Copied from mobile/src/constants/legal.ts by scripts/sync-legal.mjs.
+src/generated/
