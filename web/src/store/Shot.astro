@@ -1,7 +1,8 @@
 ---
 /**
  * The store listings' pictures: one page per screenshot, plus Google Play's
- * feature graphic. Not part of the site — the route only exists while
+ * feature graphic and the App Store's two wide pictures (the product page's
+ * header and the search result). Not part of the site — the route only exists while
  * STORE_ASSETS is set (astro.config.mjs), and `npm run store` photographs
  * each page into ../store-assets/.
  *
@@ -97,12 +98,14 @@ export function getStaticPaths() {
   const shots = ['ios', 'android'].flatMap((platform) =>
     [0, 1, 2, 3, 4, 5].map((index) => ({ params: { id: `${platform}-${index + 1}` } })),
   );
-  return [...shots, { params: { id: 'feature' } }];
+  return [...shots, ...['feature', 'header', 'search'].map((id) => ({ params: { id } }))];
 }
 
 const { id } = Astro.params;
 const [platform, number] = String(id).split('-');
-const shot = platform === 'feature' ? null : SHOTS[Number(number) - 1];
+/** The pictures that are not screenshots: Play's feature graphic, the App Store's banners. */
+const wide = platform === 'feature' || platform === 'header' || platform === 'search';
+const shot = wide ? null : SHOTS[Number(number) - 1];
 const device = platform === 'ios' ? 'iphone' : 'android';
 const flipped = shot && platform === 'android' && 'android' in shot;
 const line = shot && (flipped ? shot.android : shot.line);
@@ -145,7 +148,27 @@ const DETAIL = 1.2;
       )
     }
     {
-      !shot && (
+      (platform === 'header' || platform === 'search') && (
+        <main class:list={['banner', platform]}>
+          <Phone screen="camera" photo={weddingDance} tile={sample1} device="iphone" label="" eager detail={DETAIL} class="left" />
+          <div class="copy">
+            <p class="brand">
+              <Image src={logo} alt="" width={96} height={96} loading="eager" />
+              <span>LEFT</span>
+            </p>
+            <h1>
+              One roll each.
+              <br />
+              <em>Developed together.</em>
+            </h1>
+            <p class="sub">The disposable camera for events</p>
+          </div>
+          <Phone screen="album" photo={weddingCrowd} prints={PRINTS} device="iphone" label="" eager detail={DETAIL} class="right" />
+        </main>
+      )
+    }
+    {
+      platform === 'feature' && (
         <main class="feature">
           <div class="copy">
             <p class="brand">
@@ -317,5 +340,67 @@ const DETAIL = 1.2;
     left: 2vw;
     top: 9vh;
     rotate: -5deg;
+  }
+
+  /*
+    ── The App Store's wide pictures: the product page's header (3840x1646)
+    and the search result (3840x2560). The store crops both towards the middle
+    on narrow screens, so the brand and the line sit in the centre and the two
+    phones at the sides are what may be lost.
+  */
+  .banner {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    background:
+      radial-gradient(60vw 60vw at 50% -10%, rgba(240, 190, 140, 0.28), transparent 62%),
+      var(--bg);
+  }
+
+  .banner .copy {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .banner h1 {
+    font-size: 4.4vw;
+    line-height: 1.08;
+  }
+
+  .banner :global(.phone) {
+    position: absolute;
+    width: 17vw;
+    top: 15vh;
+  }
+
+  .banner :global(.left) {
+    left: 5vw;
+    rotate: -6deg;
+  }
+
+  .banner :global(.right) {
+    right: 5vw;
+    rotate: 6deg;
+  }
+
+  /* 3:2 is taller: larger phones that fit whole, and a larger line. */
+  .banner.search h1 {
+    font-size: 4.8vw;
+  }
+
+  .banner.search :global(.phone) {
+    width: 23vw;
+    top: 13vh;
+  }
+
+  .banner.search :global(.left) {
+    left: 2.5vw;
+  }
+
+  .banner.search :global(.right) {
+    right: 2.5vw;
   }
 </style>

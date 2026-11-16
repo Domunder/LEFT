@@ -1,6 +1,7 @@
 /**
  * Renders the store listings' pictures into ../store-assets/: the screenshots
- * for the App Store and Google Play, Play's feature graphic and both icons.
+ * for the App Store and Google Play, Play's feature graphic, the App Store's
+ * header and search-result pictures and both icons.
  *
  *   npm run store
  *
@@ -69,6 +70,9 @@ try {
     }
   }
   await capture('feature', { width: 512, height: 250, scale: 2 }, path.join(out, 'android', 'feature-graphic-1024x500.png'));
+  // The App Store's product-page header and search-result picture.
+  await capture('header', { width: 1920, height: 823, scale: 2 }, path.join(out, 'ios', 'header-3840x1646.png'));
+  await capture('search', { width: 1920, height: 1280, scale: 2 }, path.join(out, 'ios', 'search-results-3840x2560.png'));
 
   for (const [file, size] of [['ios/app-icon-1024.png', 1024], ['android/icon-512.png', 512]]) {
     await sharp(icon).resize(size, size).flatten({ background: BG }).removeAlpha().png().toFile(path.join(out, file));
