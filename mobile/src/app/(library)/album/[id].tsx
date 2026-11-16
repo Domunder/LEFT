@@ -166,7 +166,7 @@ export default function AlbumScreen() {
           if (cancelled) return;
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setReveal('done');
-          void markRevealSeen(id);
+          void markRevealSeen(id, photos.length);
         }, revealDurationMs(photos.length, reducedMotion))
       );
     })();

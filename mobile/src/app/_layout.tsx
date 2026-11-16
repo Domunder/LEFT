@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { ToastProvider } from '@/components/ui/toast-host';
+import { startAnalytics } from '@/lib/analytics';
 import { getSession } from '@/lib/auth';
 import { OnboardingProvider } from '@/lib/onboarding-draft';
 import { onPushOpened, syncPush } from '@/lib/push';
@@ -145,6 +146,11 @@ export default function RootLayout() {
   */
   useEffect(() => {
     void syncPush({ ask: false });
+  }, []);
+
+  // Error reports and the four launch numbers. A no-op without a key in .env.
+  useEffect(() => {
+    startAnalytics();
   }, []);
 
   const fontsSettled = fontsLoaded || fontError || fontsTimedOut;

@@ -60,6 +60,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Body, Display } from '@/components/ui/typography';
 import { Colors, Settings as S } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { ANALYTICS_CONFIGURED, isAnalyticsEnabled, setAnalyticsEnabled } from '@/lib/analytics';
 import { getSession, isAnonymous, resolveDisplayName, signOut } from '@/lib/auth';
 import { initialsFor, restorePurchases } from '@/lib/events';
 import { identify, PURCHASES_UNAVAILABLE, restore } from '@/lib/purchases';
@@ -118,6 +119,7 @@ export default function SettingsScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
   const [restoring, setRestoring] = useState(false);
+  const [usageData, setUsageData] = useState(true);
 
   /*
     On focus rather than on mount: linking an identity from 15's prompt changes
@@ -130,6 +132,9 @@ export default function SettingsScreen() {
 
       async function load() {
         try {
+          const enabled = await isAnalyticsEnabled();
+          if (!cancelled) setUsageData(enabled);
+
           const current = await getSession();
           if (cancelled) return;
           setSession(current);
@@ -336,6 +341,27 @@ export default function SettingsScreen() {
               />
             </SettingsListRow>
           </SettingsGroup>
+
+          {/*
+            Not on the artboard. The privacy policy names this switch as the way
+            to object to usage statistics, so it has to exist wherever they are
+            collected — and only there: without a key nothing is sent and a
+            switch would be decoration.
+          */}
+          {ANALYTICS_CONFIGURED ? (
+            <SettingsGroup title="Privacy">
+              <SettingsListRow label="Share usage data">
+                <ToggleSwitch
+                  value={usageData}
+                  onValueChange={(next) => {
+                    setUsageData(next);
+                    void setAnalyticsEnabled(next);
+                  }}
+                  accessibilityLabel="Share anonymous usage statistics and error reports"
+                />
+              </SettingsListRow>
+            </SettingsGroup>
+          ) : null}
 
           <SettingsGroup title="Account">
             <SettingsListRow

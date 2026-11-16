@@ -12,6 +12,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import { Share } from 'react-native';
 
+import { track } from './analytics';
 import { getSession } from './auth';
 import { getEvent, isDeveloped, listMembers, type Event } from './events';
 import { listPhotos, type Photo } from './photos';
@@ -163,7 +164,9 @@ export async function hasSeenReveal(eventId: string): Promise<boolean> {
   }
 }
 
-export async function markRevealSeen(eventId: string): Promise<void> {
+export async function markRevealSeen(eventId: string, photoCount: number): Promise<void> {
+  track('reveal_seen', { photos: photoCount });
+
   try {
     await AsyncStorage.setItem(REVEAL_PREFIX + eventId, '1');
   } catch {
