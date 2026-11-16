@@ -463,18 +463,6 @@ export const Invite = {
   qrRadius: 24,
   /** The light card's padding, which doubles as the QR's quiet zone. */
   qrPadding: 20,
-  /**
-   * The card's paper: warm white running a little warmer towards the bottom.
-   * Both ends stay far lighter than the modules need for a scanner.
-   */
-  qrPaper: ['#fbf8f2', '#efe3d2'] as const,
-  /** Corner radii in module units: a run of modules, a finder's ring and its eye. */
-  qrModuleRadius: 0.5,
-  qrFinderRadius: 2,
-  qrEyeRadius: 1,
-  /** The matrix -> the line under it ("LEFT · Scan to join"). */
-  qrFooterGap: 14,
-  qrFooterMuted: 'rgba(11,11,12,0.5)',
   /** The artboard's subcopy is 0.38; Colors.textDim is 0.42. */
   subcopy: 'rgba(240,237,232,0.38)',
   /**

@@ -387,8 +387,8 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   viewer's own frames, then stand-ins, because RLS hands out nobody else's;
   the Moments list runs to the physical bottom edge and dissolves there
   (`Screen edges={['top']}`, `ScrollEdge`'s `inset`); 09's two buttons are
-  drawn on `Glass` and the QR has round modules, rounded finders, warm paper
-  and a line with the event's name (**scan it once on a device**); 10 reads
+  drawn on `Glass` (a restyled QR code was tried and reverted the same day
+  — the plain square-module code stays, to be safe for scanners); 10 reads
   "3/50 people" and "47 spots left"; Landing has no glass panel — copy and
   buttons stand on the gradient (`VideoOverlay.gradientColors`) so the
   people in the photos stay visible.
