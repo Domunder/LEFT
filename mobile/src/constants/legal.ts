@@ -365,7 +365,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
         'Earlier, if the host deletes the event or a photo, or you delete your own photo.',
         'Your account or guest session: until you delete it.',
         'Push tokens: until you sign out, delete your account, or the token stops working.',
-        'Purchase records: as long as accounting and tax law requires — in Switzerland ten years.',
+        'Purchase records in our database: until you delete your account. The app stores, and our own accounting, keep transaction records for as long as tax and accounting law requires — in Switzerland ten years.',
         'Server logs, usage statistics and error reports: a short rolling period, normally no longer than 90 days.',
         'Backups: deleted data can remain in encrypted backups for up to [BACKUP RETENTION] before it is overwritten.',
       ] },
@@ -376,8 +376,8 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     blocks: [
       'You can delete your account or guest session in the app under Settings → ' +
         'Delete Account. This removes your account and sign-in data, your ' +
-        'memberships, your push tokens, and every event you host — for all of ' +
-        'its members, together with all of its photos.',
+        'memberships, your push tokens, our record of your purchases, and every ' +
+        'event you host — for all of its members, together with all of its photos.',
       // REVIEW: keeping a deleted user's photos in other people's events,
       // unattributed (photos.user_id on delete set null). Chosen so that one
       // guest leaving does not tear holes in a group's album; a reviewer should

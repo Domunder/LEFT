@@ -4,17 +4,18 @@
 -- runs against a hosted project — `db reset` is local-only.
 --
 -- What it exists for: the host path needs Google or Apple, and neither works in
--- Expo Go. Sign-up's "Skip sign-in (dev)" button covers creating an event, but a
--- group of one is a poor test of a screen about a *group* — 10's roster, the
--- shared budget, and the camera's realtime bar all only show their real
--- behaviour with more than one member in the event.
+-- Expo Go. Landing's "Skip sign-in (dev)" signs in anonymously, which cannot
+-- create an event — and a group of one is a poor test of screens about a
+-- *group*: 10's roster, the reveal, and the album only show their real
+-- behaviour with more than one member.
 --
 -- So this seeds an event that already has people in it. Its members are real
 -- auth.users rows rather than bare uuids, because every RLS policy keys off
 -- auth.uid() and a membership pointing at a nonexistent user would read as
 -- corrupt data the moment anything joined against it.
 --
--- The event is free-tier (4 people, 60s) so nothing here depends on a purchase.
+-- The event is free-tier (25 guests, a 24 roll) so nothing here depends on a
+-- purchase.
 
 -- ---------------------------------------------------------------------------
 -- Identities
@@ -60,6 +61,20 @@ values
   )
 on conflict (id) do nothing;
 
+-- GoTrue scans these four columns into plain strings: left NULL (which is what a
+-- hand-written insert leaves them), every password sign-in for the row fails
+-- with "Database error querying schema". Rows created by GoTrue itself hold ''.
+update auth.users
+   set confirmation_token     = coalesce(confirmation_token, ''),
+       recovery_token         = coalesce(recovery_token, ''),
+       email_change_token_new = coalesce(email_change_token_new, ''),
+       email_change           = coalesce(email_change, '')
+ where id in (
+   '2252058e-dc4d-4f3f-ae4d-59c16cafe35c',
+   'cccccccc-0000-4000-8000-000000000002',
+   'cccccccc-0000-4000-8000-000000000003'
+ );
+
 -- The email identity, so devhost@left.local can actually be signed in as.
 insert into auth.identities (
   id, user_id, provider_id, provider, identity_data, created_at, updated_at
@@ -78,8 +93,7 @@ on conflict (provider, provider_id) do nothing;
 -- The event
 -- ---------------------------------------------------------------------------
 -- Inserted directly rather than through create_event(), which needs an
--- auth.uid() there is no session for here. (Four people is the free tier, so a
--- purchase is not what stands in the way.) A fixed
+-- auth.uid() there is no session for here. A fixed
 -- invite_code means the join link is stable across resets:
 --
 --     https://leftmoment.com/j/DEV123   ->  screen 11

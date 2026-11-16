@@ -97,7 +97,7 @@ function profileFrom(session: Session | null): Profile | null {
     return {
       name: 'Guest',
       initials: '?',
-      detail: 'Not signed in — your films live on this device.',
+      detail: 'Not signed in — your moments are tied to this phone.',
       guest: true,
     };
   }
@@ -260,7 +260,7 @@ export default function SettingsScreen() {
     Alert.alert(
       'Log out?',
       guest
-        ? 'You are signed in as a guest, so there is no account to come back to. Your films will stay on this device but you will not be able to reach them again.'
+        ? 'You are signed in as a guest, so there is no account to come back to. You will not be able to reach your moments and their photos again.'
         : 'You can sign back in at any time.',
       [
         { text: 'Cancel', style: 'cancel' },

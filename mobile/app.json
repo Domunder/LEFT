@@ -96,7 +96,8 @@
           "color": "#101010"
         }
       ],
-      "./plugins/with-worklets-headers"
+      "./plugins/with-worklets-headers",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true
