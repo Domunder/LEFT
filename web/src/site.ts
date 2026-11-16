@@ -26,14 +26,14 @@ export const NAV = [
 
 /**
  * Mirrors `create_event()` on the server (see CLAUDE.md → Pricing). The store
- * is the authority on the final price; these are the CHF targets.
+ * is the authority on the final price; these are the US dollar prices.
  */
 export const TIERS = [
   { id: 'free', price: 0, guests: 50, roll: 'Rolls of 5 to 36 photos', note: 'For most parties' },
-  { id: 'left_small', price: 10, guests: 50, roll: 'Unlimited roll', note: 'Shoot all night' },
-  { id: 'left_medium', price: 15, guests: 100, roll: 'Any roll, unlimited included', note: 'Most weddings' },
-  { id: 'left_large', price: 20, guests: 150, roll: 'Any roll, unlimited included', note: 'Big celebrations' },
-  { id: 'left_unlimited', price: 25, guests: 200, roll: 'Any roll, unlimited included', note: 'The whole village' },
+  { id: 'left_small', price: 9.99, guests: 50, roll: 'Unlimited roll', note: 'Shoot all night' },
+  { id: 'left_medium', price: 14.99, guests: 100, roll: 'Any roll, unlimited included', note: 'Most weddings' },
+  { id: 'left_large', price: 19.99, guests: 150, roll: 'Any roll, unlimited included', note: 'Big celebrations' },
+  { id: 'left_unlimited', price: 24.99, guests: 200, roll: 'Any roll, unlimited included', note: 'The whole village' },
 ] as const;
 
 export const LOOKS = [
@@ -64,7 +64,7 @@ export const HOME_FAQ: Faq[] = [
   },
   {
     q: 'What does LEFT cost?',
-    a: 'Events with up to 50 guests and a limited roll are free. An unlimited roll for up to 50 guests is CHF 10, and larger groups are CHF 15 (up to 100 guests), CHF 20 (up to 150) and CHF 25 (up to 200). The host pays once per event. Guests never pay, and there is no subscription.',
+    a: 'Events with up to 50 guests and a limited roll are free. An unlimited roll for up to 50 guests is $9.99, and larger groups are $14.99 (up to 100 guests), $19.99 (up to 150) and $24.99 (up to 200). The host pays once per event. Guests never pay, and there is no subscription.',
   },
   {
     q: 'What are the film looks?',

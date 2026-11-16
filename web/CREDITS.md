@@ -14,7 +14,6 @@ derives the AVIF/WebP sizes. The social cards in `public/og*.jpg` are made from
 | wedding-dance.jpg | Wesley Tingey | https://unsplash.com/photos/0CklaCuehpc |
 | wedding-crowd.jpg | Omar Lopez | https://unsplash.com/photos/1HiSyieWYS8 |
 | wedding-mono.jpg | Derrick Treadwell | https://unsplash.com/photos/1h-64bCdVUI |
-| wedding-laugh.jpg | Kari Bjorn Photography | https://unsplash.com/photos/G3O5fc5_r4s |
 | wedding-friends.jpg | Daniel Hobiera | https://unsplash.com/photos/x7tmep-Yd5w |
 | party-flash.jpg | Mariya Tarakhnenko | https://unsplash.com/photos/Df5WpOgV1P8 |
 | party-wine.jpg | Sangria Señorial | https://unsplash.com/photos/TPcdefPzmIQ |

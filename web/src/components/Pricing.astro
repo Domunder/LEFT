@@ -9,7 +9,7 @@ const { highlight } = Astro.props;
   <div class="wrap">
     <div class="section-head center reveal">
       <p class="eyebrow">Pricing</p>
-      <h2>Free for most parties. <em>A few francs for the big ones.</em></h2>
+      <h2>Free for most parties. <em>A few dollars for the big ones.</em></h2>
       <p class="lede">The host pays once per event. Guests never pay.</p>
     </div>
     <ul class="tiers reveal">
@@ -21,7 +21,7 @@ const { highlight } = Astro.props;
                 <b>Free</b>
               ) : (
                 <>
-                  <small>CHF</small>
+                  <small>$</small>
                   <b>{tier.price}</b>
                 </>
               )}

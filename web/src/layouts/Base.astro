@@ -7,6 +7,12 @@ import '../styles/global.css';
 import { Image } from 'astro:assets';
 import logo from '../assets/left-logo.png';
 import { NAV, SITE } from '../site';
+// The four faces every page shows above the fold. Preloaded so they are there
+// for the first layout: each one that arrives later re-lays the whole page.
+import newsreader from '@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2?url';
+import newsreaderItalic from '@fontsource-variable/newsreader/files/newsreader-latin-wght-italic.woff2?url';
+import inter from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url';
+import dmSerif from '@fontsource/dm-serif-display/files/dm-serif-display-latin-400-normal.woff2?url';
 
 type Props = {
   title: string;
@@ -43,6 +49,9 @@ const year = new Date().getFullYear();
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, follow" />}
     <meta name="theme-color" content="#101010" />
+    {[inter, newsreader, newsreaderItalic, dmSerif].map((href) => (
+      <link rel="preload" as="font" type="font/woff2" href={href} crossorigin />
+    ))}
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
@@ -63,9 +72,30 @@ const year = new Date().getFullYear();
     {jsonLd.map((data) => <script type="application/ld+json" set:html={JSON.stringify(data)} />)}
     <script is:inline>
       document.documentElement.classList.add('js');
+      if (document.fonts && document.fonts.load) document.documentElement.classList.add('fonts-wait');
     </script>
   </head>
   <body>
+    <script is:inline>
+      // Hold the first paint until the four preloaded faces are in (350 ms at
+      // most). A face that lands after it re-lays the whole document on top
+      // of an already visible page — a flash of the fallback font, and the
+      // main thread busy exactly when the page first appears.
+      (() => {
+        const root = document.documentElement;
+        if (!root.classList.contains('fonts-wait')) return;
+        const show = () => root.classList.remove('fonts-wait');
+        Promise.all(
+          [
+            '300 1em "Newsreader Variable"',
+            'italic 300 1em "Newsreader Variable"',
+            '400 1em "Inter Variable"',
+            '400 1em "DM Serif Display"',
+          ].map((face) => document.fonts.load(face)),
+        ).then(show, show);
+        setTimeout(show, 350);
+      })();
+    </script>
     <a class="skip" href="#main">Skip to content</a>
     <header class="site-header">
       <nav class="bar glass" aria-label="Main">
@@ -138,23 +168,142 @@ const year = new Date().getFullYear();
 
     <script is:inline>
       (() => {
-        const items = document.querySelectorAll('.reveal');
+        const items = document.querySelectorAll('.reveal, .develop');
+        const phones = document.querySelectorAll('.phone');
+        const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // Each phone's display is a 393pt canvas scaled to the phone's width.
+        // The observer reports before the first paint and again when a phone
+        // further down is first laid out; reading the widths here instead
+        // would force the layout of the whole page, skipped sections included.
+        const screens = document.querySelectorAll('.phone .screen');
+        const fit = (el, width) => el.style.setProperty('--k', (width / 393).toFixed(4));
+        if ('ResizeObserver' in window) {
+          const sizes = new ResizeObserver((entries) => {
+            for (const entry of entries) fit(entry.target, entry.contentRect.width);
+          });
+          screens.forEach((el) => sizes.observe(el));
+        } else {
+          screens.forEach((el) => fit(el, el.clientWidth));
+        }
         if (!('IntersectionObserver' in window)) {
           items.forEach((el) => el.classList.add('in'));
+          phones.forEach((el) => el.classList.add('live'));
           return;
         }
+
+        // Arrivals: things that come in together are staggered.
         const io = new IntersectionObserver(
           (entries) => {
+            let order = 0;
             for (const entry of entries) {
-              if (entry.isIntersecting) {
-                entry.target.classList.add('in');
-                io.unobserve(entry.target);
-              }
+              if (!entry.isIntersecting) continue;
+              entry.target.style.setProperty('--d', `${Math.min(order++, 5) * 90}ms`);
+              entry.target.classList.add('in');
+              io.unobserve(entry.target);
             }
           },
           { rootMargin: '0px 0px -8% 0px' },
         );
         items.forEach((el) => io.observe(el));
+
+        // A phone's screen only moves while it is on screen.
+        const typing = new WeakMap();
+        const type = (phone) => {
+          const field = phone.querySelector('[data-type]');
+          if (!field || typing.has(phone)) return;
+          const text = field.dataset.type;
+          if (still) return void (field.textContent = text);
+          let shown = 0;
+          field.textContent = '';
+          typing.set(
+            phone,
+            setInterval(() => {
+              field.textContent = text.slice(0, ++shown);
+              if (shown >= text.length) clearInterval(typing.get(phone));
+            }, 190),
+          );
+        };
+        const shooting = new WeakMap();
+        const shoot = (phone, on) => {
+          const count = phone.querySelector('[data-count]');
+          if (!count || still) return;
+          clearInterval(shooting.get(phone));
+          if (!on) return;
+          const start = Number(count.dataset.count);
+          let left = Number(count.textContent) || start;
+          shooting.set(
+            phone,
+            setInterval(() => {
+              left = left > start - 5 ? left - 1 : start;
+              phone.classList.remove('shot');
+              requestAnimationFrame(() => requestAnimationFrame(() => phone.classList.add('shot')));
+              setTimeout(() => (count.textContent = String(left)), 140);
+            }, 3600),
+          );
+        };
+        const ticking = new WeakMap();
+        const tick = (phone, on) => {
+          const seconds = phone.querySelector('[data-tick]');
+          if (!seconds || still) return;
+          clearInterval(ticking.get(phone));
+          if (!on) return;
+          ticking.set(
+            phone,
+            setInterval(() => {
+              const next = (Number(seconds.textContent) + 59) % 60;
+              seconds.textContent = String(next).padStart(2, '0');
+            }, 1000),
+          );
+        };
+        const live = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              entry.target.classList.toggle('live', entry.isIntersecting);
+              if (entry.isIntersecting) type(entry.target);
+              shoot(entry.target, entry.isIntersecting);
+              tick(entry.target, entry.isIntersecting);
+            }
+          },
+          { threshold: 0.35 },
+        );
+        phones.forEach((el) => live.observe(el));
+
+        if (still) return;
+
+        // Scroll-linked pieces: parallax drift and the two photo rows.
+        const drifting = [...document.querySelectorAll('[data-parallax]')];
+        const reels = [...document.querySelectorAll('[data-reel]')];
+        if (!drifting.length && !reels.length) return;
+        let queued = false;
+        const frame = () => {
+          queued = false;
+          const height = innerHeight;
+          for (const el of drifting) {
+            const box = el.parentElement.getBoundingClientRect();
+            if (box.bottom < -200 || box.top > height + 200) continue;
+            const offset = (box.top + box.height / 2 - height / 2) * Number(el.dataset.parallax);
+            el.style.translate = `0 ${offset.toFixed(1)}px`;
+          }
+          for (const reel of reels) {
+            const box = reel.getBoundingClientRect();
+            if (box.bottom < 0 || box.top > height) continue;
+            const progress = Math.min(1, Math.max(0, (height - box.top) / (height + box.height)));
+            for (const row of reel.children) {
+              const spare = row.scrollWidth - reel.clientWidth;
+              const along = row.dataset.dir === 'back' ? 1 - progress : progress;
+              row.style.transform = `translate3d(${(-spare * along).toFixed(1)}px,0,0)`;
+            }
+          }
+        };
+        const queue = () => {
+          if (queued) return;
+          queued = true;
+          requestAnimationFrame(frame);
+        };
+        addEventListener('scroll', queue, { passive: true });
+        addEventListener('resize', queue, { passive: true });
+        queue();
       })();
     </script>
   </body>
