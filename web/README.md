@@ -21,7 +21,7 @@ npm run assets       # regenerate public/og*.jpg and the icons
 | `/use-cases/` | `src/pages/use-cases.astro` | Weddings first, then parties, trips, birthdays, more |
 | `/wedding/` | `src/pages/wedding.astro` | The wedding landing page, own FAQ |
 | `/j/{CODE}` | `src/pages/j/index.astro` | Invite landing; one page for every code via `public/_redirects` |
-| `/terms/`, `/privacy/` | `src/components/LegalPlaceholder.astro` | **Placeholders**, `noindex`, until M6 |
+| `/terms/`, `/privacy/` | `src/components/LegalDocument.astro` | Rendered from `../mobile/src/constants/legal.ts` (the app's own source). **Unreviewed draft**: `noindex` and a notice while `LEGAL_DRAFT` is true |
 | `/.well-known/apple-app-site-association` | `public/.well-known/` | Universal links (iOS) |
 | `/.well-known/assetlinks.json` | `public/.well-known/` | App links (Android) |
 
@@ -36,7 +36,7 @@ phone mocks are HTML/CSS (`src/components/Phone.astro`), not screenshots.
 | App Store / Play Store links | `src/site.ts` (`appStoreUrl`, `playStoreUrl`) | the store listings. Until then the buttons read "Coming soon" and `/j/{CODE}` does not forward to a store. |
 | Apple Team ID | `public/.well-known/apple-app-site-association` (`REPLACE_WITH_APPLE_TEAM_ID`) | Apple Developer account → Membership |
 | Android signing fingerprint | `public/.well-known/assetlinks.json` (`REPLACE_WITH_SHA256_SIGNING_CERT_FINGERPRINT`) | `eas credentials` (or Play Console → App signing) |
-| Terms and Privacy text | `src/pages/terms.astro`, `privacy.astro` | the reviewed texts from M6; then remove `noindex` and the entries in `UNLISTED` (`astro.config.mjs`) |
+| Terms and Privacy | `../mobile/src/constants/legal.ts` | legal review and the `[BRACKETED]` values; then set `LEGAL_DRAFT = false` (drops the notice and `noindex`) and remove the two entries from `UNLISTED` (`astro.config.mjs`) |
 | Contact address | `src/site.ts` (`contactEmail`) | not shown anywhere yet |
 
 ## Deploying (once the domain exists)
