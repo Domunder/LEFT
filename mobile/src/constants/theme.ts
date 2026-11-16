@@ -991,8 +991,10 @@ export const Camera = {
     paddingX: 20,
     paddingTop: 8,
     paddingBottom: 12,
-    /** Both side slots, equal so the event's name sits on the centre line: close, countdown. */
+    /** Both side slots, equal so the counter sits on the centre line: close, countdown. */
     sideWidth: 76,
+    /** Event name -> counter. */
+    nameGap: 2,
   },
 
   /** "17 left" — the roll. */
@@ -1040,17 +1042,7 @@ export const Camera = {
    * roll counter and flip along the top; "Your shots", zoom and invite along
    * the bottom. Only the shutter sits outside the picture.
    */
-  overlay: {
-    /** From the viewfinder's edge to the chrome. */
-    inset: 12,
-    /** The counter's capsule. */
-    counterPaddingX: 16,
-    counterPaddingY: 3,
-    /** The status note sits this far above the bottom row. */
-    noteGap: 10,
-  },
-
-  /** "Your shots", bottom-left of the viewfinder — a tile like a print leaning in the corner. */
+  /** "Your shots", left of the shutter — a tile like a print leaning in the corner. */
   shots: {
     size: 46,
     radius: 12,
@@ -1060,13 +1052,16 @@ export const Camera = {
     fadeMs: 180,
   },
 
-  /** The invite tile, bottom-right of the viewfinder — the same tile as "Your shots". */
+  /** The invite tile, right of the shutter — the same tile as "Your shots". */
   invite: {
     iconSize: 22,
+    /** Between the upload count and the tile. */
+    queueGap: 10,
   },
 
-  /** The status pill inside the viewfinder, above the bottom row of chrome — offline, a missed shot. */
+  /** The status pill inside the viewfinder's bottom edge — offline, a missed shot. */
   note: {
+    inset: 14,
     bg: 'rgba(0,0,0,0.52)',
     border: 'rgba(255,255,255,0.09)',
     paddingY: 6,
@@ -1076,13 +1071,16 @@ export const Camera = {
     color: 'rgba(240,237,232,0.8)',
   },
 
-  /** Flash and flip — glass buttons (`GlassButton`, 44pt) in the viewfinder's top corners. */
+  /** Flash and flip — glass buttons (`GlassButton`, 44pt) either side of the zoom, under the viewfinder. */
   controls: {
-    /** Flash off, and flash on. Off is brighter than it was on the dark page: it sits over a picture now. */
+    paddingX: 24,
+    paddingTop: 16,
+    paddingBottom: 4,
+    /** Flash off, and flash on. */
     flashColor: ['rgba(240,237,232,0.6)', Colors.text] as const,
   },
 
-  /** The glass segmented zoom control, bottom centre of the viewfinder. */
+  /** The glass segmented zoom control between them. */
   zoom: {
     gap: 3,
     paddingY: 4,

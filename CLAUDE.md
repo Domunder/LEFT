@@ -43,8 +43,8 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   the `Glass` primitive (Liquid Glass on iOS 26+). See "Album, viewer and
   glass (M3)" below.
 - **Done (2026-11-15), not run on a device: glass and motion in the remaining
-  screens** — the camera's chrome floats in the viewfinder as glass, buttons
-  give on press-in (`PressScale`), sheets drag (`SheetDrag`), the toast and
+  screens** — the camera's controls are glass (outside the viewfinder again
+  since 2026-11-16), buttons give on press-in (`PressScale`), sheets drag (`SheetDrag`), the toast and
   10's chips move on springs. JS only, no new build. See "Album, viewer and
   glass (M3)" and the camera section.
 - **Done (M4, 2026-11-16), verified against the local stack, never on a
@@ -275,17 +275,20 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
 - **`GrainOverlay`'s tiled image does not repeat reliably over a large area**
   (seen as one tile top-left over the viewfinder). Nothing uses it any more;
   the component is kept on purpose.
-- **The camera's chrome is glass inside the viewfinder** (2026-11-15): flash,
-  roll counter and flip along its top edge, "Your shots", zoom and invite along
-  its bottom edge (`Camera.overlay`), all plain views on `Glass` above the
-  canvas and above the shutter's blackout. Outside the frame only the shutter
-  remains — glass needs a picture behind it. **Not seen on a device.**
+- **Every camera control sits outside the viewfinder** (decided 2026-11-16 by
+  the user, after seeing the 2026-11-15 version with the chrome floating in
+  the picture on a device — do not move it back in): the roll counter in the
+  header under the event's name, flash · zoom · flip in a row under the frame,
+  "Your shots" · shutter · invite in the bottom row. The controls keep the
+  glass look (`GlassButton`, `Glass` tiles) although they sit on the dark
+  page. Only the status note is drawn inside the frame. **The new arrangement
+  has not been seen on a device.**
 - **A guest can see their own frames before the reveal** (decided 2026-11-15,
-  replacing "no preview at all"): `(capture)/roll`, from the tile bottom-left of
-  the viewfinder, which shows the last photo taken. Both read `lib/my-shots.ts`:
+  replacing "no preview at all"): `(capture)/roll`, from the tile left of
+  the shutter, which shows the last photo taken. Both read `lib/my-shots.ts`:
   uploaded rows + frames still in the queue. Others' stay hidden — RLS.
 - **Any member can invite from the camera** (decided 2026-11-15): the tile
-  bottom-right of 13's viewfinder opens 09 with `from=camera` — QR, link, back to the
+  right of 13's shutter opens 09 with `from=camera` — QR, link, back to the
   camera, without the host's "See who's joined". Members can read their
   event's `invite_code` (RLS), so no server change.
 - **The shutter only enqueues.** `enqueueShot()` moves the capture into
@@ -310,9 +313,8 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   posters, the Films backdrop) — never glass on glass, and never animate a
   glass view's opacity (fade a wrapper). `GlassPanel`, `CircleIconButton`'s
   `glass` variant, the zoom selector and the toast draw on `Glass` since
-  2026-11-15; the camera's close button is glass too, and so is all the chrome
-  inside the viewfinder. **Glass over the viewfinder's Skia canvas has not
-  been seen on a device.** `PillButton`'s `glass` variant is a flat fill, no
+  2026-11-15; the camera's close button is glass too, and so are its controls
+  around the viewfinder (nothing is glass *over* the viewfinder any more). `PillButton`'s `glass` variant is a flat fill, no
   blur: it sits inside glass panels and on the solid sheet.
 - **Press feedback is `components/ui/press-scale.tsx`.** `PressScale` is a
   `Pressable` that springs towards a smaller scale on touch-down (`Press`
