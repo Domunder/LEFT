@@ -70,7 +70,7 @@ import {
   writePref,
   type NotificationPrefs,
 } from '@/lib/notification-prefs';
-import { syncPush } from '@/lib/push';
+import { pushPermission, syncPush } from '@/lib/push';
 
 /** What the profile card shows, once the session has been read. */
 type Profile = {
@@ -180,9 +180,12 @@ export default function SettingsScreen() {
           system settings can help, and saying so beats a switch that is on and
           does nothing.
         */
+        // Read before asking: someone who has just said no to the system prompt
+        // does not need a second dialog about it a moment later.
+        const refusedEarlier = (await pushPermission()) === 'denied';
         const status = await syncPush({ ask: value });
 
-        if (value && status === 'denied') {
+        if (value && refusedEarlier && status === 'denied') {
           Alert.alert(
             'Notifications are off',
             'LEFT is not allowed to send notifications on this phone. You can change that in Settings.',
