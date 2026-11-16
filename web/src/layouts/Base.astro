@@ -172,12 +172,12 @@ const year = new Date().getFullYear();
         const phones = document.querySelectorAll('.phone');
         const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-        // Each phone's display is a 393pt canvas scaled to the phone's width.
+        // Each phone's display is a 402pt canvas scaled to the phone's width.
         // The observer reports before the first paint and again when a phone
         // further down is first laid out; reading the widths here instead
         // would force the layout of the whole page, skipped sections included.
         const screens = document.querySelectorAll('.phone .screen');
-        const fit = (el, width) => el.style.setProperty('--k', (width / 393).toFixed(4));
+        const fit = (el, width) => el.style.setProperty('--k', (width / 402).toFixed(4));
         if ('ResizeObserver' in window) {
           const sizes = new ResizeObserver((entries) => {
             for (const entry of entries) fit(entry.target, entry.contentRect.width);

@@ -33,7 +33,7 @@ Copied from the app (`mobile/assets/images/samples/`, see its `CREDITS.md`):
 | sample-5.jpg | Danka & Peter | https://unsplash.com/photos/tvicgTdh7Fg |
 | sample-6.jpg | Ilham Rahmansyah | https://unsplash.com/photos/DwTZwZYi9Ww |
 
-Only `sample-2.jpg` is used so far (the album mock's grid).
+Only `sample-2.jpg` is used so far (a strip in the Your Moments mock).
 
 The people in these photos are strangers and identifiable. The Unsplash License
 covers copyright, not a model release — fine for editorial-style use on a
@@ -42,3 +42,8 @@ events to show.
 
 Fonts: Newsreader, Inter and DM Serif Display, self-hosted through Fontsource
 (SIL Open Font License).
+
+The iPhone 17 Pro frame around the screens comes from Mockify
+(`@mockifydev/react`, MIT), which packages the device frames of Apple's design
+resources. Apple's marketing guidelines apply to how the device is shown:
+unaltered, with the app's own screens in it.

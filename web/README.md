@@ -27,7 +27,9 @@ npm run assets       # regenerate public/og*.jpg and the icons
 
 Copy that is not page-specific — prices, looks, the home FAQ, store links —
 lives in `src/site.ts`. The app's tokens are in `src/styles/global.css`. The
-phone mocks are HTML/CSS (`src/components/Phone.astro`), not screenshots.
+phone mocks are HTML/CSS (`src/components/Phone.astro`), not screenshots, inside a
+real iPhone 17 Pro frame from `@mockifydev/react` (a dev dependency: only its
+frame PNG and geometry are used at build time).
 
 ## Placeholders to fill before launch
 

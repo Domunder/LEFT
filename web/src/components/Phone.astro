@@ -1,12 +1,18 @@
 ---
 /**
- * An iPhone showing one LEFT screen. The screens are redrawn in HTML/CSS from
- * the app's own layouts (mobile/src/app, sizes in points) — not screenshots.
+ * An iPhone 17 Pro showing one LEFT screen.
  *
- * Everything on the screen is sized in `--u`, one point of a 393pt-wide
- * display, and the whole display is scaled to the phone, so it stays one
- * picture at any size. The body adds a 10pt black bezel and a 5pt titanium
- * band around it.
+ * The body is a real frame: the PNG and the display's geometry come from
+ * Mockify (@mockifydev/react, MIT — frames from Apple's design resources).
+ * Only its assets and device config are used, not its React component: that
+ * one takes a fixed pixel width, and this site has no React on the page. The
+ * frame carries the bezel, the keys and the Dynamic Island; the display lies
+ * under it.
+ *
+ * The screens are redrawn in HTML/CSS from the app's own layouts
+ * (mobile/src/app, sizes in points) — not screenshots. Everything on a screen
+ * is sized in `--u`, one point of the 402pt-wide display, and the whole
+ * display is scaled to the phone, so it stays one picture at any size.
  *
  * The figure gets `.live` while it is on screen and the script in Base.astro
  * drives the small loops (`data-count`, `data-tick`, `data-type`); every
@@ -24,6 +30,10 @@ import birthdayCandle from '../assets/photos/birthday-candle.jpg';
 import dinnerCandle from '../assets/photos/dinner-candle.jpg';
 import tripTrunk from '../assets/photos/trip-trunk.jpg';
 import sample2 from '../assets/photos/sample-2.jpg';
+import tripVan from '../assets/photos/trip-van.jpg';
+import { iPhone17Pro as device } from '@mockifydev/react';
+// A relative path: the package's `exports` only names its entry point.
+import frame from '../../node_modules/@mockifydev/react/assets/devices/iPhone 17 Pro - Silver.png';
 import { LOOKS } from '../site';
 
 type Props = {
@@ -48,19 +58,67 @@ const {
 } = Astro.props;
 
 const loading = eager ? 'eager' : 'lazy';
-const grid = [
-  weddingFriends,
-  weddingDance,
-  partyFlash,
-  dinnerCandle,
-  weddingCrowd,
-  birthdayCandle,
-  weddingMono,
-  partyWine,
-  tripTrunk,
-  sample2,
-  weddingDance,
-  partyFlash,
+/** Where the display sits in the frame, from the device's config. */
+const pct = (fraction: number) => `${(fraction * 100).toFixed(4)}%`;
+const screenWidth = device.framePngWidth * device.screenWidthFraction;
+const screenHeight = device.framePngHeight * device.screenHeightFraction;
+const radius = device.framePngWidth * device.screenRadiusFraction;
+const geometry = [
+  `--frame:${device.framePngWidth} / ${device.framePngHeight}`,
+  `--sx:${pct(device.screenLeftFraction)}`,
+  `--sy:${pct(device.screenTopFraction)}`,
+  `--sw:${pct(device.screenWidthFraction)}`,
+  `--sh:${pct(device.screenHeightFraction)}`,
+  `--sr:${pct(radius / screenWidth)} / ${pct(radius / screenHeight)}`,
+].join(';');
+
+/** The album's prints under the hero, two to a row, each with who took it. */
+const prints = [
+  { src: weddingFriends, by: 'Lena' },
+  { src: partyFlash, by: 'Tom' },
+  { src: dinnerCandle, by: 'Aylin' },
+  { src: weddingCrowd, by: 'Marc' },
+];
+
+/** Your Moments: the last tile of a strip stands for the rest of the album. */
+const moments = [
+  {
+    title,
+    photos: 412,
+    people: 38,
+    status: 'Developed',
+    live: false,
+    more: 409,
+    strip: [photo, weddingFriends, weddingCrowd, weddingMono],
+  },
+  {
+    title: 'Lena’s 30th',
+    photos: 57,
+    people: 14,
+    status: '1d 4h left',
+    live: true,
+    more: 0,
+    // Not developed yet: only your own frames, and an empty one.
+    strip: [birthdayCandle, partyWine, partyFlash, null],
+  },
+  {
+    title: 'Lisbon',
+    photos: 96,
+    people: 7,
+    status: 'Developed',
+    live: false,
+    more: 93,
+    strip: [tripTrunk, tripVan, sample2, dinnerCandle],
+  },
+  {
+    title: 'Housewarming',
+    photos: 128,
+    people: 21,
+    status: 'Developed',
+    live: false,
+    more: 125,
+    strip: [partyWine, dinnerCandle, partyFlash, weddingDance],
+  },
 ];
 
 /** Feather icons (24 grid, stroked), the set the app uses. */
@@ -73,7 +131,10 @@ const ICON = {
   plus: 'M12 5v14M5 12h14',
   users:
     'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75',
-  sliders: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
+  settings:
+    'M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z',
+  image:
+    'M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2zM8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM21 15l-5-5L5 21',
   download: 'M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3',
   camera:
     'M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2zM12 17a4 4 0 100-8 4 4 0 000 8z',
@@ -82,22 +143,23 @@ const ICON = {
 };
 ---
 
-<figure class:list={['phone', className]} role="img" aria-label={label}>
-  <span class="key k-action"></span>
-  <span class="key k-up"></span>
-  <span class="key k-down"></span>
-  <span class="key k-power"></span>
-  <div class="bezel">
-    <div class="screen" aria-hidden="true">
-      <div class="canvas">
+<figure class:list={['phone', className]} role="img" aria-label={label} style={geometry}>
+  <div class="screen" aria-hidden="true">
+    <div class="canvas">
       {
         screen === 'camera' && (
           <div class="s camera">
             <div class="cam-head">
-              <span class="round glass">
+              <span class="round lg glass">
                 <svg viewBox="0 0 24 24"><path d={ICON.x} /></svg>
               </span>
-              <span class="eyebrow-s">{title}</span>
+              <span class="cam-title">
+                <span class="eyebrow-s">{title}</span>
+                <span class="roll">
+                  <b data-count={shotsLeft}>{shotsLeft}</b>
+                  <small>Left</small>
+                </span>
+              </span>
               <span class="until">
                 <b>01</b><small>D</small><b class="dim">04</b><small>H</small>
               </span>
@@ -115,34 +177,28 @@ const ICON = {
                   fetchpriority={eager ? 'high' : 'auto'}
                   class="look-golden"
                 />
-                <div class="row row-top">
-                  <span class="round lg glass">
-                    <svg viewBox="0 0 24 24"><path d={ICON.zap} /></svg>
-                  </span>
-                  <span class="roll glass">
-                    <b data-count={shotsLeft}>{shotsLeft}</b>
-                    <small>Left</small>
-                  </span>
-                  <span class="round lg glass">
-                    <svg viewBox="0 0 24 24"><path d={ICON.flip} /></svg>
-                  </span>
-                </div>
-                <div class="row row-bottom">
-                  <span class="tile glass">
-                    <Image src={weddingFriends} alt="" width={140} height={140} fit="cover" quality={55} loading={loading} class="look-golden" />
-                  </span>
-                  <span class="zoom glass">
-                    <i>0.5×</i><i class="on">1×</i><i>3×</i>
-                  </span>
-                  <span class="tile glass">
-                    <svg viewBox="0 0 24 24"><path d={ICON.qr} /></svg>
-                  </span>
-                </div>
                 <span class="flash" />
               </div>
             </div>
+            <div class="cam-controls">
+              <span class="round lg glass">
+                <svg viewBox="0 0 24 24"><path d={ICON.zap} /></svg>
+              </span>
+              <span class="zoom glass">
+                <i>0.5×</i><i class="on">1×</i><i>4×</i>
+              </span>
+              <span class="round lg glass">
+                <svg viewBox="0 0 24 24"><path d={ICON.flip} /></svg>
+              </span>
+            </div>
             <div class="shutter-bar">
+              <span class="tile glass">
+                <Image src={weddingFriends} alt="" width={140} height={140} fit="cover" quality={55} loading={loading} class="look-golden" />
+              </span>
               <span class="shutter"><i /></span>
+              <span class="tile glass">
+                <svg viewBox="0 0 24 24"><path d={ICON.qr} /></svg>
+              </span>
             </div>
           </div>
         )
@@ -186,11 +242,10 @@ const ICON = {
       {
         screen === 'moments' && (
           <div class="s moments">
-            <Image src={photo} alt="" width={60} height={130} fit="cover" quality={40} loading={loading} class="wash" />
             <div class="lib-head">
               <p class="headline sm">Your Moments</p>
               <span class="round lg glass">
-                <svg viewBox="0 0 24 24"><path d={ICON.sliders} /></svg>
+                <svg viewBox="0 0 24 24"><path d={ICON.settings} /></svg>
               </span>
               <span class="round lg glass">
                 <svg viewBox="0 0 24 24"><path d={ICON.users} /></svg>
@@ -199,34 +254,55 @@ const ICON = {
                 <svg viewBox="0 0 24 24"><path d={ICON.plus} /></svg>
               </span>
             </div>
-            <div class="stack">
-              <span class="print far">
-                <Image src={weddingCrowd} alt="" width={400} height={640} fit="cover" quality={50} loading={loading} class="look-golden" />
-              </span>
-              <span class="print near">
-                <Image src={weddingFriends} alt="" width={400} height={640} fit="cover" quality={50} loading={loading} class="look-golden" />
-              </span>
-              <span class="print front">
-                <Image src={photo} alt="" width={600} height={960} fit="cover" quality={62} loading={loading} class="look-golden" />
-                <span class="caption">
-                  <b>{title}</b>
-                  <span class="caps">
-                    <span class="cap glass">
-                      Developed · 412 photos
-                      <svg viewBox="0 0 24 24"><path d={ICON.next} /></svg>
+            <div class="moment-list">
+              {moments.map((moment, index) => (
+                <div class="moment" style={`--n:${index}`}>
+                  <div class="moment-head">
+                    <span class="moment-name">
+                      <b>{moment.title}</b>
+                      <span class="moment-meta">
+                        <span>
+                          <svg viewBox="0 0 24 24"><path d={ICON.image} /></svg>
+                          {moment.photos} photos
+                        </span>
+                        <span>
+                          <svg viewBox="0 0 24 24"><path d={ICON.users} /></svg>
+                          {moment.people} people
+                        </span>
+                      </span>
                     </span>
-                    <span class="cap glass">
-                      <svg viewBox="0 0 24 24"><path d={ICON.users} /></svg>
-                      38
+                    <span class="status-cap">
+                      {moment.live && <i class="live-dot" />}
+                      {moment.status}
+                      {moment.live && <svg viewBox="0 0 24 24"><path d={ICON.next} /></svg>}
                     </span>
-                  </span>
-                </span>
-              </span>
-              <span class="print peek" />
+                  </div>
+                  <div class="strip">
+                    {moment.strip.map((image, tile) => {
+                      const counted = moment.more > 0 && tile === moment.strip.length - 1;
+                      return image ? (
+                        <span class:list={{ counted }}>
+                          {/* 24px wide and stretched: the upscale is the blur. */}
+                          <Image
+                            src={image}
+                            alt=""
+                            width={counted ? 24 : 170}
+                            height={counted ? 32 : 227}
+                            fit="cover"
+                            quality={52}
+                            loading={loading}
+                            class="look-golden"
+                          />
+                          {counted && <em>+{moment.more}</em>}
+                        </span>
+                      ) : (
+                        <span class="blank" />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
-            <span class="pages">
-              <i class="on" /><i /><i />
-            </span>
           </div>
         )
       }
@@ -234,25 +310,35 @@ const ICON = {
       {
         screen === 'album' && (
           <div class="s album">
-            <div class="album-scroll">
-              <p class="headline">{title}</p>
-              <p class="meta">412 photos · 38 people</p>
-              <div class="grid">
-                {grid.map((image, index) => (
-                  <span style={`--n:${index}`}>
-                    <Image src={image} alt="" width={210} height={280} fit="cover" quality={52} loading={loading} class="look-golden" />
-                  </span>
-                ))}
+            <div class="hero-print">
+              <Image src={photo} alt="" width={720} height={1040} fit="cover" quality={64} loading={loading} class="look-golden" />
+              <span class="veil" style="--n:0" />
+              <span class="shade" />
+              <div class="hero-text">
+                <p class="headline xl">{title}</p>
+                <p class="stats">
+                  <span><b>412</b><small>Photos</small></span>
+                  <i />
+                  <span><b>38</b><small>People</small></span>
+                </p>
+                <span class="cta">
+                  <svg viewBox="0 0 24 24"><path d={ICON.download} /></svg>
+                  Save all
+                </span>
               </div>
             </div>
-            <span class="fade" />
+            <div class="grid">
+              {prints.map((print, index) => (
+                <span>
+                  <Image src={print.src} alt="" width={370} height={494} fit="cover" quality={56} loading={loading} class="look-golden" />
+                  <em>{print.by}</em>
+                  <span class="veil" style={`--n:${index + 1}`} />
+                </span>
+              ))}
+            </div>
             <div class="float">
               <span class="round lg glass">
                 <svg viewBox="0 0 24 24"><path d={ICON.back} /></svg>
-              </span>
-              <span class="cap glass">
-                <svg viewBox="0 0 24 24"><path d={ICON.download} /></svg>
-                Save all
               </span>
             </div>
           </div>
@@ -328,12 +414,20 @@ const ICON = {
           </svg>
         </span>
       </div>
-      <span class="island"><i></i></span>
       <span class="home"></span>
-      </div>
     </div>
-    <span class="glare"></span>
   </div>
+  <Image
+    src={frame}
+    alt=""
+    class="frame"
+    widths={[320, 480, 640, 960]}
+    sizes="(min-width: 900px) 300px, 70vw"
+    width={640}
+    quality={80}
+    loading={loading}
+    decoding="async"
+  />
 </figure>
 
 <style>
@@ -344,81 +438,45 @@ const ICON = {
     margin: 0;
     width: 100%;
     max-width: 300px;
-    aspect-ratio: 423 / 882;
-    padding: 1.182%;
-    border-radius: 16.55% / 7.94%;
-    /* Brushed titanium: light along the top-left edge, darker through the turn. */
-    background: linear-gradient(
-      145deg,
-      #a39d94 0%,
-      #55514c 14%,
-      #8d877f 30%,
-      #3c3936 52%,
-      #7b766f 72%,
-      #2f2d2b 88%,
-      #6d6862 100%
-    );
+    aspect-ratio: var(--frame);
+  }
+
+  /*
+    The body's silhouette under the frame: it closes the hairline between the
+    display and the frame's inner edge, and it casts the shadow — a
+    drop-shadow on the PNG itself would also fall into the display.
+  */
+  .phone::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: 1.1% 2.4%;
+    border-radius: 18.6% / 8.9%;
+    background: #000;
     box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.18),
-      0 0 0 1px rgba(0, 0, 0, 0.7),
       0 2px 4px rgba(0, 0, 0, 0.5),
       0 36px 60px -22px rgba(0, 0, 0, 0.85);
   }
 
-  .key {
+  .phone :global(.frame) {
     position: absolute;
-    z-index: -1;
-    width: 1.1%;
-    border-radius: 2px;
-    background: linear-gradient(90deg, #4a4642, #8f8981 50%, #3a3734);
-  }
-
-  .k-action,
-  .k-up,
-  .k-down {
-    left: -0.75%;
-  }
-
-  .k-power {
-    right: -0.75%;
-    top: 30.5%;
-    height: 11%;
-    background: linear-gradient(270deg, #4a4642, #8f8981 50%, #3a3734);
-  }
-
-  .k-action {
-    top: 19.2%;
-    height: 3.6%;
-  }
-
-  .k-up {
-    top: 26.2%;
-    height: 6.8%;
-  }
-
-  .k-down {
-    top: 34.6%;
-    height: 6.8%;
-  }
-
-  .bezel {
-    position: relative;
+    inset: 0;
     width: 100%;
     height: 100%;
-    padding: 2.421%;
-    border-radius: 15.74% / 7.45%;
-    background: #050505;
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+    pointer-events: none;
+    user-select: none;
   }
 
   /* Off-screen phones skip layout; the frame fixes the size, so nothing shifts. */
   .screen {
     content-visibility: auto;
     container-type: inline-size;
-    position: relative;
-    width: 100%;
-    height: 100%;
-    border-radius: 14% / 6.455%;
+    position: absolute;
+    left: var(--sx);
+    top: var(--sy);
+    width: var(--sw);
+    height: var(--sh);
+    border-radius: var(--sr);
     overflow: hidden;
     background: #101010;
     color: #f0ede8;
@@ -426,14 +484,14 @@ const ICON = {
   }
 
   /*
-    The display is drawn once at 393x852 and scaled to the phone (`--k`, set
+    The display is drawn once at 402x876 and scaled to the phone (`--k`, set
     by the script in Base.astro): a re-layout of the page then costs these
     screens nothing. Without JS the same CSS runs on container units instead.
   */
   .canvas {
     position: absolute;
     inset: 0;
-    --u: calc(100cqw / 393);
+    --u: calc(100cqw / 402);
   }
 
   :global(.js) .screen {
@@ -442,38 +500,28 @@ const ICON = {
 
   :global(.js) .canvas {
     inset: 0 auto auto 0;
-    width: 393px;
-    height: 852px;
+    width: 402px;
+    height: 876px;
     --u: 1px;
     transform-origin: 0 0;
     transform: scale(var(--k, 0.7));
   }
 
-  /* The glass over the display: one soft reflection from the top-left. */
-  .glare {
-    position: absolute;
-    inset: 2.421%;
-    border-radius: 14% / 6.455%;
-    pointer-events: none;
-    background: linear-gradient(118deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 22%, transparent 38%);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-  }
-
+  /* The status bar: the time and the system icons either side of the island. */
   .status {
     position: absolute;
     inset: 0 0 auto 0;
-    height: calc(var(--u) * 54);
+    height: calc(var(--u) * 63);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-top: calc(var(--u) * 5);
     font-family: -apple-system, 'SF Pro Text', 'Inter Variable', system-ui, sans-serif;
     pointer-events: none;
   }
 
   .time,
   .sys {
-    width: calc(var(--u) * 133);
+    width: calc(var(--u) * 138);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -527,29 +575,6 @@ const ICON = {
     fill-opacity: 0.45;
   }
 
-  .island {
-    position: absolute;
-    top: calc(var(--u) * 11);
-    left: 50%;
-    width: calc(var(--u) * 124);
-    height: calc(var(--u) * 36);
-    margin-left: calc(var(--u) * -62);
-    border-radius: 999px;
-    background: #000;
-  }
-
-  .island i {
-    position: absolute;
-    right: calc(var(--u) * 12);
-    top: 50%;
-    width: calc(var(--u) * 11);
-    height: calc(var(--u) * 11);
-    margin-top: calc(var(--u) * -5.5);
-    border-radius: 50%;
-    background: radial-gradient(circle at 38% 36%, #2b3350, #0a0c16 60%);
-    box-shadow: 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.04);
-  }
-
   .home {
     position: absolute;
     left: 50%;
@@ -567,7 +592,7 @@ const ICON = {
     inset: 0;
     display: flex;
     flex-direction: column;
-    padding: calc(var(--u) * 59) 0 calc(var(--u) * 34);
+    padding: calc(var(--u) * 62) 0 calc(var(--u) * 34);
     font-size: calc(var(--u) * 14);
     line-height: 1.35;
   }
@@ -706,7 +731,7 @@ const ICON = {
 
   .float {
     position: absolute;
-    inset: calc(var(--u) * 71) calc(var(--u) * 12) auto;
+    inset: calc(var(--u) * 74) calc(var(--u) * 12) auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -721,8 +746,10 @@ const ICON = {
     flex: none;
   }
 
-  .cam-head .eyebrow-s {
-    text-align: center;
+  .cam-title {
+    display: grid;
+    justify-items: center;
+    gap: calc(var(--u) * 2);
   }
 
   .until {
@@ -766,28 +793,10 @@ const ICON = {
     background: #0a0a0c;
   }
 
-  .row {
-    position: absolute;
-    inset-inline: calc(var(--u) * 12);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .row-top {
-    top: calc(var(--u) * 12);
-  }
-
-  .row-bottom {
-    bottom: calc(var(--u) * 12);
-  }
-
   .roll {
     display: flex;
     align-items: baseline;
     gap: calc(var(--u) * 6);
-    padding: calc(var(--u) * 3) calc(var(--u) * 16);
-    border-radius: 999px;
   }
 
   .roll b {
@@ -853,10 +862,20 @@ const ICON = {
     pointer-events: none;
   }
 
+  /* Flash · zoom · flip, under the frame: nothing is drawn over the picture. */
+  .cam-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: calc(var(--u) * 16) calc(var(--u) * 24) calc(var(--u) * 4);
+    flex: none;
+  }
+
   .shutter-bar {
-    display: grid;
-    place-items: center;
-    padding: calc(var(--u) * 10) 0 calc(var(--u) * 16);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: calc(var(--u) * 10) calc(var(--u) * 24) calc(var(--u) * 16);
     flex: none;
   }
 
@@ -1060,21 +1079,19 @@ const ICON = {
     }
   }
 
-  /* ── 15/16 Your Moments ───────────────────────────────────────── */
-  .moments :global(.wash) {
-    position: absolute;
-    inset: 0;
-    /* 60px wide and stretched: the upscale is the blur. */
-    opacity: 0.3;
-    transform: scale(1.3);
+  /* ── 16 Your Moments ──────────────────────────────────────────── */
+  .moments {
+    padding-bottom: 0;
+    background:
+      radial-gradient(calc(var(--u) * 440) calc(var(--u) * 440) at 88% -6%, rgba(240, 190, 140, 0.15), transparent 70%),
+      #101010;
   }
 
   .lib-head {
-    position: relative;
     display: flex;
     align-items: center;
-    gap: calc(var(--u) * 8);
-    padding: calc(var(--u) * 6) calc(var(--u) * 20) calc(var(--u) * 16);
+    gap: calc(var(--u) * 10);
+    padding: calc(var(--u) * 6) calc(var(--u) * 24) calc(var(--u) * 16);
     flex: none;
   }
 
@@ -1084,162 +1101,256 @@ const ICON = {
     font-size: calc(var(--u) * 29);
   }
 
-  .stack {
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    margin: calc(var(--u) * 20) calc(var(--u) * 46) 0;
-  }
-
-  .print {
-    position: absolute;
-    inset: 0;
-    border-radius: calc(var(--u) * 30);
-    overflow: hidden;
-    background: #141316;
-    box-shadow:
-      inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.14),
-      0 calc(var(--u) * 18) calc(var(--u) * 40) rgba(0, 0, 0, 0.5);
-    transition: transform 1.3s var(--ease);
-  }
-
-  .near::after,
-  .far::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: rgba(8, 8, 10, 0.38);
-  }
-
-  /* The fan opens as the stack arrives in front. */
-  .near {
-    transform: rotate(-2deg) translate(calc(var(--u) * -6), calc(var(--u) * -2)) scale(0.95);
-  }
-
-  .far {
-    transform: rotate(1.6deg) translate(calc(var(--u) * 6), calc(var(--u) * -4)) scale(0.93);
-  }
-
-  .phone.live .near {
-    transform: rotate(-6deg) translate(calc(var(--u) * -18), calc(var(--u) * -6)) scale(0.95);
-    transition-delay: 0.25s;
-  }
-
-  .phone.live .far {
-    transform: rotate(5deg) translate(calc(var(--u) * 18), calc(var(--u) * -12)) scale(0.93);
-    transition-delay: 0.35s;
-  }
-
-  .peek {
-    left: calc(100% + var(--u) * 34);
-    right: auto;
-    width: 100%;
-    transform: scale(0.9);
-    transform-origin: left center;
-    opacity: 0.6;
-  }
-
-  .caption {
-    position: absolute;
-    inset: auto 0 0 0;
-    padding: calc(var(--u) * 120) calc(var(--u) * 20) calc(var(--u) * 20);
-    background: linear-gradient(rgba(8, 8, 10, 0), rgba(8, 8, 10, 0.35) 42%, rgba(8, 8, 10, 0.82));
+  .moment-list {
     display: grid;
-    gap: calc(var(--u) * 14);
+    gap: calc(var(--u) * 12);
+    padding-inline: calc(var(--u) * 16);
   }
 
-  .caption b {
+  .moment {
+    display: grid;
+    gap: calc(var(--u) * 12);
+    padding: calc(var(--u) * 14);
+    border-radius: calc(var(--u) * 22);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 0 0 calc(var(--u) * 0.5) rgba(255, 255, 255, 0.1);
+  }
+
+  .moment-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: calc(var(--u) * 12);
+  }
+
+  .moment-name {
+    display: grid;
+    gap: calc(var(--u) * 5);
+    min-width: 0;
+  }
+
+  .moment-name b {
     font-family: var(--serif);
     font-weight: 300;
-    font-size: calc(var(--u) * 30);
-    line-height: calc(var(--u) * 35);
+    font-size: calc(var(--u) * 22);
+    line-height: calc(var(--u) * 26);
     letter-spacing: -0.015em;
+    white-space: nowrap;
   }
 
-  .caps {
+  .moment-meta,
+  .moment-meta span {
     display: flex;
-    gap: calc(var(--u) * 8);
+    align-items: center;
   }
 
-  .pages {
-    position: relative;
+  .moment-meta {
+    gap: calc(var(--u) * 12);
+    font-size: calc(var(--u) * 12);
+    color: rgba(240, 237, 232, 0.55);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .moment-meta span {
+    gap: calc(var(--u) * 5);
+  }
+
+  .moment svg {
+    width: calc(var(--u) * 12);
+    height: calc(var(--u) * 12);
+  }
+
+  .status-cap {
     display: flex;
-    justify-content: center;
-    gap: calc(var(--u) * 7);
-    padding: calc(var(--u) * 18) 0 calc(var(--u) * 14);
+    align-items: center;
+    gap: calc(var(--u) * 6);
+    height: calc(var(--u) * 24);
+    padding-inline: calc(var(--u) * 10);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: calc(var(--u) * 11);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
     flex: none;
   }
 
-  .pages i {
+  .status-cap svg {
+    color: rgba(240, 237, 232, 0.55);
+  }
+
+  .live-dot {
     width: calc(var(--u) * 6);
     height: calc(var(--u) * 6);
-    border-radius: 999px;
-    background: rgba(240, 237, 232, 0.3);
+    border-radius: 50%;
+    background: rgba(140, 220, 120, 0.85);
   }
 
-  .pages i.on {
-    width: calc(var(--u) * 18);
-    background: #f0ede8;
+  /* The one moment still running. */
+  .phone.live .live-dot {
+    animation: breathe 2.4s ease-in-out infinite;
   }
 
-  /* ── album/[id] ───────────────────────────────────────────────── */
+  @keyframes breathe {
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  .strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: calc(var(--u) * 6);
+  }
+
+  .strip span {
+    position: relative;
+    aspect-ratio: 3 / 4;
+    border-radius: calc(var(--u) * 10);
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .strip .blank {
+    border: calc(var(--u) * 1) dashed rgba(255, 255, 255, 0.14);
+  }
+
+  .strip .counted :global(img) {
+    transform: scale(1.25);
+  }
+
+  .strip em {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: rgba(8, 8, 10, 0.45);
+    font-style: normal;
+    font-size: calc(var(--u) * 15);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── album/[id]: the hero, then the prints two to a row ───────── */
   .album {
     padding: 0;
   }
 
-  .album-scroll {
-    padding-top: calc(var(--u) * 123);
+  .hero-print {
+    position: relative;
+    height: calc(var(--u) * 578);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    flex: none;
   }
 
-  .album .headline,
-  .album .meta {
-    margin-inline: calc(var(--u) * 24);
+  .hero-print > :global(img) {
+    position: absolute;
+    inset: 0;
   }
 
-  .album .meta {
-    margin-top: calc(var(--u) * 6);
+  .shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      rgba(16, 16, 16, 0.4),
+      rgba(16, 16, 16, 0) 22%,
+      rgba(16, 16, 16, 0.72) 68%,
+      #101010
+    );
+  }
+
+  .hero-text {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    text-align: center;
+    padding: 0 calc(var(--u) * 24) calc(var(--u) * 20);
+  }
+
+  .stats {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 18);
+    margin-top: calc(var(--u) * 14);
+  }
+
+  .stats span {
+    display: flex;
+    align-items: baseline;
+    gap: calc(var(--u) * 7);
+  }
+
+  .stats b {
+    font-family: var(--numeral);
+    font-weight: 400;
+    font-size: calc(var(--u) * 22);
+    letter-spacing: -0.01em;
+  }
+
+  .stats small {
+    font-size: calc(var(--u) * 11);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(240, 237, 232, 0.42);
+  }
+
+  .stats i {
+    width: calc(var(--u) * 0.5);
+    height: calc(var(--u) * 18);
+    background: rgba(240, 237, 232, 0.32);
+  }
+
+  .album .cta {
+    justify-self: stretch;
+    margin-top: calc(var(--u) * 24);
   }
 
   .grid {
-    margin-top: calc(var(--u) * 20);
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: calc(var(--u) * 3);
+    grid-template-columns: repeat(2, 1fr);
+    gap: calc(var(--u) * 8);
+    padding-inline: calc(var(--u) * 12);
   }
 
-  .grid span {
+  .grid > span {
     position: relative;
     aspect-ratio: 3 / 4;
-    border-radius: calc(var(--u) * 4);
+    border-radius: calc(var(--u) * 16);
     overflow: hidden;
     background: #141316;
   }
 
-  /* The reveal: the veils clear one after another. */
-  .grid span::after {
+  .grid > span::before {
     content: '';
     position: absolute;
+    inset: auto 0 0 0;
+    height: calc(var(--u) * 72);
+    background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.5));
+  }
+
+  .grid em {
+    position: absolute;
+    left: calc(var(--u) * 12);
+    bottom: calc(var(--u) * 10);
+    font-family: var(--serif);
+    font-size: calc(var(--u) * 16);
+  }
+
+  /* The reveal: the veils clear one after another, the hero first. */
+  .veil {
+    position: absolute;
     inset: 0;
-    background: linear-gradient(160deg, #241810, #0f0c0a);
+    background: linear-gradient(160deg, #241810, #0d0806);
     transition: opacity 0.5s var(--ease);
   }
 
-  .phone.live .grid span::after {
+  .phone.live .veil {
     opacity: 0;
-    transition: opacity 1.4s var(--ease) calc(var(--n) * 110ms + 500ms);
-  }
-
-  .fade {
-    position: absolute;
-    inset: 0 0 auto 0;
-    height: calc(var(--u) * 155);
-    background: linear-gradient(#101010 30%, rgba(16, 16, 16, 0));
-    opacity: 0.9;
-    pointer-events: none;
-  }
-
-  .album .fade {
-    height: calc(var(--u) * 120);
+    transition: opacity 1.4s var(--ease) calc(var(--n) * 220ms + 500ms);
   }
 
   /* ── 11 Your name ─────────────────────────────────────────────── */
