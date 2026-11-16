@@ -6,13 +6,17 @@
  *
  *  - **Before the event is developed** — `DevelopingFilm`: a countdown, how
  *    many photos exist, nothing to see. The host can develop early.
- *  - **Developed** — the whole group's photos in one grid, the shared
- *    `PhotoViewer`, save, share and moderation.
+ *  - **Developed** — `AlbumHero` (one of the album's photos, picked at random
+ *    each time the screen opens, full-bleed and going dark towards the name,
+ *    the two counts and "Save all"), then the whole group's photos two to a
+ *    row with the photographer's name on each, the shared `PhotoViewer`, save,
+ *    share and moderation. (2026-11-16, replacing the dense three-column grid
+ *    under a small title — the user's design.)
  *
  * **The reveal** plays the first time a developed album is opened on this
  * phone: the sheet waits in the dark until the first thumbnails are loaded,
- * then the prints come up one after another (`RevealVeil`), with a haptic as
- * it starts and one as it lands. It is the only choreographed moment in the
+ * then the hero and after it the prints come up one after another
+ * (`RevealVeil`), with a haptic as it starts and one as it lands. It is the only choreographed moment in the
  * app; everything else here stays quiet.
  *
  * What a member may read is RLS, not this file: before the reveal the photo
@@ -27,10 +31,15 @@ import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
+import { Alert, type FlatList, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useReducedMotion,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AlbumHero } from '@/components/ui/album-hero';
 import { DevelopingFilm } from '@/components/ui/developing-film';
 import { Glass, GlassButton } from '@/components/ui/glass';
 import { PhotoTile, useTileRegistry } from '@/components/ui/photo-tile';
@@ -39,7 +48,7 @@ import { PillButton } from '@/components/ui/pill-button';
 import { RevealVeil, revealDurationMs } from '@/components/ui/reveal-veil';
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
-import { Body, Display } from '@/components/ui/typography';
+import { Body } from '@/components/ui/typography';
 import { Album as T, Colors, Glass as GlassTokens } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import {
@@ -83,7 +92,15 @@ export default function AlbumScreen() {
   /** Whether leaving should pass through the "keep your film" offer. */
   const [offerKeep, setOfferKeep] = useState(false);
 
+  /** Which photo opens the album — drawn once per visit, so it holds still. */
+  const [heroDraw] = useState(() => Math.random());
+  const [heroFull, setHeroFull] = useState<{ id: string; uri: string } | null>(null);
+
   const list = useRef<FlatList<AlbumPhoto>>(null);
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
   const { register, rectOf } = useTileRegistry();
 
   // --- loading --------------------------------------------------------------
@@ -133,12 +150,35 @@ export default function AlbumScreen() {
   const photos = useMemo(() => album?.photos ?? [], [album]);
   const developed = album?.developed ?? false;
 
+  // --- the hero -------------------------------------------------------------
+
+  const heroIndex = photos.length > 0 ? Math.floor(heroDraw * photos.length) : -1;
+  const hero = heroIndex >= 0 ? photos[heroIndex] : undefined;
+
+  // The thumbnail is soft at this size: fetch a URL for the original.
+  useEffect(() => {
+    if (!hero) return;
+    let cancelled = false;
+    void originalUrl(hero)
+      .then((uri) => {
+        if (uri && !cancelled) setHeroFull({ id: hero.id, uri });
+      })
+      .catch(() => {
+        // The thumbnail stays.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Keyed by id: a refresh hands over a new object for the same photo.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hero?.id]);
+
   // --- the reveal -----------------------------------------------------------
 
-  const firstThumbs = useMemo(
-    () => photos.slice(0, T.reveal.maxStaggered).map((photo) => photo.thumbUri),
-    [photos]
-  );
+  const firstThumbs = useMemo(() => {
+    const thumbs = photos.slice(0, T.reveal.maxStaggered).map((photo) => photo.thumbUri);
+    return hero ? [hero.thumbUri, ...thumbs] : thumbs;
+  }, [photos, hero]);
 
   useEffect(() => {
     if (!id || !developed || reveal !== 'waiting') return;
@@ -167,7 +207,8 @@ export default function AlbumScreen() {
           void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           setReveal('done');
           void markRevealSeen(id, photos.length);
-        }, revealDurationMs(photos.length, reducedMotion))
+          // The hero comes up first, so the sheet is one print longer.
+        }, revealDurationMs(photos.length + 1, reducedMotion))
       );
     })();
 
@@ -423,15 +464,17 @@ export default function AlbumScreen() {
 
   return (
     <View style={styles.root}>
-      <FlatList
+      <Animated.FlatList
         ref={list}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         data={photos}
         keyExtractor={(photo) => photo.id}
         numColumns={T.columns}
         columnWrapperStyle={styles.row}
         contentContainerStyle={[
           styles.grid,
-          { paddingTop: insets.top, paddingBottom: insets.bottom + T.listPaddingBottom },
+          { paddingBottom: insets.bottom + T.listPaddingBottom },
         ]}
         showsVerticalScrollIndicator={false}
         // The sheet holds still while it develops.
@@ -440,13 +483,29 @@ export default function AlbumScreen() {
           // The row is not laid out yet; the viewer then closes with a fade.
         }}
         ListHeaderComponent={
-          <View style={styles.title}>
-            <Display size="xl">{album.event.name}</Display>
-            <Body small>
-              {plural(photos.length, 'photo', 'photos')} ·{' '}
-              {plural(album.memberCount, 'person', 'people')}
-            </Body>
-          </View>
+          <AlbumHero
+            title={album.event.name}
+            photoCount={photos.length}
+            memberCount={album.memberCount}
+            photo={
+              hero
+                ? {
+                    id: hero.id,
+                    thumbUri: hero.thumbUri,
+                    fullUri: heroFull?.id === hero.id ? heroFull.uri : undefined,
+                  }
+                : undefined
+            }
+            scrollY={scrollY}
+            veil={
+              veiled ? (
+                <RevealVeil index={0} play={reveal === 'playing'} reducedMotion={reducedMotion} />
+              ) : null
+            }
+            onPressPhoto={veiled ? undefined : () => setOpen({ index: heroIndex, origin: null })}
+            onSaveAll={saveAll}
+            saveDisabled={busy || veiled}
+          />
         }
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -465,31 +524,39 @@ export default function AlbumScreen() {
               if (!veiled) setOpen({ index, origin });
             }}
             style={styles.tile}>
+            {item.author ? (
+              <>
+                <LinearGradient
+                  pointerEvents="none"
+                  colors={T.tile.captionFade}
+                  style={styles.captionFade}
+                />
+                <Text style={styles.caption} numberOfLines={1}>
+                  {item.author}
+                </Text>
+              </>
+            ) : null}
             {veiled ? (
-              <RevealVeil index={index} play={reveal === 'playing'} reducedMotion={reducedMotion} />
+              // The hero is print 0.
+              <RevealVeil
+                index={index + 1}
+                play={reveal === 'playing'}
+                reducedMotion={reducedMotion}
+              />
             ) : null}
           </PhotoTile>
         )}
       />
 
-      {/* A soft edge where the grid scrolls under the chrome, instead of a divider. */}
+      {/* A soft edge where the grid scrolls under the back button, instead of a divider. */}
       <LinearGradient
         pointerEvents="none"
-        colors={[Colors.bg, 'rgba(16,16,16,0)']}
+        colors={[T.topFadeColor, 'rgba(16,16,16,0)']}
         style={[styles.topFade, { height: insets.top + T.topFade }]}
       />
 
       <View style={[styles.chrome, { top: insets.top + T.chromeInset }]} pointerEvents="box-none">
         <GlassButton icon="chevron-left" accessibilityLabel="Back" onPress={leave} />
-        {photos.length > 0 ? (
-          <GlassButton
-            icon="download"
-            label="Save all"
-            accessibilityLabel={`Save all ${photos.length} photos`}
-            disabled={busy || veiled}
-            onPress={saveAll}
-          />
-        ) : null}
       </View>
 
       {open && viewerPhotos.length > 0 ? (
@@ -575,18 +642,29 @@ const styles = StyleSheet.create({
   },
   row: {
     gap: T.gap,
+    paddingHorizontal: T.gridPaddingX,
   },
   tile: {
     flex: 1 / T.columns,
+    borderRadius: T.tile.radius,
   },
-  title: {
-    paddingHorizontal: T.titlePaddingX,
-    paddingTop: T.titlePaddingTop,
-    paddingBottom: T.titlePaddingBottom,
-    gap: T.titleGap,
+  captionFade: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: T.tile.captionFadeHeight,
+  },
+  caption: {
+    ...Typography.tileCaption,
+    position: 'absolute',
+    left: T.tile.captionPaddingX,
+    right: T.tile.captionPaddingX,
+    bottom: T.tile.captionPaddingBottom,
+    color: Colors.text,
   },
   empty: {
-    paddingTop: T.titlePaddingTop,
+    paddingTop: T.titlePaddingBottom,
     alignItems: 'center',
   },
   topFade: {

@@ -340,6 +340,19 @@ export const Typography = {
     fontSize: 12,
   } as TextStyle,
 
+  /** 17 — the two counts on the album's hero. */
+  albumStat: {
+    fontFamily: FontFamily.numeric,
+    fontSize: 22,
+    letterSpacing: -0.2,
+  } as TextStyle,
+
+  /** 17 — the photographer's name on a print. */
+  tileCaption: {
+    fontFamily: FontFamily.displayItalic,
+    fontSize: 16,
+  } as TextStyle,
+
   /** "+39" on the last tile of a moment's photo strip (16). */
   stripMore: {
     fontFamily: FontFamily.semibold,

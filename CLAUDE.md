@@ -350,6 +350,14 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   the photo rows are hidden by RLS — and the host's "develop now"), then the
   grid. It is reached from the camera's roll-empty state and from a live
   card's status capsule.
+- **A developed album opens with `AlbumHero`** (`album-hero.tsx`; decided
+  2026-11-16 by the user, from a reference, replacing the three-column grid
+  under a small title): one of the album's photos, drawn at random per visit,
+  full-bleed and going dark towards the event's name, the two counts and
+  "Save all"; under it the prints two to a row with the photographer's name
+  on each. The hero shows the thumbnail first and the original over it, it
+  stretches on overscroll, a tap opens it in the viewer, and in the reveal it
+  is print 0. Only the back button floats. **Not seen on a device.**
 - **The reveal** plays once per film and phone (`left:reveal-seen:{id}` in
   AsyncStorage): the sheet waits dark until the first thumbnails are
   prefetched, then `RevealVeil`s clear one after another, a haptic at the start

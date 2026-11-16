@@ -1576,20 +1576,53 @@ export const PhotoTile = {
  * Not in the prototype (17 was the clip player).
  */
 export const Album = {
-  columns: 3,
-  gap: 3,
-  /** The title block above the grid. */
-  titlePaddingX: 24,
-  /** Room for the floating chrome above the title. */
+  /** Two large prints per row (2026-11-16; was a dense grid of three). */
+  columns: 2,
+  gap: 8,
+  gridPaddingX: 12,
+  /** Under the "couldn't load" copy and the blank-film note. */
   titlePaddingTop: 64,
-  titleGap: 6,
   titlePaddingBottom: 20,
   listPaddingBottom: 48,
   /** Floating glass controls, inset from the safe area. */
   chromeInset: 12,
-  chromeGap: 10,
-  /** The soft edge where the grid scrolls under the chrome — no divider. */
+  /** The soft edge where the grid scrolls under the back button — no divider. */
   topFade: 96,
+  topFadeColor: 'rgba(16,16,16,0.6)',
+
+  /** The full-bleed photo that opens a developed album. */
+  hero: {
+    /** Of the window's height: the first row of prints still shows under it. */
+    heightRatio: 0.66,
+    minHeight: 420,
+    paddingX: 24,
+    paddingBottom: 20,
+    /** Keeps a long title clear of the back button on a short phone. */
+    contentPaddingTop: 120,
+    /** Without a photo: room for the floating chrome above the title. */
+    plainPaddingTop: 64,
+    titleGap: 14,
+    statsGap: 18,
+    statLabelGap: 7,
+    dividerHeight: 18,
+    actionsGap: 24,
+    /** The thumbnail giving way to the original. */
+    sharpenMs: 300,
+    /** A trace of shade for the status bar, clear in the middle, the page's own dark at the foot. */
+    shade: {
+      colors: ['rgba(16,16,16,0.4)', 'rgba(16,16,16,0)', 'rgba(16,16,16,0.72)', '#101010'],
+      locations: [0, 0.22, 0.68, 1],
+    },
+  },
+
+  /** A print in the grid, with its photographer's name on it. */
+  tile: {
+    radius: 16,
+    captionPaddingX: 12,
+    captionPaddingBottom: 10,
+    captionFadeHeight: 72,
+    captionFade: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)'],
+  },
   /** The status capsule ("Saved", "Saving 12 / 124"). */
   status: {
     bottom: 76,
