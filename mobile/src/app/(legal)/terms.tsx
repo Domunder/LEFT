@@ -1,5 +1,11 @@
 import { LegalPageView } from '@/components/ui/legal-page';
-import { LEGAL_UPDATED, TERMS_INTRO, TERMS_SECTIONS } from '@/constants/legal';
+import {
+  LEGAL_DRAFT,
+  LEGAL_DRAFT_NOTICE,
+  LEGAL_UPDATED,
+  TERMS_INTRO,
+  TERMS_SECTIONS,
+} from '@/constants/legal';
 
 /** Terms of Service. Content lives in constants/legal.ts. */
 export default function TermsScreen() {
@@ -9,6 +15,7 @@ export default function TermsScreen() {
       updated={LEGAL_UPDATED}
       intro={TERMS_INTRO}
       sections={TERMS_SECTIONS}
+      draftNotice={LEGAL_DRAFT ? LEGAL_DRAFT_NOTICE : undefined}
     />
   );
 }
