@@ -37,7 +37,7 @@ export const DisplaySize = {
   xs: 26, // 08 Join sheet
   xxs: 24, // 10.1 Group info
   xxxs: 22, // 15 Films — the "No films yet." empty-state headline
-  card: 21, // 16 Films — an event card's title (unused since the carousel)
+  card: 21, // 16 Films — a moment card's title
   poster: 30, // 16 Films — the title on a film's poster
 } as const;
 
@@ -338,6 +338,12 @@ export const Typography = {
   metaMd: {
     fontFamily: FontFamily.regular,
     fontSize: 12,
+  } as TextStyle,
+
+  /** "+39" on the last tile of a moment's photo strip (16). */
+  stripMore: {
+    fontFamily: FontFamily.semibold,
+    fontSize: 15,
   } as TextStyle,
 
   /**

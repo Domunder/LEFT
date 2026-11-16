@@ -39,7 +39,7 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   Skia 2.14). Android has not been built.
 - **Done (M3), run on a device (2026-11-15):** the album (`(library)/album/[id]`) with
   its "developing" state and the reveal, the shared `PhotoViewer`, save /
-  share / moderation / "develop now", the Films carousel with real covers, and
+  share / moderation / "develop now", the library with real covers, and
   the `Glass` primitive (Liquid Glass on iOS 26+). See "Album, viewer and
   glass (M3)" below.
 - **Done (2026-11-15), not run on a device: glass and motion in the remaining
@@ -162,7 +162,7 @@ mobile/src/
     (host)/               09 Invite · 10 Your group
     (guest)/              11 Name · 12 Waiting
     (capture)/            13 Camera · Your shots (roll)
-    (library)/            15/16 Your Moments (stacks) · album/[id] (developing → reveal → album)
+    (library)/            15/16 Your Moments (list of cards) · album/[id] (developing → reveal → album)
     (modals)/             08 Join sheet · Delete account
     settings.tsx          20 Settings
     +native-intent.ts     invite link -> 11
@@ -349,7 +349,7 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   `DevelopingFilm` (countdown, photo count from the roster's `shots_taken` —
   the photo rows are hidden by RLS — and the host's "develop now"), then the
   grid. It is reached from the camera's roll-empty state and from a live
-  poster's status capsule.
+  card's status capsule.
 - **The reveal** plays once per film and phone (`left:reveal-seen:{id}` in
   AsyncStorage): the sheet waits dark until the first thumbnails are
   prefetched, then `RevealVeil`s clear one after another, a haptic at the start
@@ -360,16 +360,22 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   run**). Owner or host can delete (`deletePhoto`, RLS).
 - **`(auth)/keep` is reached when an anonymous guest leaves a developed album**
   (once, unless declined) — after the photos, never in front of them.
-- **The library is "Your Moments", a carousel of photo stacks** (decided
-  2026-11-15, replacing the artboard's list and the first poster carousel):
-  each moment is a `PhotoStack` (`photo-stack.tsx`) — the front print carries
-  the title, two more fan out behind it, and the fan opens with the scroll
-  position as a stack arrives in front. A developed moment shows its album's
-  first photos (`lib/covers.ts`); one that is not shows dimmed stock pictures
-  tagged "Sample" (`constants/samples.ts`, credits in
-  `assets/images/samples/CREDITS.md`) — the user's call, replacing "your own
-  latest shot". The carousel always ends in `NewMomentCard`; with no moments it
-  is the only stack, which replaces 15's empty state.
+- **The library is "Your Moments", a list of compact cards** (decided
+  2026-11-16 by the user, replacing the full-screen carousel of photo stacks
+  of 2026-11-15 — thumbnails blown up to the screen looked soft and only one
+  moment fitted; do not go back). Each moment is a `MomentCard`
+  (`moment-card.tsx`): name, "42 photos · 18 people", a status capsule and a
+  strip of four photos whose last tile is blurred and reads "+N" when there
+  are more. A developed moment shows its album's first photos; one that is
+  not shows **the viewer's own latest frames** (RLS returns nothing else), or
+  empty frames — `lib/covers.ts`. The photo count before the reveal is the
+  roster's `shots_taken`, summed (`listMyEventSummaries`). A running moment
+  opens its camera, or the album's developing state once the viewer's roll is
+  used up; its status capsule opens the developing state (the host's "develop
+  now") and its strip "Your shots". **With no moments** the screen is
+  the one large `NewMomentCard` stack of sample prints ("Start your moment",
+  join capsule) — the only place the stock pictures (`constants/samples.ts`)
+  and `PhotoStack` are still used. **Not seen on a device.**
 - **04 Event End is one screen, no popovers** (decided 2026-11-15): the
   question, then the answer written large (day, time, "developed in 5 days"),
   and two wheels straight on the screen, no card — `DayStrip` (days sideways, the centred

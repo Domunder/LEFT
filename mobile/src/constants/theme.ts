@@ -1196,8 +1196,8 @@ export const Films = {
   },
 
   /**
-   * The "start a moment" card — the last stack in the carousel, and the only
-   * one when there are no moments yet (replaces 15's centred empty state).
+   * The "start a moment" stack, shown while there are no moments yet
+   * (replaces 15's centred empty state).
    */
   fresh: {
     padding: 24,
@@ -1209,50 +1209,75 @@ export const Films = {
     joinGap: 22,
   },
 
-  /** The guest's "Keep your films" panel, above the carousel. */
+  /** The guest's "Keep your films" panel, above the moments. */
   prompt: {
     paddingX: 20,
     paddingTop: 4,
     paddingBottom: 12,
   },
 
-  /**
-   * 16 · the carousel — one stack of photos per moment, swiped sideways.
-   *
-   * Replaces the artboard's vertical list of cards (redesigned 2026-11-15). It
-   * is a native horizontal scroll, so tracking, momentum, rubber-banding and
-   * interruption are the system's own.
-   */
-  carousel: {
-    /** Stack inset from the screen edge — room for its fan and the neighbours. */
+  /** 15 · no moments yet: the one large "start a moment" stack, alone on the screen. */
+  empty: {
+    /** Stack inset from the screen edge — room for its fan. */
     sideInset: 46,
-    /** Wide enough that one stack's fan never lands on the next one's front. */
-    gap: 34,
     /** Room above the stack for the photos that lift out behind it. */
     paddingTop: 20,
-    /** How far a stack one page away recedes. */
-    neighbourScale: 0.9,
-    neighbourOpacity: 0.6,
-    /** Carousel -> page dots -> the bottom of the screen. */
-    dotsGap: 18,
-    dotsBottom: 14,
-    dotSize: 6,
-    dotGap: 7,
-    dotActiveWidth: 18,
+    paddingBottom: 38,
+  },
+
+  /**
+   * 16 · the list — one compact card per moment (redesigned 2026-11-16,
+   * replacing the full-screen carousel: its covers were thumbnails blown up to
+   * the whole screen, and only one moment fitted).
+   */
+  list: {
+    paddingX: 16,
+    paddingBottom: 32,
+    /** Between cards. */
+    gap: 12,
+  },
+
+  /** 16 · one moment's card: title, counts, status, and a strip of its photos. */
+  moment: {
+    radius: 22,
+    padding: 14,
+    pressScale: 0.98,
+    /** Title -> the counts under it. */
+    titleGap: 5,
+    /** Between "42 photos" and "18 people", and an icon and its number. */
+    metaGap: 12,
+    metaIconGap: 5,
+    metaIconSize: 12,
+    /** The status capsule, top right. */
+    capsuleHeight: 24,
+    capsulePaddingX: 10,
+    capsuleGap: 6,
+    liveDot: 6,
+    /** Header -> the strip of photos. */
+    stripGap: 12,
+    tileGap: 6,
+    tileRadius: 10,
+    /** A print's proportions, upright. */
+    tileAspect: 3 / 4,
+    /** The last tile when there are more photos than tiles: blurred, dimmed, counted. */
+    moreBlur: 14,
+    moreDim: 'rgba(8,8,10,0.45)',
+    /** An empty frame, where no photo exists yet. */
+    emptyIconSize: 16,
+    fadeMs: 220,
   },
 
   /**
    * The photos fanned out behind a stack's front picture, nearest first. Each
    * is the front's size, turned and shifted so an edge shows left or right.
-   * `spread` scales all of it: 1 for the stack in front, `restSpread` for the
-   * ones beside it, so the fan opens as a stack arrives at the centre.
+   * `spread` scales all of it; the one stack left (the empty state) is
+   * always fully open.
    */
   stack: {
     behind: [
       { rotate: -6, shiftX: -18, lift: -6, scale: 0.95 },
       { rotate: 5, shiftX: 18, lift: -12, scale: 0.93 },
     ] as const,
-    restSpread: 0.35,
     /** Depth: the photos behind are darker than the one in front. */
     behindDim: 'rgba(8,8,10,0.38)',
     /** Sample pictures are dimmed again, so they never read as the group's own. */
@@ -1260,25 +1285,17 @@ export const Films = {
     sampleTag: { inset: 14, height: 22, paddingX: 9, bg: 'rgba(8,8,10,0.5)' },
   },
 
-  /** 16 · one film's poster. */
+  /** The front print of a stack. */
   poster: {
     radius: 30,
-    /** The photo's bottom scrim, so the title and capsules stay legible. */
-    scrim: ['rgba(8,8,10,0)', 'rgba(8,8,10,0.35)', 'rgba(8,8,10,0.82)'] as const,
-    scrimLocations: [0.35, 0.62, 1] as const,
-    padding: 20,
-    /** Title -> the capsule row. */
-    titleGap: 14,
-    capsuleGap: 8,
-    liveDot: 7,
     pressScale: 0.975,
     /** How long a cover takes to fade in over the poster's tint. */
     coverTransitionMs: 260,
   },
 
   /**
-   * 16's ambient backdrop — the film in front, blurred and dimmed, so the
-   * screen reads as lit by its own content. Cross-fades as the carousel moves.
+   * The empty state's ambient backdrop — its front print, blurred and dimmed,
+   * so the screen reads as lit by its own content.
    */
   backdrop: {
     opacity: 0.5,

@@ -7,17 +7,22 @@
  * whatever that event is currently doing, not just a link to a finished album —
  * see lib/film-status.ts for the routing table.
  *
- * **It is a carousel of photo stacks, not the artboard's list** (redesigned
- * 2026-11-15, the user's call): each moment is a stack of prints, the front
- * one carrying its title, two more fanned out behind it. A developed moment
- * shows its album; one that is not shows dimmed sample pictures, tagged
- * "Sample". The carousel always ends in one more stack that starts a new
- * moment — with no moments yet it is the only one, which replaces the
- * artboard's centred empty state.
+ * **Two layouts** (redesigned 2026-11-16, the user's call, replacing the
+ * full-screen carousel of 2026-11-15):
  *
- * It is a native horizontal scroll, so tracking, momentum, rubber-banding and
- * interruption are the system's. Behind it the stack in front is blurred into
- * the backdrop, so the screen is lit by its own content.
+ *  - No moments yet: one large stack of sample prints, "Start your moment",
+ *    with the join capsule on it — and that stack blurred into the backdrop.
+ *    This replaces the artboard's centred empty state.
+ *  - Otherwise a vertical list of compact cards (`MomentCard`): name, photo
+ *    and people counts, status, and a strip of four photos whose last tile is
+ *    blurred and reads "+N" when there are more. A developed moment shows its
+ *    album; one that is not shows the viewer's own frames so far, or empty
+ *    frames. Starting and joining are the header's plus and people buttons.
+ *
+ * Where a tap goes: a running moment opens its camera — unless the viewer's
+ * roll is used up, then the album's "developing" state; a finished one opens
+ * its album. On a running moment the status capsule opens the developing
+ * state (the host's "develop now" lives there) and the strip "Your shots".
  *
  * Other deviations from the artboard, all flagged in CLAUDE.md:
  *  - the title is "Your Moments" (was "Your Films")
@@ -30,26 +35,16 @@
  */
 
 import type { Session } from '@supabase/supabase-js';
-import { Image, type ImageSource } from 'expo-image';
+import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { StyleSheet, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
-import Animated, {
-  interpolate,
-  useAnimatedReaction,
-  useAnimatedScrollHandler,
-  useAnimatedStyle,
-  useDerivedValue,
-  useReducedMotion,
-  useSharedValue,
-  type SharedValue,
-} from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
+import { FlatList, StyleSheet, View } from 'react-native';
 
 import { CircleIconButton } from '@/components/ui/circle-back-button';
-import { FilmPoster, NewMomentCard } from '@/components/ui/film-poster';
+import { NewMomentCard } from '@/components/ui/film-poster';
 import { GlassButton } from '@/components/ui/glass';
 import { KeepYourFilm } from '@/components/ui/keep-your-film';
+import { MomentCard } from '@/components/ui/moment-card';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
@@ -59,20 +54,15 @@ import { Colors, Films, Glass } from '@/constants/theme';
 import { getSession, isAnonymous } from '@/lib/auth';
 import { loadCovers, type FilmCover } from '@/lib/covers';
 import { isDeveloped, listMyEventSummaries, type EventSummary } from '@/lib/events';
-import { destinationFor, filmPhase, posterStatus, tickIntervalMs } from '@/lib/film-status';
+import { destinationFor, filmPhase, statusLabel, tickIntervalMs } from '@/lib/film-status';
 import { tintFor } from '@/lib/film-tint';
 import { dismissPrompt, isPromptDismissed } from '@/lib/prompt-dismissal';
-
-const C = Films.carousel;
 
 /** One shared identity for "no events", so a non-ready render is stable. */
 const EMPTY: EventSummary[] = [];
 const NO_COVERS = new Map<string, FilmCover>();
+const NO_PHOTOS: readonly string[] = [];
 
-/** What the carousel scrolls: every moment, then the stack that starts a new one. */
-type Item = { kind: 'moment'; event: EventSummary } | { kind: 'new' };
-
-const NEW_ITEM: Item = { kind: 'new' };
 /** Seeds the new-moment stack's samples and tint, the way an event id does. */
 const NEW_SEED = 'new-moment';
 
@@ -83,16 +73,12 @@ type LoadState =
 
 export default function FilmsScreen() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
-  const reducedMotion = useReducedMotion();
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [covers, setCovers] = useState(NO_COVERS);
   const [session, setSession] = useState<Session | null>(null);
   const [promptDismissed, setPromptDismissed] = useState(true);
   const [now, setNow] = useState(() => new Date());
-  const [active, setActive] = useState(0);
-  const [carouselHeight, setCarouselHeight] = useState(0);
 
   const load = useCallback(async (isCancelled: () => boolean) => {
     try {
@@ -103,7 +89,7 @@ export default function FilmsScreen() {
       setSession(current);
       setNow(new Date());
 
-      // Covers arrive after the posters: the library should never wait on photos.
+      // Photos arrive after the cards: the library should never wait on them.
       void loadCovers(events).then((next) => {
         if (!isCancelled()) setCovers(next);
       });
@@ -124,7 +110,7 @@ export default function FilmsScreen() {
   /*
     Re-read on focus, not just on mount. Every route that creates or advances an
     event lands back here, so a library that only loaded once would show a stale
-    status — and a stale cover — the moment someone took a photo.
+    status — and a stale strip — the moment someone took a photo.
   */
   useFocusEffect(
     useCallback(() => {
@@ -189,66 +175,72 @@ export default function FilmsScreen() {
   }, [router, session]);
   const joinEvent = useCallback(() => router.push('/(modals)/join'), [router]);
 
-  // --- the carousel ---------------------------------------------------------
+  // --- one moment's card ---------------------------------------------------
 
-  const posterWidth = width - 2 * C.sideInset;
-  const step = posterWidth + C.gap;
+  const renderMoment = useCallback(
+    ({ item: event }: { item: EventSummary }) => {
+      const cover = covers.get(event.id);
+      const developed = isDeveloped(event, now);
+      const phase = filmPhase(event, now);
 
-  const scrollX = useSharedValue(0);
-  const onScroll = useAnimatedScrollHandler((event) => {
-    scrollX.value = event.contentOffset.x;
-  });
+      // Before the reveal `photoCount` is the viewer's own frames (RLS), which
+      // is exactly what a used-up roll is measured in.
+      const own = developed ? 0 : (cover?.photoCount ?? 0);
+      const rollEmpty = phase === 'live' && event.roll_size !== null && own >= event.roll_size;
 
-  // The film in front drives the backdrop and the page dots.
-  useAnimatedReaction(
-    () => Math.round(scrollX.value / step),
-    (index, previous) => {
-      if (index !== previous) scheduleOnRN(setActive, index);
-    }
-  );
+      const album = { pathname: '/(library)/album/[id]', params: { id: event.id } } as const;
 
-  const onCarouselLayout = useCallback((event: LayoutChangeEvent) => {
-    setCarouselHeight(event.nativeEvent.layout.height);
-  }, []);
-
-  const items = useMemo<Item[]>(
-    () => [...events.map((event): Item => ({ kind: 'moment', event })), NEW_ITEM],
-    [events]
-  );
-
-  /** A moment's stack: its album once developed, samples until then. */
-  const stackFor = useCallback(
-    (event: EventSummary): { photos: ImageSource[]; sample: boolean } => {
-      if (!isDeveloped(event, now)) return { photos: samplesFor(event.id), sample: true };
-      return {
-        photos: (covers.get(event.id)?.uris ?? []).map((uri) => ({ uri })),
-        sample: false,
-      };
+      return (
+        <MomentCard
+          title={event.name}
+          status={statusLabel(event, now)}
+          phase={phase}
+          members={event.memberCount}
+          // Everyone's photos once they can be counted; until then the roster's
+          // counters, which is what the album's "developing" state shows too.
+          photoCount={developed ? (cover?.photoCount ?? event.shotsTaken) : event.shotsTaken}
+          photos={cover?.uris ?? NO_PHOTOS}
+          stripCount={cover?.photoCount ?? 0}
+          // Nothing left to shoot: the camera would only say so. Go and wait.
+          onPress={() => router.push(rollEmpty ? album : destinationFor(event, user?.id))}
+          // A running moment opens its camera; the capsule is the way to its
+          // count, its countdown and the host's "develop now".
+          onPressStatus={phase === 'live' && !rollEmpty ? () => router.push(album) : undefined}
+          // On a running moment the strip is the viewer's own roll so far.
+          onPressPhotos={
+            phase === 'live' && own > 0
+              ? () => router.push({ pathname: '/(capture)/roll', params: { eventId: event.id } })
+              : undefined
+          }
+          photosLabel="Your shots"
+        />
+      );
     },
-    [covers, now]
+    [covers, now, router, user?.id]
   );
 
   const ready = state.kind === 'ready';
-  const frontIndex = Math.min(Math.max(active, 0), items.length - 1);
-  const front = items[frontIndex];
-  const frontSeed = front.kind === 'moment' ? front.event.id : NEW_SEED;
-  const frontPhoto =
-    front.kind === 'moment' ? stackFor(front.event).photos[0] : samplesFor(NEW_SEED)[0];
+  const empty = ready && events.length === 0;
+
+  const prompt = showsPrompt ? (
+    <View style={empty ? styles.promptEmpty : styles.promptList}>
+      <KeepYourFilm onLinked={handleLinked} onDismiss={handleDismiss} />
+    </View>
+  ) : null;
 
   return (
     <Screen transparent padded={false}>
-      {ready ? (
+      {/* Only the empty state has a picture to be lit by; the list sits on the page's glow. */}
+      {empty ? (
         <View style={styles.backdrop} pointerEvents="none">
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: tintFor(frontSeed)[0] }]} />
-          {frontPhoto ? (
-            <Image
-              source={frontPhoto}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              blurRadius={Films.backdrop.blurRadius}
-              transition={Films.backdrop.transitionMs}
-            />
-          ) : null}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: tintFor(NEW_SEED)[0] }]} />
+          <Image
+            source={samplesFor(NEW_SEED)[0]}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            blurRadius={Films.backdrop.blurRadius}
+            transition={Films.backdrop.transitionMs}
+          />
           <View style={[StyleSheet.absoluteFill, styles.backdropScrim]} />
         </View>
       ) : null}
@@ -300,105 +292,29 @@ export default function FilmsScreen() {
             style={styles.retry}
           />
         </View>
-      ) : (
+      ) : empty ? (
         <>
-          {showsPrompt ? (
-            <View style={styles.prompt}>
-              <KeepYourFilm onLinked={handleLinked} onDismiss={handleDismiss} />
-            </View>
-          ) : null}
-
-          <View style={styles.carousel} onLayout={onCarouselLayout}>
-            {carouselHeight > 0 ? (
-              <Animated.FlatList
-                horizontal
-                data={items}
-                keyExtractor={(item) => (item.kind === 'moment' ? item.event.id : NEW_SEED)}
-                showsHorizontalScrollIndicator={false}
-                snapToInterval={step}
-                decelerationRate="fast"
-                disableIntervalMomentum
-                onScroll={onScroll}
-                scrollEventThrottle={16}
-                contentContainerStyle={styles.carouselContent}
-                ItemSeparatorComponent={Separator}
-                getItemLayout={(_, index) => ({ length: step, offset: step * index, index })}
-                renderItem={({ item, index }) => (
-                  <CarouselItem
-                    index={index}
-                    step={step}
-                    scrollX={scrollX}
-                    still={reducedMotion}
-                    width={posterWidth}
-                    height={carouselHeight - C.paddingTop}>
-                    {(spread) => {
-                      if (item.kind === 'new') {
-                        return (
-                          <NewMomentCard
-                            photos={samplesFor(NEW_SEED)}
-                            tint={tintFor(NEW_SEED)}
-                            spread={spread}
-                            onStart={startNewEvent}
-                            onJoin={joinEvent}
-                            style={styles.poster}
-                          />
-                        );
-                      }
-
-                      const { event } = item;
-                      const phase = filmPhase(event, now);
-                      const stack = stackFor(event);
-                      return (
-                        <FilmPoster
-                          title={event.name}
-                          status={posterStatus(event, covers.get(event.id)?.photoCount ?? 0, now)}
-                          phase={phase}
-                          members={event.memberCount}
-                          photos={stack.photos}
-                          sample={stack.sample}
-                          tint={tintFor(event.id)}
-                          spread={spread}
-                          onPress={() => router.push(destinationFor(event, user?.id))}
-                          // A live moment opens its camera; the capsule is the way to
-                          // its count, its countdown and the host's "develop now".
-                          onPressStatus={
-                            phase === 'live'
-                              ? () =>
-                                  router.push({
-                                    pathname: '/(library)/album/[id]',
-                                    params: { id: event.id },
-                                  })
-                              : undefined
-                          }
-                          style={styles.poster}
-                        />
-                      );
-                    }}
-                  </CarouselItem>
-                )}
-              />
-            ) : null}
-          </View>
-
-          <View
-            style={styles.dots}
-            accessible
-            accessibilityRole="text"
-            accessibilityLabel={
-              front.kind === 'new'
-                ? 'Start a moment'
-                : `Moment ${frontIndex + 1} of ${events.length}`
-            }>
-            {items.length > 1
-              ? items.map((item, index) => (
-                  <View
-                    key={item.kind === 'moment' ? item.event.id : NEW_SEED}
-                    style={[styles.dot, index === frontIndex && styles.dotActive]}
-                  />
-                ))
-              : null}
+          {prompt}
+          <View style={styles.emptyStack}>
+            <NewMomentCard
+              photos={samplesFor(NEW_SEED)}
+              tint={tintFor(NEW_SEED)}
+              onStart={startNewEvent}
+              onJoin={joinEvent}
+              style={styles.fill}
+            />
           </View>
         </>
+      ) : (
+        <FlatList
+          data={events}
+          keyExtractor={(event) => event.id}
+          renderItem={renderMoment}
+          ListHeaderComponent={prompt ?? undefined}
+          ItemSeparatorComponent={Separator}
+          contentContainerStyle={styles.list}
+          showsVerticalScrollIndicator={false}
+        />
       )}
     </Screen>
   );
@@ -406,37 +322,6 @@ export default function FilmsScreen() {
 
 function Separator() {
   return <View style={styles.separator} />;
-}
-
-type CarouselItemProps = {
-  index: number;
-  step: number;
-  scrollX: SharedValue<number>;
-  /** Reduced motion: every stack stays at full size, fanned out. */
-  still: boolean;
-  width: number;
-  height: number;
-  /** Handed how far the stack's fan is open: 1 in front, less beside it. */
-  children: (spread: SharedValue<number>) => React.ReactNode;
-};
-
-/** A stack that recedes and squares up as it leaves the centre — with the finger. */
-function CarouselItem({ index, step, scrollX, still, width, height, children }: CarouselItemProps) {
-  /** 0 in front, 1 a whole page away. */
-  const distance = useDerivedValue(() =>
-    still ? 0 : Math.min(Math.abs(scrollX.value / step - index), 1)
-  );
-
-  const spread = useDerivedValue(() =>
-    interpolate(distance.value, [0, 1], [1, Films.stack.restSpread])
-  );
-
-  const style = useAnimatedStyle(() => ({
-    opacity: interpolate(distance.value, [0, 1], [1, C.neighbourOpacity]),
-    transform: [{ scale: interpolate(distance.value, [0, 1], [1, C.neighbourScale]) }],
-  }));
-
-  return <Animated.View style={[{ width, height }, style]}>{children(spread)}</Animated.View>;
 }
 
 const styles = StyleSheet.create({
@@ -459,42 +344,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Films.header.buttonGap,
   },
-  prompt: {
+  // The guest's "Keep your films" panel: above the stack, or as the list's first row.
+  promptEmpty: {
     paddingHorizontal: Films.prompt.paddingX,
     paddingTop: Films.prompt.paddingTop,
     paddingBottom: Films.prompt.paddingBottom,
   },
-  carousel: {
-    flex: 1,
-    paddingTop: C.paddingTop,
+  promptList: {
+    paddingTop: Films.prompt.paddingTop,
+    paddingBottom: Films.prompt.paddingBottom,
   },
-  carouselContent: {
-    paddingHorizontal: C.sideInset,
+  emptyStack: {
+    flex: 1,
+    paddingHorizontal: Films.empty.sideInset,
+    paddingTop: Films.empty.paddingTop,
+    paddingBottom: Films.empty.paddingBottom,
+  },
+  fill: {
+    flex: 1,
+  },
+  list: {
+    paddingHorizontal: Films.list.paddingX,
+    paddingBottom: Films.list.paddingBottom,
   },
   separator: {
-    width: C.gap,
-  },
-  poster: {
-    flex: 1,
-  },
-  dots: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: C.dotGap,
-    height: C.dotSize,
-    marginTop: C.dotsGap,
-    marginBottom: C.dotsBottom,
-  },
-  dot: {
-    width: C.dotSize,
-    height: C.dotSize,
-    borderRadius: C.dotSize / 2,
-    backgroundColor: Colors.dotCompleted,
-  },
-  dotActive: {
-    width: C.dotActiveWidth,
-    backgroundColor: Colors.text,
+    height: Films.list.gap,
   },
   centered: {
     flex: 1,

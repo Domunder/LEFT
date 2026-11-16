@@ -1,11 +1,12 @@
 /**
- * The photos on each moment's stack in the library, and how many it holds.
+ * The photos on each moment's card in the library, and how many there are.
  *
  * A developed moment shows the album's first few photos. One that is not
- * developed shows none of its own — the library draws dimmed sample pictures
- * there instead (decided 2026-11-15; `constants/samples.ts`) — so only its
- * count is read. RLS decides what the count covers: the caller's own frames
- * before the reveal, everyone's after.
+ * developed shows the caller's own latest frames (decided 2026-11-16,
+ * replacing the sample pictures) — a guest may see their own before the
+ * reveal, and nobody else's. No filter is needed for that: RLS returns only
+ * the caller's own rows until the event is developed, and it decides what the
+ * count covers too — own frames before the reveal, everyone's after.
  *
  * One small query per event and one signing request for all of them. A library
  * is a handful of events.
@@ -17,14 +18,14 @@ import { getSupabase } from './supabase';
 import { localShots } from './upload-queue';
 
 export type FilmCover = {
-  /** The album's first photos, front first. Empty until the moment is developed. */
+  /** Up to `STRIP_SIZE`: the album's first photos, or the caller's own latest before the reveal. */
   uris: string[];
   /** Photos the caller can see: their own before the reveal, everyone's after. */
   photoCount: number;
 };
 
-/** How many photos a stack shows: the one in front and two behind it. */
-const STACK_SIZE = 3;
+/** How many photos a card's strip shows. */
+export const STRIP_SIZE = 4;
 
 async function coverRow(event: Event): Promise<{ thumbPaths: string[]; count: number }> {
   const developed = isDeveloped(event);
@@ -33,14 +34,13 @@ async function coverRow(event: Event): Promise<{ thumbPaths: string[]; count: nu
     .select('thumb_path', { count: 'exact' })
     .eq('event_id', event.id)
     .eq('status', 'uploaded')
-    // The stack opens the way the album does: on its first photos.
-    .order('taken_at', { ascending: true })
-    .limit(developed ? STACK_SIZE : 1);
+    // A developed strip opens the way the album does, on its first photos; a
+    // running one shows what the caller shot last.
+    .order('taken_at', { ascending: developed })
+    .limit(STRIP_SIZE);
   if (error) throw error;
 
-  const thumbPaths = developed
-    ? (data ?? []).flatMap((row) => (row.thumb_path ? [row.thumb_path] : []))
-    : [];
+  const thumbPaths = (data ?? []).flatMap((row) => (row.thumb_path ? [row.thumb_path] : []));
   return { thumbPaths, count: count ?? 0 };
 }
 
@@ -56,21 +56,26 @@ export async function loadCovers(events: Event[]): Promise<Map<string, FilmCover
   try {
     urls = await signedUrls(rows.flatMap((row) => row.thumbPaths));
   } catch {
-    // Offline: the stacks fall back to their tint.
+    // Offline: the strips stay empty frames.
   }
 
   events.forEach((event, i) => {
     const { thumbPaths, count } = rows[i];
 
-    // Frames still in the upload queue are not on the server yet, but they count.
-    const queued = isDeveloped(event) ? 0 : localShots(event.id).length;
+    // Frames still in the upload queue are not on the server yet, but they
+    // count, and they are the newest — so they lead the strip.
+    const queued = isDeveloped(event)
+      ? []
+      : localShots(event.id).sort((a, b) => b.takenAt.localeCompare(a.takenAt));
+
+    const uploaded = thumbPaths.flatMap((path) => {
+      const url = urls.get(path);
+      return url ? [url] : [];
+    });
 
     covers.set(event.id, {
-      uris: thumbPaths.flatMap((path) => {
-        const url = urls.get(path);
-        return url ? [url] : [];
-      }),
-      photoCount: count + queued,
+      uris: [...queued.map((shot) => shot.thumbUri), ...uploaded].slice(0, STRIP_SIZE),
+      photoCount: count + queued.length,
     });
   });
 
