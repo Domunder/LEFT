@@ -20,6 +20,7 @@
  */
 
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2';
+import { isServiceCaller } from '../_shared/service-caller.ts';
 
 const json = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), {
@@ -73,7 +74,7 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return json({ error: 'method not allowed' }, 405);
 
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!serviceKey || req.headers.get('Authorization') !== `Bearer ${serviceKey}`) {
+  if (!serviceKey || !isServiceCaller(req)) {
     return json({ error: 'unauthorized' }, 401);
   }
 
