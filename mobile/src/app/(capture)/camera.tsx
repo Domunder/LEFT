@@ -14,18 +14,20 @@
  *    phone with one lens has no stops, and pinch does the zooming.
  *  - The flash lights the LED before the exposure and asks the camera for its
  *    own flash on top (`fire`). On the front camera the viewfinder goes white.
- *  - **The chrome floats on the picture, as glass** (2026-11-15). Flash, the
- *    roll counter and flip sit along the viewfinder's top edge; "Your shots",
- *    zoom and invite along its bottom edge. All of it is `Glass` — there is a
- *    picture behind every piece. Outside the frame only the shutter is left,
- *    on the plain page, where glass would have nothing to show.
- *  - Bottom-left of the viewfinder shows the last photo taken and opens "Your
- *    shots" — a guest may look at their own frames.
- *  - Bottom-right opens the invite (09: QR and link), for every member — a
- *    party grows while it is running, and whoever stands next to a newcomer
- *    should be able to let them in. Frames still uploading count beside the
- *    shutter.
- *  - The counter is the largest type on the screen and shows only what
+ *  - **The picture is left alone: every control sits outside the viewfinder**
+ *    (2026-11-16, the user's call after seeing the chrome floating inside it
+ *    on a device). The counter is in the header under the event's name; flash,
+ *    zoom and flip are a row under the frame; "Your shots", the shutter and
+ *    invite are the bottom row. The controls keep the glass look
+ *    (`GlassButton`, `Glass` tiles) — over the dark page it reads as a quiet
+ *    tinted surface rather than as glass over a picture.
+ *  - Left of the shutter is the last photo taken; it opens "Your shots" — a
+ *    guest may look at their own frames.
+ *  - Right of the shutter opens the invite (09: QR and link), for every
+ *    member — a party grows while it is running, and whoever stands next to a
+ *    newcomer should be able to let them in. Frames still uploading count
+ *    beside it.
+ *  - The counter is the largest type in the header and shows only what
  *    `useCameraSession` gives it — the server's count minus frames still owed.
  *  - The shutter answers on touch-down and fires on release. The viewfinder
  *    blinks shut on the same frame. No sound: a party is loud enough.
@@ -80,7 +82,7 @@ import { ShutterButton } from '@/components/ui/shutter-button';
 import { Spinner } from '@/components/ui/spinner';
 import { Body, Display, Em, Label } from '@/components/ui/typography';
 import { ZoomSelector } from '@/components/ui/zoom-selector';
-import { Camera as T, Glass as GlassTokens, Radii } from '@/constants/theme';
+import { Camera as T, Glass as GlassTokens } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { useCameraSession } from '@/hooks/use-camera-session';
 import type { FilmLook } from '@/lib/events';
@@ -661,6 +663,7 @@ function Viewfinder({
           <Label small numberOfLines={1}>
             {eventName}
           </Label>
+          <RollCounter shotsLeft={shotsLeft} />
         </View>
 
         <View style={[styles.headerSide, styles.headerRight]}>
@@ -700,87 +703,60 @@ function Viewfinder({
               pointerEvents="none"
             />
 
-            {/*
-              The chrome, over the picture and over the shutter's blackout: plain
-              views above the canvas, each on `Glass`. No blend modes here — on
-              iOS they paint over the preview. `box-none`, so the gaps between
-              the controls still belong to the pinch.
-            */}
-            <View style={[styles.overlayRow, styles.overlayTop]} pointerEvents="box-none">
-              <GlassButton
-                icon={flash ? 'zap' : 'zap-off'}
-                color={at(T.controls.flashColor, flash)}
-                accessibilityLabel={flash ? 'Flash on' : 'Flash off'}
-                onPress={() => setFlash((on) => !on)}
-              />
-              <Glass radius={Radii.pill} style={styles.counter}>
-                <RollCounter shotsLeft={shotsLeft} />
-              </Glass>
-              <GlassButton icon="refresh-cw" accessibilityLabel="Switch camera" onPress={flip} />
-            </View>
-
             {note ? (
               <View style={styles.note} accessibilityLiveRegion="polite">
                 <Feather name={note.icon} size={T.note.iconSize} color={T.note.color} />
                 <Text style={styles.noteText}>{note.text}</Text>
               </View>
             ) : null}
-
-            <View style={[styles.overlayRow, styles.overlayBottom]} pointerEvents="box-none">
-              <PressScale
-                accessibilityRole="button"
-                accessibilityLabel="Your shots"
-                accessibilityHint="Shows the photos you have taken"
-                hitSlop={8}
-                scale={GlassTokens.pressScale}
-                onPress={onOpenShots}>
-                <Glass radius={T.shots.radius} interactive style={styles.tile}>
-                  {lastShot ? (
-                    <Image
-                      source={{ uri: lastShot }}
-                      style={StyleSheet.absoluteFill}
-                      contentFit="cover"
-                      transition={T.shots.fadeMs}
-                    />
-                  ) : (
-                    <Feather name="image" size={T.shots.iconSize} color={T.shots.iconColor} />
-                  )}
-                </Glass>
-              </PressScale>
-
-              {stops.length > 0 ? (
-                <ZoomSelector
-                  stops={stops}
-                  selected={selected}
-                  onSelect={(stop) => {
-                    zoom.value = stop.zoom;
-                    setSelected(stop.label);
-                  }}
-                />
-              ) : null}
-
-              <PressScale
-                accessibilityRole="button"
-                accessibilityLabel="Invite"
-                accessibilityHint="Shows the QR code and the link to this event"
-                hitSlop={8}
-                scale={GlassTokens.pressScale}
-                onPress={onOpenInvite}>
-                <Glass radius={T.shots.radius} interactive style={styles.tile}>
-                  <MaterialCommunityIcons
-                    name="qrcode"
-                    size={T.invite.iconSize}
-                    color={T.shots.iconColor}
-                  />
-                </Glass>
-              </PressScale>
-            </View>
           </View>
         </GestureDetector>
       </View>
 
+      {/* Flash · zoom · flip, under the frame. Nothing is drawn over the picture. */}
+      <View style={styles.controls}>
+        <GlassButton
+          icon={flash ? 'zap' : 'zap-off'}
+          color={at(T.controls.flashColor, flash)}
+          accessibilityLabel={flash ? 'Flash on' : 'Flash off'}
+          onPress={() => setFlash((on) => !on)}
+        />
+        {stops.length > 0 ? (
+          <ZoomSelector
+            stops={stops}
+            selected={selected}
+            onSelect={(stop) => {
+              zoom.value = stop.zoom;
+              setSelected(stop.label);
+            }}
+          />
+        ) : null}
+        <GlassButton icon="refresh-cw" accessibilityLabel="Switch camera" onPress={flip} />
+      </View>
+
       <View style={styles.bottom}>
-        <View style={styles.bottomSide} />
+        <View style={styles.bottomSide}>
+          <PressScale
+            accessibilityRole="button"
+            accessibilityLabel="Your shots"
+            accessibilityHint="Shows the photos you have taken"
+            hitSlop={8}
+            scale={GlassTokens.pressScale}
+            onPress={onOpenShots}>
+            <Glass radius={T.shots.radius} interactive style={styles.tile}>
+              {lastShot ? (
+                <Image
+                  source={{ uri: lastShot }}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="cover"
+                  transition={T.shots.fadeMs}
+                />
+              ) : (
+                <Feather name="image" size={T.shots.iconSize} color={T.shots.iconColor} />
+              )}
+            </Glass>
+          </PressScale>
+        </View>
 
         <ShutterButton onFire={fire} disabled={!ready} />
 
@@ -795,6 +771,21 @@ function Viewfinder({
               <Text style={styles.queueText}>{pending}</Text>
             </View>
           ) : null}
+          <PressScale
+            accessibilityRole="button"
+            accessibilityLabel="Invite"
+            accessibilityHint="Shows the QR code and the link to this event"
+            hitSlop={8}
+            scale={GlassTokens.pressScale}
+            onPress={onOpenInvite}>
+            <Glass radius={T.shots.radius} interactive style={styles.tile}>
+              <MaterialCommunityIcons
+                name="qrcode"
+                size={T.invite.iconSize}
+                color={T.shots.iconColor}
+              />
+            </Glass>
+          </PressScale>
         </View>
       </View>
     </Screen>
@@ -837,6 +828,7 @@ const styles = StyleSheet.create({
   headerCenter: {
     flex: 1,
     alignItems: 'center',
+    gap: T.header.nameGap,
   },
   // Centres the 3:4 frame in whatever height the header and controls leave.
   viewfinderArea: {
@@ -853,24 +845,14 @@ const styles = StyleSheet.create({
   screenFlash: {
     backgroundColor: T.flash.screenColor,
   },
-  // Flash · counter · flip along the top edge, shots · zoom · invite along the bottom.
-  overlayRow: {
-    position: 'absolute',
-    left: T.overlay.inset,
-    right: T.overlay.inset,
+  // Flash · zoom · flip, between the frame and the shutter.
+  controls: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  overlayTop: {
-    top: T.overlay.inset,
-  },
-  overlayBottom: {
-    bottom: T.overlay.inset,
-  },
-  counter: {
-    paddingHorizontal: T.overlay.counterPaddingX,
-    paddingVertical: T.overlay.counterPaddingY,
+    paddingHorizontal: T.controls.paddingX,
+    paddingTop: T.controls.paddingTop,
+    paddingBottom: T.controls.paddingBottom,
   },
   // "Your shots" and invite. The glass draws the edge; a photo covers it.
   tile: {
@@ -884,8 +866,7 @@ const styles = StyleSheet.create({
   },
   note: {
     position: 'absolute',
-    // Clear of the bottom row of chrome.
-    bottom: T.overlay.inset + T.shots.size + T.overlay.noteGap,
+    bottom: T.note.inset,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
@@ -916,6 +897,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+    gap: T.invite.queueGap,
   },
   queue: {
     flexDirection: 'row',
