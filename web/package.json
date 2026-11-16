@@ -10,7 +10,8 @@
     "preview": "astro preview",
     "check": "npm run legal && astro check",
     "assets": "node scripts/static-assets.mjs",
-    "preview:cf": "wrangler pages dev dist --port 8788"
+    "preview:cf": "wrangler pages dev dist --port 8788",
+    "store": "node scripts/store-assets.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.5",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@mockifydev/react": "^0.1.0",
+    "puppeteer-core": "^25.17.0",
     "wrangler": "^4.162.0"
   }
 }

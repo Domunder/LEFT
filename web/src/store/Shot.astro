@@ -1,0 +1,321 @@
+---
+/**
+ * The store listings' pictures: one page per screenshot, plus Google Play's
+ * feature graphic. Not part of the site — the route only exists while
+ * STORE_ASSETS is set (astro.config.mjs), and `npm run store` photographs
+ * each page into ../store-assets/.
+ *
+ * Everything is sized in vw/vh, so one page serves every screenshot size;
+ * the script picks the size through the viewport. Google Play's pictures use
+ * the Android handset (Phone's `device`). No script runs here: the
+ * phones use their no-JS path (container units) and stay still.
+ */
+import '@fontsource-variable/newsreader/wght.css';
+import '@fontsource-variable/newsreader/wght-italic.css';
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource/dm-serif-display/400.css';
+import '../styles/global.css';
+import { Image } from 'astro:assets';
+import Phone from '../components/Phone.astro';
+import logo from '../assets/left-logo.png';
+import weddingFriends from '../assets/photos/wedding-friends.jpg';
+import weddingDance from '../assets/photos/wedding-dance.jpg';
+import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
+import weddingMono from '../assets/photos/wedding-mono.jpg';
+import partyFlash from '../assets/photos/party-flash.jpg';
+import partyWine from '../assets/photos/party-wine.jpg';
+import birthdayCandle from '../assets/photos/birthday-candle.jpg';
+import dinnerCandle from '../assets/photos/dinner-candle.jpg';
+import tripTrunk from '../assets/photos/trip-trunk.jpg';
+import tripVan from '../assets/photos/trip-van.jpg';
+import sample1 from '../assets/photos/sample-1.jpg';
+import sample2 from '../assets/photos/sample-2.jpg';
+import sample3 from '../assets/photos/sample-3.jpg';
+import sample4 from '../assets/photos/sample-4.jpg';
+import sample5 from '../assets/photos/sample-5.jpg';
+import sample6 from '../assets/photos/sample-6.jpg';
+
+/**
+ * No photo appears twice across the six screenshots: sixteen photos, each
+ * used once (the film picker shows its one photo in the four looks — that is
+ * the point of that screen). That is why the album shows two prints and the
+ * birthday two frames; a third card's worth of photos does not exist.
+ */
+const PRINTS = [
+  { src: partyFlash, by: 'Tom' },
+  { src: partyWine, by: 'Aylin' },
+];
+const MOMENTS = [
+  {
+    title: 'Road trip',
+    photos: 96,
+    people: 7,
+    status: 'Developed',
+    live: false,
+    more: 93,
+    strip: [tripTrunk, tripVan, sample6, sample5],
+  },
+  {
+    title: 'Lena’s 30th',
+    photos: 57,
+    people: 14,
+    status: '1d 4h left',
+    live: true,
+    more: 0,
+    strip: [birthdayCandle, dinnerCandle, null, null],
+  },
+  {
+    title: 'Summer ’26',
+    photos: 128,
+    people: 21,
+    status: 'Developed',
+    live: false,
+    more: 125,
+    strip: [sample3, sample4, sample2, weddingMono],
+  },
+];
+
+/** The six screenshots, in listing order (docs/LAUNCH.md §10). */
+/**
+ * A screenshot shows a part of one screen, not the whole phone: the phone is
+ * wider than the picture and runs off one edge. `line` says where the
+ * headline stands — the phone is cut at the opposite edge, so 'top' shows a
+ * screen's upper part and 'bottom' its lower part.
+ */
+const SHOTS = [
+  { screen: 'camera', line: 'top', lines: ['Every guest gets', 'a roll of film.'], glow: '12% 4%', photo: weddingDance },
+  { screen: 'looks', line: 'bottom', lines: ['Pick the film', 'for your event.'], glow: '88% 96%', photo: weddingFriends },
+  { screen: 'join', line: 'top', lines: ['Join by link.', 'No sign-up.'], glow: '50% -4%' },
+  // 9:16 cuts deeper: from below, this screen's own headline would be halved.
+  { screen: 'developing', line: 'bottom', android: 'top', lines: ['Hidden until', 'it’s over.'], glow: '10% 98%' },
+  // …and here it would cut the hero through the faces.
+  { screen: 'album', line: 'bottom', android: 'top', lines: ['The whole night,', 'developed together.'], glow: '90% 96%', photo: weddingCrowd },
+  { screen: 'moments', line: 'top', lines: ['Every event,', 'one album.'], glow: '50% 2%' },
+] as const;
+
+export function getStaticPaths() {
+  const shots = ['ios', 'android'].flatMap((platform) =>
+    [0, 1, 2, 3, 4, 5].map((index) => ({ params: { id: `${platform}-${index + 1}` } })),
+  );
+  return [...shots, { params: { id: 'feature' } }];
+}
+
+const { id } = Astro.params;
+const [platform, number] = String(id).split('-');
+const shot = platform === 'feature' ? null : SHOTS[Number(number) - 1];
+const device = platform === 'ios' ? 'iphone' : 'android';
+const flipped = shot && platform === 'android' && 'android' in shot;
+const line = shot && (flipped ? shot.android : shot.line);
+const glow = shot && (flipped ? `${shot.glow.split(' ')[0]} 2%` : shot.glow);
+/** Three device pixels per point, and the phone fills most of the picture. */
+const DETAIL = 1.2;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Store asset {id}</title>
+  </head>
+  <body class={platform}>
+    {
+      shot && (
+        <main class:list={['shot', line]} style={`--glow:${glow}`}>
+          <h1>
+            {shot.lines[0]}
+            <br />
+            <em>{shot.lines[1]}</em>
+          </h1>
+          <div class="stage">
+            <Phone
+              screen={shot.screen}
+              photo={'photo' in shot ? shot.photo : undefined}
+              tile={sample1}
+              prints={PRINTS}
+              moments={MOMENTS}
+              device={device}
+              label=""
+              eager
+              detail={DETAIL}
+            />
+          </div>
+        </main>
+      )
+    }
+    {
+      !shot && (
+        <main class="feature">
+          <div class="copy">
+            <p class="brand">
+              <Image src={logo} alt="" width={96} height={96} loading="eager" />
+              <span>LEFT</span>
+            </p>
+            <h1>
+              One roll each.
+              <br />
+              <em>Developed together.</em>
+            </h1>
+            <p class="sub">The disposable camera for events</p>
+          </div>
+          <div class="phones">
+            <Phone screen="album" photo={weddingCrowd} prints={PRINTS} device="android" label="" eager detail={DETAIL} class="back" />
+            <Phone screen="camera" photo={weddingDance} tile={sample1} device="android" label="" eager detail={DETAIL} class="front" />
+          </div>
+        </main>
+      )
+    }
+  </body>
+</html>
+
+<style is:global>
+  html,
+  body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* The site caps a phone at 300px and animates it; here it fills its stage. */
+  .phone {
+    max-width: none !important;
+  }
+
+  .phone .veil {
+    display: none;
+  }
+
+</style>
+
+<style>
+  /* ── A screenshot: the line, and a part of the phone ───────────── */
+  .shot {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background:
+      radial-gradient(125vw 125vw at var(--glow), rgba(240, 190, 140, 0.26), transparent 62%),
+      var(--bg);
+  }
+
+  .shot.bottom {
+    flex-direction: column-reverse;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 300;
+    letter-spacing: -0.015em;
+    text-align: center;
+    color: var(--ink);
+  }
+
+  .shot h1 {
+    flex: none;
+    font-size: 10.8vw;
+    line-height: 1.1;
+    padding: 7.4vh 0 4.4vh;
+  }
+
+  .shot.bottom h1 {
+    padding: 4vh 0 6.6vh;
+  }
+
+  /* The phone hangs from the line's side and leaves by the other edge. */
+  .stage {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .shot.bottom .stage {
+    align-items: flex-end;
+  }
+
+  .stage :global(.phone) {
+    flex: none;
+    width: 104vw;
+  }
+
+  /* 9:16 is shorter than an iPhone's 9:19.5: a smaller line, a larger part. */
+  .android .shot h1 {
+    font-size: 9.6vw;
+    padding: 5.6vh 0 3.6vh;
+  }
+
+  .android .shot.bottom h1 {
+    padding: 3.4vh 0 5.2vh;
+  }
+
+  /* ── Google Play's feature graphic, 1024x500 ───────────────────── */
+  .feature {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding-left: 7vw;
+    background:
+      radial-gradient(70vw 70vw at 78% 10%, rgba(240, 190, 140, 0.26), transparent 62%),
+      var(--bg);
+  }
+
+  .copy {
+    display: grid;
+    gap: 2.2vw;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 1.1vw;
+    font-weight: 600;
+    font-size: 2.3vw;
+    letter-spacing: 0.08em;
+  }
+
+  .brand :global(img) {
+    width: 3vw;
+    height: 3vw;
+  }
+
+  .feature h1 {
+    text-align: left;
+    font-size: 5.6vw;
+    line-height: 1.08;
+  }
+
+  .sub {
+    font-size: 1.9vw;
+    color: var(--ink-70);
+  }
+
+  .phones {
+    position: absolute;
+    inset: 0 0 0 56vw;
+  }
+
+  .phones :global(.phone) {
+    position: absolute;
+    width: 21vw;
+  }
+
+  .phones :global(.back) {
+    left: 20vw;
+    top: 16vh;
+    rotate: 7deg;
+  }
+
+  .phones :global(.front) {
+    left: 2vw;
+    top: 9vh;
+    rotate: -5deg;
+  }
+</style>
