@@ -93,6 +93,13 @@ anders heissen.
 7. ☐ Authentication → Sign In / Providers:
    - **Anonymous sign-ins: an** — sonst scheitert jeder Gast-Beitritt still.
    - Google und Apple gemäss `mobile/docs/social-sign-in.md`.
+   - **Email-Provider: aus.** Die App nutzt nur Google, Apple und anonyme
+     Sitzungen; mit offenem Email-Signup kann sich jeder per API ein Konto ohne
+     Google/Apple anlegen und Events hosten. („Allow new users to sign up"
+     bleibt an — sonst kommen weder Gäste noch neue Hosts hinein.)
+   - **Manual linking: an** (Authentication → Settings, „Allow manual
+     linking"). Ohne das scheitert „Keep your film" — der Gast kann sein
+     anonymes Konto nicht mit Google/Apple verbinden.
    - Rate Limits: „Anonymous sign-ins" pro IP auf einen Wert, der eine Hochzeit
      im selben WLAN aushält (Vorschlag: 300 / Stunde).
    - **CAPTCHA noch NICHT einschalten.** Die App schickt kein CAPTCHA-Token

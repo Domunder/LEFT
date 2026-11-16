@@ -455,6 +455,10 @@ export type Database = {
         Args: { p_display_name: string; p_invite_code: string }
         Returns: string
       }
+      mark_photo_uploaded: {
+        Args: { p_height: number; p_photo_id: string; p_width: number }
+        Returns: undefined
+      }
       max_event_days: { Args: never; Returns: number }
       max_event_members: { Args: never; Returns: number }
       notification_recipients: {
@@ -462,6 +466,12 @@ export type Database = {
         Returns: {
           shots_left: number
           token: string
+        }[]
+      }
+      orphaned_storage_paths: {
+        Args: { p_limit?: number }
+        Returns: {
+          path: string
         }[]
       }
       prepare_account_deletion: {

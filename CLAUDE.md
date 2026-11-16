@@ -55,6 +55,10 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   locally), legal texts rewritten for photos (an **unreviewed draft**), usage
   statistics and error reports behind an env key, cleanup. What is left needs
   accounts, a domain or a device — `docs/LAUNCH.md` is the ordered runbook.
+- **Done (2026-11-16), server half verified against the local stack over
+  HTTP, client half not run on a device: the security review.** See "Security
+  review (2026-11-16)" below. **`linkIdentity` was rewritten and has never run
+  on a device.**
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -178,7 +182,7 @@ mobile/src/
   types/database.ts       generated — `npm run db:types` at the root
 supabase/
   migrations/             baseline, price tiers, notifications, service_role
-                          grants, retention
+                          grants, retention, photo reports, security hardening
   functions/              create-event, delete-account, restore-purchases,
                           revenuecat-webhook, send-notifications,
                           purge-expired-events
@@ -468,8 +472,9 @@ and upload queue that use it are described above.
   "No subscription." and a free one says nothing.
 
 Statuses: `setup → live → developed`. Clients cannot write `status`, `ends_at`,
-`roll_size`, `max_members` or `shots_taken`, and cannot INSERT events or photos —
-`create_event()` and `claim_shot()` are the doors.
+`roll_size`, `max_members` or `shots_taken`, cannot INSERT events or photos, and
+cannot UPDATE a photo row or DELETE a roster row — `create_event()`,
+`claim_shot()` and `mark_photo_uploaded()` are the doors.
 
 ## Notifications (M4)
 
@@ -520,6 +525,51 @@ Statuses: `setup → live → developed`. Clients cannot write `status`, `ends_a
   a worldwide release, knowing the gaps (no EU representative under GDPR
   Art. 27). Never present it as reviewed; `REVIEW:` comments mark what a
   lawyer should look at.
+
+## Security review (2026-11-16)
+
+Migration `20261116010000_security_hardening.sql`. What it changed, and what
+must stay that way:
+
+- **Clients never delete an `event_members` row** — it holds `shots_taken`,
+  and delete + `join_event()` was a fresh roll. There is no leave / remove-guest
+  feature; if one is built it is an RPC that keeps the count (a flag, not a
+  delete).
+- **Clients never write a `photos` row.** `claim_shot()` inserts,
+  `mark_photo_uploaded(photo, width, height)` attaches the upload — it derives
+  both paths from the row and checks the two files exist. `storage_path` used
+  to be client-written, and account deletion (service role) and moderation
+  deleted whatever it named. **Never delete files by a path read from a row
+  with elevated rights**: list the bucket by event prefix
+  (`event_storage_paths()`), as `delete-account` and the purge do.
+- **The bucket's insert *and* update policies pin the whole path, and only
+  while the row is `pending`.** The update policy's `WITH CHECK` is what a
+  storage "move" is checked against. Once attached, a print cannot be
+  replaced; a queue retry that meets the refusal asks `mark_photo_uploaded()`
+  (a no-op on an attached row) and drops the entry (`upload()` in
+  `lib/upload-queue.ts`).
+- **In a policy on `storage.objects`, write `objects.name`.** Inside a
+  subquery over `events` a bare `name` is the *event's* name: the baseline's
+  delete policy did that, so host moderation removed no file and a host who
+  renamed their event to `{its id}/x` could delete every file they could see.
+- **Files whose event is gone are swept by the daily purge**
+  (`orphaned_storage_paths()`), so `delete-account` may stay best-effort on
+  files.
+- **Invite codes are 8 characters from a CSPRNG** (old 6-character codes keep
+  working). Still open: `join_event()` has no attempt limit — the CAPTCHA /
+  rate-limit item covers it.
+- **The purchase ledger is keyed by the store's transaction id by every
+  writer** (`ledgerIdOf()`); the client's id (RevenueCat's) only finds the
+  purchase. Storing the client's id recorded each purchase twice.
+- **`linkIdentity()` links with the native ID token** and only reports success
+  for a user who is no longer anonymous and kept their id. The bare
+  `auth.linkIdentity({ provider })` is a browser flow and does nothing in RN.
+  Needs "manual linking" on in the hosted project.
+- **Known and left open:** a guest gets a fresh roll with every new anonymous
+  identity (bounded by `max_members`; needs the CAPTCHA item); sandbox
+  purchases unlock events (App Review buys in sandbox); realtime DELETE events
+  carry primary keys to any subscriber; a purchase could be restored to a new
+  account after its buyer's account was deleted.
 
 ## Guests have no account
 

@@ -150,7 +150,10 @@ export async function getTierProduct(tier: EventTier) {
 }
 
 export type TierPurchase = {
-  /** The store's id for this transaction — the ledger's idempotency key. */
+  /**
+   * RevenueCat's id for this transaction. Only a lookup key: the server finds
+   * the purchase by it and records it under the store's own id.
+   */
   transactionId: string;
   productId: string;
 };

@@ -100,21 +100,23 @@ export async function getRollState(
   };
 }
 
-/** Attach a finished upload to its row. */
+/**
+ * Attach a finished upload to its row.
+ *
+ * `mark_photo_uploaded()` is the only door: clients cannot write a photo row.
+ * The server derives both paths from the row and checks that the two files are
+ * in the bucket — a path a client could choose was a path account deletion and
+ * moderation would later delete on its word.
+ */
 export async function markPhotoUploaded(
   photoId: string,
-  upload: { storagePath: string; thumbPath: string; width: number; height: number }
+  size: { width: number; height: number }
 ): Promise<void> {
-  const { error } = await getSupabase()
-    .from('photos')
-    .update({
-      storage_path: upload.storagePath,
-      thumb_path: upload.thumbPath,
-      width: upload.width,
-      height: upload.height,
-      status: 'uploaded',
-    })
-    .eq('id', photoId);
+  const { error } = await getSupabase().rpc('mark_photo_uploaded', {
+    p_photo_id: photoId,
+    p_width: size.width,
+    p_height: size.height,
+  });
   if (error) throw error;
 }
 

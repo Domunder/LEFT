@@ -81,11 +81,11 @@ export function parseInviteUrl(url: string): string | null {
 }
 
 /**
- * Codes are six characters from a deliberately unambiguous alphabet — no I, O,
- * 0 or 1, because they get read aloud and typed by hand at a party. See
- * `generate_invite_code()` in the initial migration.
+ * Codes are eight characters (six before 2026-11-16, and those still work)
+ * from a deliberately unambiguous alphabet — no I, O, 0 or 1. See
+ * `generate_invite_code()` in the security-hardening migration.
  */
-const CODE_SHAPE = /^[A-HJ-NP-Z2-9]{6}$/;
+const CODE_SHAPE = /^[A-HJ-NP-Z2-9]{6,12}$/;
 
 /** True when a code is well-formed. Not a claim that the event exists. */
 export function isValidCodeShape(code: string): boolean {

@@ -128,6 +128,10 @@ export function useEventCreation(): EventCreation {
         if (!PURCHASES_UNAVAILABLE) {
           const session = await getSession();
           if (!session) throw new Error('You need to be signed in to create an event.');
+          // create_event() refuses a guest; never take their money first.
+          if (session.user.is_anonymous) {
+            throw new Error('Sign in with Google or Apple to create an event.');
+          }
           await identify(session.user.id);
         }
 
