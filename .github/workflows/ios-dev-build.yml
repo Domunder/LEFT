@@ -6,6 +6,12 @@
 # then hands the .ipa to EAS for an install link — the same QR / link flow as a
 # cloud build, which matters because there is no Mac to install an .ipa from.
 #
+# The `production` profile builds the App Store binary the same way and hands
+# it to `eas submit`, which uploads it to App Store Connect (TestFlight). That
+# needs two things EAS must already hold, both set up once and interactively
+# with `eas credentials -p ios` on a workstation: the App Store distribution
+# certificate and profile, and an App Store Connect API key for submissions.
+#
 # Needs one repository secret: EXPO_TOKEN (expo.dev -> Account settings ->
 # Access tokens). Nothing else is stored here.
 #
@@ -30,6 +36,7 @@ on:
         options:
           - development
           - preview
+          - production
   push:
     tags:
       - 'ios-build-*'
@@ -98,7 +105,14 @@ jobs:
             --non-interactive \
             --output "$RUNNER_TEMP/left.ipa"
 
+      # A store binary cannot be installed from a link; it goes to TestFlight.
+      - name: Submit to App Store Connect
+        if: env.PROFILE == 'production'
+        run: |
+          eas submit             --platform ios             --profile production             --path "$RUNNER_TEMP/left.ipa"             --non-interactive
+
       - name: Upload to EAS for an install link
+        if: env.PROFILE != 'production'
         run: eas upload --platform ios --build-path "$RUNNER_TEMP/left.ipa" --non-interactive
 
       # Build logs only — no binary, no credentials.
