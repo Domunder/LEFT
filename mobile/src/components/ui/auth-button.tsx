@@ -6,8 +6,7 @@
  * PillButton hardcodes `width: '100%'`, pad 16/12 against its 17/28, and set
  * their label at 15px weight 600 against Typography.button's 16/500. Bending the
  * component every other screen's CTA depends on, to fit one screen, costs more
- * than a small sibling — the same call already made for EndRow.pill and
- * DurationPill.
+ * than a small sibling — the same call `ShareButton` and `StatusPill` make.
  *
  * The artboard draws both marks flat in the button's text color rather than in
  * Google's brand palette, so @expo/vector-icons covers them and react-native-svg

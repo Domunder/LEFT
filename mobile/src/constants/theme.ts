@@ -217,32 +217,6 @@ export const Field = {
 } as const;
 
 /**
- * 04 · Event End — the two label/value rows and the pill that opens each picker.
- *
- * The pill is close to ChoicePill but not equal (paddingY 10 vs 11, a fill, and a
- * lighter border), so it carries its own metrics rather than bending that one.
- */
-export const EndRow = {
-  paddingY: 20,
-  paddingX: 2,
-  /** Subcopy -> first row. */
-  topGap: 34,
-  /**
-   * Back button -> headline. The prototype uses 44 here where 02/03 use 52 — this
-   * screen has subcopy the others lack, which absorbs the difference.
-   */
-  headerGap: 44,
-  pill: {
-    paddingY: 10,
-    paddingX: 16,
-    gap: 8,
-    iconSize: 14,
-    bg: 'rgba(255,255,255,0.06)',
-    border: 'rgba(255,255,255,0.12)',
-  },
-} as const;
-
-/**
  * 04 · Event End, rebuilt 2026-11-15. Top to bottom: the question, the answer
  * written large, and the two
  * wheels (days, sideways; time, upright). Nothing behind a popover.
@@ -273,37 +247,6 @@ export const Ending = {
     fade: [1, 0.5, 0] as const,
     scale: [1, 0.86, 0.7] as const,
   },
-} as const;
-
-/**
- * The month grid behind 04's Ending Date pill.
- *
- * Drawn in-app rather than by the platform picker, so its geometry is ours. Cells
- * are laid out `flex: 1` inside fixed-count rows rather than at a fixed width —
- * RN has no CSS Grid, and a fraction of the panel is the only thing that survives
- * the popover being narrowed on a small screen. `cellSize` is therefore the
- * *circle* drawn inside a cell, not the cell itself.
- */
-export const Picker = {
-  /** The tappable circle in a cell. 38 plus the row gap clears a 40pt target. */
-  cellSize: 38,
-  /** Gap between grid rows. Horizontal spacing comes from `flex: 1`, not a gap. */
-  rowGap: 2,
-  /** Days to a week. */
-  columns: 7,
-  /** The month title row: an arrow either side of the month name. */
-  header: {
-    buttonSize: 30,
-    iconSize: 15,
-    height: 30,
-    /** Title row -> weekday row. */
-    gap: 12,
-  },
-  /** Height of the weekday-initials row, and its gap to the first week. */
-  weekdayHeight: 18,
-  weekdayGap: 6,
-  /** Ring width on today's cell when it is not the selection. */
-  todayRing: 1,
 } as const;
 
 /**
@@ -407,22 +350,6 @@ export const Spacing = {
   xxl: 44,
 } as const;
 
-/**
- * The popover the pickers sit in (04) — anchored under the pill that opened it,
- * rather than pinned to the bottom of the screen as a sheet.
- */
-export const Popover = {
-  /** Gap between the anchor pill and the popover's top edge. */
-  offset: 10,
-  /** Inset from the screen edges, so it never touches the sides. */
-  margin: Spacing.screenX,
-  paddingX: Spacing.md,
-  paddingY: Spacing.md,
-  /** Widest the popover grows; narrower screens fall back to the margins. */
-  maxWidth: 320,
-  bg: 'rgba(28,26,30,0.96)',
-} as const;
-
 /** Vertical padding on a primary/secondary pill button. */
 export const PillPaddingY = 17;
 
@@ -431,8 +358,7 @@ export const PillPaddingY = 17;
  *
  * Close to PillButton but smaller on every axis (16/12 padding vs 17/28, 15px
  * weight 600 vs 16px weight 500) and sized by `flex: 1` rather than full width,
- * so it carries its own metrics — the same call already made for EndRow.pill and
- * LengthChoice.
+ * so it carries its own metrics — the same call already made for StatusPill.
  */
 export const AuthButton = {
   paddingY: 16,
@@ -966,24 +892,10 @@ export const Guest = {
 } as const;
 
 /**
- * 14 · Creating Your Film.
- *
- * From the artboard's `14 · Neu` frame: an 88px ring spinner over a centred
- * headline, with a 220×3 bar beneath it.
- *
- * The bar is **determinate** where the artboard draws it at a fixed 64%, and it
- * was indeterminate before that. There is now a real quantity to report: the
- * screen waits for every clip to finish uploading, so the bar is `uploaded /
- * total` and the number is the truth. It falls back to the old sweeping segment
- * only while that count is still unknown — see `IndeterminateBar`'s `progress`.
- *
- * (Historically this screen waited on `compile_film()`, which returned
- * immediately and had nothing honest to say. There is no compile any more; the
- * film is played as a sequence of clips, so what matters is that the clips have
- * all arrived.)
+ * The ring spinner (`components/ui/spinner.tsx`). The name is what is left of
+ * the old "14 · Creating Your Film" frame, whose screen and bar are gone.
  */
 export const Processing = {
-  /** The ring. */
   spinner: {
     size: 88,
     borderWidth: 2,
@@ -993,29 +905,6 @@ export const Processing = {
     head: Colors.text,
     /** One full rotation. Linear — an eased spin looks like it is struggling. */
     duration: 1000,
-  },
-  /** Spinner -> headline. */
-  spinnerGap: 32,
-  /** Headline -> subcopy. */
-  headlineGap: 10,
-  /** Subcopy -> the bar. */
-  copyGap: 28,
-  /** The subcopy is held narrow so it breaks where the artboard breaks it. */
-  copyMaxWidth: 260,
-  bar: {
-    width: 220,
-    height: 3,
-    track: 'rgba(255,255,255,0.08)',
-    fill: Colors.text,
-    /**
-     * The travelling segment's share of the track, and how long one sweep takes.
-     *
-     * Only used in the indeterminate fallback, while the clip count is unknown.
-     */
-    segment: 0.4,
-    duration: 1400,
-    /** How long the determinate fill takes to ease to a new value. */
-    fillDuration: 400,
   },
 } as const;
 

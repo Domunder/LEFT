@@ -5,7 +5,7 @@
  * size by `flex: 1` where PillButton hardcodes `width: '100%'`, and their label is
  * 14px where Typography.button is 16. Bending the component every screen's CTA
  * depends on, to fit one screen, costs more than a small sibling — the call made
- * for EndRow.pill, LengthChoice and AuthButton before it.
+ * for AuthButton before it.
  *
  * The fill is `Colors.glassButton` flat, without PillButton's BlurView: there is no
  * video behind this screen, only the near-black page and the ambient glow, so a
