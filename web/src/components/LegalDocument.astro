@@ -1,0 +1,129 @@
+---
+/**
+ * Terms and Privacy, rendered from the app's own source.
+ *
+ * The text is not written here: it comes from `mobile/src/constants/legal.ts`,
+ * the same file the app's screens read, so the two can never say different
+ * things. `scripts/sync-legal.mjs` copies it to `src/generated/` before every
+ * build (why a copy: see that script); the file imports nothing, which is what
+ * makes it usable here.
+ *
+ * While `LEGAL_DRAFT` is true the page says so above the text and stays
+ * `noindex` (and out of the sitemap — see astro.config.mjs). Flip the flag in
+ * that one file once the texts are reviewed.
+ */
+import Base from '../layouts/Base.astro';
+import {
+  LEGAL_DRAFT,
+  LEGAL_DRAFT_NOTICE,
+  LEGAL_UPDATED,
+  PRIVACY_INTRO,
+  PRIVACY_SECTIONS,
+  TERMS_INTRO,
+  TERMS_SECTIONS,
+} from '../generated/legal';
+
+type Props = { kind: 'terms' | 'privacy' };
+const { kind } = Astro.props;
+
+const doc =
+  kind === 'terms'
+    ? { title: 'Terms of Service', intro: TERMS_INTRO, sections: TERMS_SECTIONS }
+    : { title: 'Privacy Policy', intro: PRIVACY_INTRO, sections: PRIVACY_SECTIONS };
+
+const updated = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'UTC',
+}).format(new Date(LEGAL_UPDATED));
+---
+
+<Base
+  title={`${doc.title} — LEFT`}
+  description={`The ${doc.title} of LEFT, the disposable camera app for events.`}
+  noindex={LEGAL_DRAFT}
+>
+  <article class="legal">
+    <div class="wrap inner">
+      <p class="eyebrow">Legal</p>
+      <h1>{doc.title}</h1>
+      <p class="updated">Last updated {updated}</p>
+      {LEGAL_DRAFT && <p class="draft" role="note">{LEGAL_DRAFT_NOTICE}</p>}
+      <p class="lede">{doc.intro}</p>
+
+      {
+        doc.sections.map((section) => (
+          <section>
+            <h2>{section.heading}</h2>
+            {section.blocks.map((block) =>
+              typeof block === 'string' ? (
+                <p>{block}</p>
+              ) : (
+                <ul>
+                  {block.bullets.map((bullet) => (
+                    <li>{bullet}</li>
+                  ))}
+                </ul>
+              ),
+            )}
+          </section>
+        ))
+      }
+
+      <p><a class="text-link" href="/">Back to LEFT →</a></p>
+    </div>
+  </article>
+</Base>
+
+<style>
+  .legal {
+    padding-top: clamp(140px, 18vw, 200px);
+    padding-bottom: clamp(80px, 10vw, 140px);
+  }
+
+  .inner {
+    display: grid;
+    gap: 18px;
+    max-width: 760px;
+  }
+
+  .updated,
+  .draft {
+    color: var(--ink-55);
+    font-size: 0.9rem;
+  }
+
+  .draft {
+    padding: 12px 16px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+
+  section {
+    display: grid;
+    gap: 12px;
+    margin-top: 22px;
+    /* The site's sections are full-height bands; these are paragraphs. */
+    padding: 0;
+  }
+
+  h2 {
+    font-size: 1.35rem;
+  }
+
+  p,
+  li {
+    color: var(--ink-70);
+    line-height: 1.65;
+    /* The contact block is three lines in one string. */
+    white-space: pre-line;
+  }
+
+  ul {
+    display: grid;
+    gap: 8px;
+    padding-left: 1.2em;
+    list-style: disc;
+  }
+</style>

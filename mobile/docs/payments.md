@@ -55,10 +55,10 @@ Create them in both stores, using the **same identifiers in both**.
 | Event | Price | Product ID |
 |---|---|---|
 | Up to 50 guests, roll of 5–36 | free — nothing is bought | — |
-| Up to 50 guests, unlimited roll | CHF 10 (set per storefront) | `left_small` |
-| 51–100 guests, any roll | CHF 15 (set per storefront) | `left_medium` |
-| 101–150 guests, any roll | CHF 20 (set per storefront) | `left_large` |
-| 151–200 guests, any roll | CHF 25 (set per storefront) | `left_unlimited` |
+| Up to 50 guests, unlimited roll | US$9.99 (set per storefront) | `left_small` |
+| 51–100 guests, any roll | US$14.99 (set per storefront) | `left_medium` |
+| 101–150 guests, any roll | US$19.99 (set per storefront) | `left_large` |
+| 151–200 guests, any roll | US$24.99 (set per storefront) | `left_unlimited` |
 
 In **App Store Connect**, create them under In-App Purchases with type
 **Consumable**. In **Google Play Console**, create them under Products →

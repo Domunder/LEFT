@@ -7,7 +7,7 @@
  *
  * The two answers are independent — changing the group does not touch the roll —
  * and together they decide the price (lib/tiers.ts): free up to 50 guests on a
- * finite roll, then one purchase sized by the group — CHF 10 for the unlimited
+ * finite roll, then one purchase sized by the group — $9.99 for the unlimited
  * roll in a small group, 15 up to 100 guests, 20 up to 150, 25 up to 200.
  * `tierFor()` mirrors that for the button; `create_event()` enforces it, so a
  * modified client gets a refusal rather than a free event.

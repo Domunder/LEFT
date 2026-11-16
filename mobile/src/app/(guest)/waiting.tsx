@@ -31,6 +31,7 @@ import {
   subscribeToEventStatus,
   type Event,
 } from '@/lib/events';
+import { askForPushOnce } from '@/lib/push';
 
 export default function WaitingScreen() {
   const router = useRouter();
@@ -77,6 +78,18 @@ export default function WaitingScreen() {
       router.replace({ pathname: '/(capture)/camera', params: { eventId: liveEventId } });
     }
   }, [event, liveEventId, router]);
+
+  /*
+    The notification prompt, for a guest who is actually waiting. They have just
+    joined something that ends later without them — the one moment "tell me when
+    the photos are developed" needs no explaining. Not when the cameras are
+    already open: that guest is on their way to the camera's own permission
+    prompt, and is asked after their first shot instead.
+  */
+  const waiting = !!event && event.status === 'setup' && !isDeveloped(event);
+  useEffect(() => {
+    if (waiting) askForPushOnce();
+  }, [waiting]);
 
   useEffect(() => {
     if (!liveEventId) return;

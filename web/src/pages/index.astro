@@ -11,7 +11,7 @@ import { HOME_FAQ, LOOKS, SITE, TIERS } from '../site';
 import weddingDance from '../assets/photos/wedding-dance.jpg';
 import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
 import weddingFriends from '../assets/photos/wedding-friends.jpg';
-import weddingLaugh from '../assets/photos/wedding-laugh.jpg';
+import weddingMono from '../assets/photos/wedding-mono.jpg';
 import partyFlash from '../assets/photos/party-flash.jpg';
 import partyWine from '../assets/photos/party-wine.jpg';
 import birthdayCandle from '../assets/photos/birthday-candle.jpg';
@@ -23,21 +23,30 @@ const title = 'LEFT — The disposable camera app for weddings, parties and trip
 const description =
   'Guests join by link or QR code and get a limited roll of photos. Nothing is visible until the event ends — then the whole group’s film is developed together.';
 
-const strip = [
-  { src: partyFlash, alt: 'A group of friends squeezed together at a party, lit by a camera flash' },
-  { src: weddingFriends, alt: 'A bride raising her bouquet while dancing with friends' },
-  { src: dinnerCandle, alt: 'Friends sharing a long dinner by candlelight' },
-  { src: weddingCrowd, alt: 'Wedding guests waving sparklers around the couple at night' },
-  { src: partyWine, alt: 'Friends pouring wine and laughing at a house party' },
-  { src: birthdayCandle, alt: 'People gathered around a table with a single lit candle' },
-  { src: tripTrunk, alt: 'Two friends sitting in the open boot of a small car on a road trip' },
+// Two rows that slide against each other as the page scrolls. `ratio` is the
+// frame's width over its height; the row height is shared.
+const reel = [
+  [
+    { src: partyFlash, ratio: 1.5, alt: 'A group of friends squeezed together at a party, lit by a camera flash' },
+    { src: weddingFriends, ratio: 0.8, alt: 'A bride raising her bouquet while dancing with friends' },
+    { src: dinnerCandle, ratio: 1.5, alt: 'Friends sharing a long dinner by candlelight' },
+    { src: weddingCrowd, ratio: 1, alt: 'Wedding guests waving sparklers around the couple at night' },
+    { src: partyWine, ratio: 0.8, alt: 'Friends pouring wine and laughing at a house party' },
+  ],
+  [
+    { src: birthdayCandle, ratio: 0.8, alt: 'People gathered around a table with a single lit candle' },
+    { src: tripTrunk, ratio: 1.5, alt: 'Two friends sitting in the open boot of a small car on a road trip' },
+    { src: weddingDance, ratio: 1, alt: 'A couple on a wedding dance floor' },
+    { src: weddingMono, ratio: 1.5, alt: 'Wedding guests caught mid-celebration' },
+    { src: tripVan, ratio: 0.8, alt: 'A white camper van on a country road at sunset' },
+  ],
 ];
 
 const steps = [
   {
     screen: 'join',
     photo: weddingCrowd,
-    label: 'LEFT invite screen: a guest types their name to join Mia and Jonas’s wedding, no account needed',
+    label: 'LEFT name screen: a guest types their name to join, no account needed',
     title: 'Join with a link',
     text: 'Share a link or put the QR code on the tables. Guests type a name and they’re in. No sign-up, no password.',
   },
@@ -51,7 +60,7 @@ const steps = [
   {
     screen: 'developing',
     photo: weddingDance,
-    label: 'LEFT developing screen with a countdown of one day and four hours until the film is developed',
+    label: 'LEFT developing screen: nothing to see yet, with a countdown until the film is developed',
     title: 'Developed together',
     text: 'Nobody sees the album until the event ends. Then the film is developed and every photo appears for everyone at once.',
   },
@@ -80,7 +89,7 @@ const jsonLd = [
     operatingSystem: 'iOS, Android',
     offers: {
       '@type': 'AggregateOffer',
-      priceCurrency: 'CHF',
+      priceCurrency: 'USD',
       lowPrice: 0,
       highPrice: TIERS[TIERS.length - 1].price,
       offerCount: TIERS.length,
@@ -100,49 +109,56 @@ const jsonLd = [
 
 <Base title={title} description={description} jsonLd={jsonLd}>
   <section class="hero">
-    <div class="glow" aria-hidden="true"></div>
+    <div class="glow" aria-hidden="true" data-parallax="0.18"></div>
     <div class="wrap hero-grid">
       <div class="hero-copy">
-        <p class="eyebrow">A disposable camera for events</p>
-        <h1>One roll each. <em>Developed together.</em></h1>
-        <p class="lede">
+        <p class="eyebrow enter">A disposable camera for events</p>
+        <h1>
+          <span class="line"><span style="--i:1">One roll each.</span></span>
+          <span class="line"><span style="--i:2"><em>Developed together.</em></span></span>
+        </h1>
+        <p class="lede enter" style="--i:4">
           LEFT turns every guest’s phone into a disposable camera. A few shots each, one film look, and nothing
           to see until the party is over — then the whole group’s photos appear at once.
         </p>
-        <StoreButtons />
-        <p class="hint">Free for up to 50 guests. No account for guests.</p>
+        <div class="enter" style="--i:5"><StoreButtons /></div>
+        <p class="hint enter" style="--i:6">Free for up to 50 guests. No account for guests.</p>
       </div>
       <div class="hero-visual">
-        <div class="print print-a" aria-hidden="true">
-          <Picture src={weddingLaugh} alt="" formats={['avif', 'webp']} widths={[240, 480]} sizes="220px" class="look-golden" loading="eager" />
+        <div class="hero-back" data-parallax="-0.08">
+          <Phone
+            screen="album"
+            class="arrive-back"
+            label="The developed album on a second phone: a grid of the photos every guest took"
+          />
         </div>
-        <div class="print print-b" aria-hidden="true">
-          <Picture src={partyFlash} alt="" formats={['avif', 'webp']} widths={[240, 480]} sizes="220px" class="look-golden" loading="eager" />
+        <div class="hero-front" data-parallax="0.04">
+          <Phone
+            screen="camera"
+            eager
+            class="arrive-front"
+            label="The LEFT camera on a phone: a wedding dance floor in the viewfinder and a counter that reads 17 left"
+          />
         </div>
-        <Phone
-          screen="camera"
-          eager
-          label="The LEFT camera on a phone: a wedding dance floor in the viewfinder and a counter that reads 17 left"
-        />
       </div>
     </div>
   </section>
 
-  <section class="strip-section" aria-label="Photos from parties, weddings and trips">
-    <div class="track">
+  <section class="reel-section" aria-label="Photos from parties, weddings and trips">
+    <div class="reel" data-reel>
       {
-        [0, 1].map((copy) => (
-          <ul aria-hidden={copy === 1 ? 'true' : undefined}>
-            {strip.map((photo, index) => (
-              <li style={`--tilt:${(index % 2 ? 1 : -1) * (1.2 + (index % 3))}deg`}>
+        reel.map((row, index) => (
+          <ul data-dir={index === 1 ? 'back' : undefined}>
+            {row.map((photo) => (
+              <li class="develop" style={`--r:${photo.ratio}`}>
                 <Picture
                   src={photo.src}
-                  alt={copy === 0 ? photo.alt : ''}
+                  alt={photo.alt}
                   formats={['avif', 'webp']}
-                  widths={[320, 640]}
-                  sizes="300px"
-                  width={640}
-                  height={480}
+                  widths={[Math.round(300 * photo.ratio), Math.round(600 * photo.ratio)]}
+                  sizes={`${Math.round(300 * photo.ratio)}px`}
+                  width={Math.round(600 * photo.ratio)}
+                  height={600}
                   fit="cover"
                   class="look-golden"
                 />
@@ -163,7 +179,7 @@ const jsonLd = [
       <ol class="steps">
         {
           steps.map((step, index) => (
-            <li class="reveal">
+            <li class="reveal" data-reveal="scale">
               <Phone screen={step.screen} photo={step.photo} label={step.label} />
               <p class="num" aria-hidden="true">
                 {index + 1}
@@ -179,7 +195,7 @@ const jsonLd = [
 
   <section id="looks" class="looks">
     <div class="wrap looks-grid">
-      <div class="looks-copy reveal">
+      <div class="looks-copy reveal" data-reveal="left">
         <p class="eyebrow">The film</p>
         <h2>One look <em>for the whole night.</em></h2>
         <p class="lede">
@@ -191,7 +207,7 @@ const jsonLd = [
             LOOKS.map((look) => (
               <li>
                 <Picture
-                  src={weddingLaugh}
+                  src={weddingFriends}
                   alt={`The same wedding photo in the ${look.name} look`}
                   formats={['avif', 'webp']}
                   widths={[280, 560]}
@@ -208,10 +224,10 @@ const jsonLd = [
           }
         </ul>
       </div>
-      <div class="looks-phone reveal">
+      <div class="looks-phone reveal" data-reveal="right">
         <Phone
           screen="looks"
-          photo={weddingLaugh}
+          photo={weddingFriends}
           label="LEFT film picker with four looks: Golden, Chrome, Faded and Mono"
         />
       </div>
@@ -219,9 +235,9 @@ const jsonLd = [
   </section>
 
   <section class="album">
-    <div class="glow" aria-hidden="true"></div>
+    <div class="glow" aria-hidden="true" data-parallax="0.18"></div>
     <div class="wrap album-grid">
-      <div class="album-phones reveal">
+      <div class="album-phones reveal" data-reveal="scale">
         <Phone
           screen="moments"
           class="tilt-left"
@@ -233,7 +249,7 @@ const jsonLd = [
           label="LEFT album screen: a grid of 412 photos taken by 38 guests"
         />
       </div>
-      <div class="album-copy reveal">
+      <div class="album-copy reveal" data-reveal="right">
         <p class="eyebrow">The reveal</p>
         <h2>The morning after, <em>the whole night comes back.</em></h2>
         <p class="lede">
@@ -261,8 +277,9 @@ const jsonLd = [
             src={weddingCrowd}
             alt="Wedding guests waving sparklers around the newlyweds at night"
             formats={['avif', 'webp']}
-            widths={[480, 800, 1200]}
-            sizes="(min-width: 900px) 660px, 100vw"
+            widths={[640, 960, 1440, 1920]}
+            sizes="(min-width: 900px) 780px, 100vw"
+            quality={72}
             class="look-golden"
           />
           <span>
@@ -277,10 +294,11 @@ const jsonLd = [
                 src={item.src}
                 alt={item.alt}
                 formats={['avif', 'webp']}
-                widths={[320, 640]}
-                sizes="(min-width: 900px) 320px, 100vw"
-                width={640}
-                height={480}
+                widths={[480, 800, 1280]}
+                sizes="(min-width: 900px) 400px, 100vw"
+                width={1280}
+                height={960}
+                quality={72}
                 fit="cover"
                 class="look-golden"
               />
@@ -332,43 +350,67 @@ const jsonLd = [
     font-size: 0.875rem;
   }
 
+  /*
+    Two phones on a wide screen: the camera in front, the album it becomes
+    behind it. A phone-sized screen gets the camera alone — there is no room
+    for the pair, and a second phone doubles what a handset has to draw before
+    the page is usable.
+  */
   .hero-visual {
+    --w: min(290px, 68vw);
     position: relative;
     display: grid;
     justify-items: center;
+    padding-block: 12px 28px;
+  }
+
+  .hero-front {
+    position: relative;
+    width: var(--w);
+  }
+
+  .hero-back {
+    display: none;
+    position: absolute;
+    width: calc(var(--w) * 0.88);
+    top: 9%;
+    left: calc(50% + var(--w) * 0.02);
+  }
+
+  @media (min-width: 900px) {
+    .hero-front {
+      margin-right: calc(var(--w) * 0.34);
+    }
+    .hero-back {
+      display: block;
+    }
   }
 
   .hero-visual :global(.phone) {
-    position: relative;
-    max-width: min(300px, 68vw);
+    max-width: none;
   }
 
-  .print {
-    position: absolute;
-    width: min(200px, 40vw);
-    padding: 8px 8px 30px;
-    background: var(--ink);
-    border-radius: 6px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  .hero-visual :global(.arrive-front) {
+    animation: arrive-front 1.5s var(--ease) 0.15s both;
   }
 
-  .print :global(img) {
-    aspect-ratio: 4 / 5;
-    width: 100%;
-    object-fit: cover;
-    border-radius: 2px;
+  .hero-visual :global(.arrive-back) {
+    transform: rotate(7deg);
+    animation: arrive-back 1.7s var(--ease) 0.3s both;
   }
 
-  .print-a {
-    left: calc(50% - min(280px, 46vw));
-    top: 12%;
-    transform: rotate(-9deg);
+  /* Transform only: the viewfinder photo is the page's largest paint. */
+  @keyframes arrive-front {
+    from {
+      transform: translate3d(0, 70px, 0) rotate(-5deg) scale(0.94);
+    }
   }
 
-  .print-b {
-    right: calc(50% - min(280px, 46vw));
-    bottom: 10%;
-    transform: rotate(8deg);
+  @keyframes arrive-back {
+    from {
+      opacity: 0;
+      transform: translate3d(-22%, 60px, 0) rotate(0deg) scale(0.92);
+    }
   }
 
   @media (min-width: 900px) {
@@ -378,47 +420,50 @@ const jsonLd = [
     }
   }
 
-  /* Photo strip */
-  .strip-section {
-    padding-block: 24px 40px;
+  /* The photo band: two rows sliding against each other with the scroll. */
+  .reel-section {
+    padding-block: 16px 40px;
     overflow: hidden;
   }
 
-  .track {
-    display: flex;
-    width: max-content;
-    animation: drift 70s linear infinite;
+  .reel {
+    /* Five frames a row, about 5.6 heights wide: always wider than the page. */
+    --h: max(150px, 22vw);
+    display: grid;
+    gap: clamp(8px, 1.2vw, 14px);
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 9%, #000 91%, transparent);
   }
 
-  .track ul {
+  .reel ul {
     display: flex;
-    gap: 22px;
+    gap: clamp(8px, 1.2vw, 14px);
+    width: max-content;
     list-style: none;
     margin: 0;
-    padding: 20px 11px;
+    padding: 0;
+    will-change: transform;
   }
 
-  .track li {
+  .reel ul[data-dir='back'] {
+    transform: translate3d(calc(100vw - 100%), 0, 0);
+  }
+
+  .reel li {
+    position: relative;
     flex: none;
-    width: clamp(220px, 26vw, 300px);
-    padding: 8px 8px 28px;
-    background: var(--ink);
-    border-radius: 6px;
-    transform: rotate(var(--tilt));
-    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.5);
+    height: var(--h);
+    width: calc(var(--h) * var(--r));
+    border-radius: clamp(12px, 1.6vw, 20px);
+    overflow: hidden;
+    background: var(--card);
   }
 
-  .track :global(img) {
-    aspect-ratio: 4 / 3;
+  .reel :global(picture),
+  .reel :global(img) {
     width: 100%;
+    height: 100%;
     object-fit: cover;
-    border-radius: 2px;
-  }
-
-  @keyframes drift {
-    to {
-      transform: translateX(-50%);
-    }
   }
 
   /* How it works */

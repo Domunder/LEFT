@@ -90,7 +90,14 @@
         }
       ],
       "expo-apple-authentication",
-      "./plugins/with-worklets-headers"
+      [
+        "expo-notifications",
+        {
+          "color": "#101010"
+        }
+      ],
+      "./plugins/with-worklets-headers",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true

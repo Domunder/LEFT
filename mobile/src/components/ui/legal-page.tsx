@@ -16,15 +16,8 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { Body, Caption, Display, Label } from '@/components/ui/typography';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import type { LegalBlock, LegalSection } from '@/constants/legal';
 import { Colors, LegalPage as Token, Spacing } from '@/constants/theme';
-
-/** A paragraph, or a bulleted list of them. */
-export type LegalBlock = string | { bullets: string[] };
-
-export type LegalSection = {
-  heading: string;
-  blocks: LegalBlock[];
-};
 
 type LegalPageProps = {
   title: string;
@@ -33,9 +26,11 @@ type LegalPageProps = {
   /** Shown above the first section — what the document is, in one or two lines. */
   intro?: string;
   sections: LegalSection[];
+  /** Printed above the text while it is an unreviewed draft — see constants/legal.ts. */
+  draftNotice?: string;
 };
 
-export function LegalPageView({ title, updated, intro, sections }: LegalPageProps) {
+export function LegalPageView({ title, updated, intro, sections, draftNotice }: LegalPageProps) {
   return (
     <Screen edges={['top']}>
       <ScreenHeader />
@@ -48,6 +43,12 @@ export function LegalPageView({ title, updated, intro, sections }: LegalPageProp
         contentInsetAdjustmentBehavior="automatic">
         <Display size="sm">{title}</Display>
         <Caption style={styles.updated}>Last updated {formatUpdated(updated)}</Caption>
+
+        {draftNotice ? (
+          <Body small color={Colors.textFaint} style={styles.draft}>
+            {draftNotice}
+          </Body>
+        ) : null}
 
         {intro ? (
           <Body color={Colors.textMuted} style={styles.intro}>
@@ -113,6 +114,9 @@ const styles = StyleSheet.create({
   },
   updated: {
     marginTop: Token.headlineGap,
+  },
+  draft: {
+    marginTop: Spacing.md,
   },
   intro: {
     marginTop: Spacing.lg,

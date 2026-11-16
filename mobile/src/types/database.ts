@@ -114,6 +114,47 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          claimed_at: string | null
+          created_at: string
+          event_id: string
+          id: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          recipients: number | null
+          sent_at: string | null
+          skipped: string | null
+        }
+        Insert: {
+          claimed_at?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+          recipients?: number | null
+          sent_at?: string | null
+          skipped?: string | null
+        }
+        Update: {
+          claimed_at?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["notification_kind"]
+          recipients?: number | null
+          sent_at?: string | null
+          skipped?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       photos: {
         Row: {
           created_at: string
@@ -217,11 +258,50 @@ export type Database = {
           },
         ]
       }
+      push_tokens: {
+        Row: {
+          created_at: string
+          notify_developed: boolean
+          notify_reminder: boolean
+          platform: string
+          token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          notify_developed?: boolean
+          notify_reminder?: boolean
+          platform: string
+          token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          notify_developed?: boolean
+          notify_reminder?: boolean
+          platform?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      claim_notifications: {
+        Args: { p_limit?: number }
+        Returns: {
+          event_id: string
+          event_name: string
+          id: string
+          kind: Database["public"]["Enums"]["notification_kind"]
+        }[]
+      }
       claim_shot: {
         Args: { p_event_id: string; p_photo_id: string; p_taken_at?: string }
         Returns: {
@@ -229,6 +309,14 @@ export type Database = {
           shots_left: number
           shots_taken: number
         }[]
+      }
+      complete_notification: {
+        Args: {
+          p_notification_id: string
+          p_recipients: number
+          p_skipped?: string
+        }
+        Returns: undefined
       }
       create_event: {
         Args: {
@@ -262,6 +350,8 @@ export type Database = {
         }
       }
       develop_expired_events: { Args: never; Returns: number }
+      dispatch_notifications: { Args: never; Returns: boolean }
+      dispatch_purge: { Args: never; Returns: boolean }
       end_event: {
         Args: { p_event_id: string }
         Returns: {
@@ -285,9 +375,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      enqueue_ending_reminders: { Args: never; Returns: number }
+      event_storage_paths: {
+        Args: { p_event_id: string }
+        Returns: {
+          path: string
+        }[]
+      }
+      events_due_for_purge: {
+        Args: { p_limit?: number }
+        Returns: {
+          event_id: string
+        }[]
+      }
       free_max_members: { Args: never; Returns: number }
       generate_invite_code: { Args: never; Returns: string }
+      invoke_edge_function: { Args: { p_name: string }; Returns: boolean }
       is_event_developed: { Args: { p_event_id: string }; Returns: boolean }
+      is_event_due_for_purge: { Args: { p_event_id: string }; Returns: boolean }
       is_event_member: {
         Args: { p_event_id: string; p_user_id: string }
         Returns: boolean
@@ -298,6 +403,13 @@ export type Database = {
       }
       max_event_days: { Args: never; Returns: number }
       max_event_members: { Args: never; Returns: number }
+      notification_recipients: {
+        Args: { p_notification_id: string }
+        Returns: {
+          shots_left: number
+          token: string
+        }[]
+      }
       prepare_account_deletion: {
         Args: { p_user_id: string }
         Returns: {
@@ -305,6 +417,19 @@ export type Database = {
           photo_paths: string[]
         }[]
       }
+      purge_event: { Args: { p_event_id: string }; Returns: boolean }
+      register_push_token: {
+        Args: {
+          p_notify_developed?: boolean
+          p_notify_reminder?: boolean
+          p_platform: string
+          p_token: string
+        }
+        Returns: undefined
+      }
+      reminder_lead: { Args: never; Returns: string }
+      reminder_min_event_length: { Args: never; Returns: string }
+      retention_period: { Args: never; Returns: string }
       start_event: {
         Args: { p_event_id: string }
         Returns: {
@@ -330,6 +455,7 @@ export type Database = {
       }
       unlimited_roll_cap: { Args: never; Returns: number }
       unlock_max_members: { Args: { p_product_id: string }; Returns: number }
+      unregister_push_token: { Args: { p_token: string }; Returns: undefined }
     }
     Enums: {
       event_status: "setup" | "live" | "developed"
@@ -343,6 +469,7 @@ export type Database = {
         | "other"
       film_look: "golden" | "chrome" | "faded" | "mono"
       member_role: "host" | "guest"
+      notification_kind: "developed" | "ending_soon"
       photo_status: "pending" | "uploaded" | "failed"
     }
     CompositeTypes: {
@@ -486,6 +613,7 @@ export const Constants = {
       ],
       film_look: ["golden", "chrome", "faded", "mono"],
       member_role: ["host", "guest"],
+      notification_kind: ["developed", "ending_soon"],
       photo_status: ["pending", "uploaded", "failed"],
     },
   },

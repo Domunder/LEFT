@@ -11,7 +11,7 @@ import { SITE, type Faq as FaqItem } from '../site';
 import weddingDance from '../assets/photos/wedding-dance.jpg';
 import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
 import weddingFriends from '../assets/photos/wedding-friends.jpg';
-import weddingLaugh from '../assets/photos/wedding-laugh.jpg';
+import dinnerCandle from '../assets/photos/dinner-candle.jpg';
 import weddingMono from '../assets/photos/wedding-mono.jpg';
 
 const title = 'Wedding disposable camera app — LEFT for weddings';
@@ -59,7 +59,7 @@ const faq: FaqItem[] = [
   },
   {
     q: 'How many guests can join a wedding?',
-    a: 'Up to 200. Events with up to 50 guests and a limited roll are free; up to 100 guests is CHF 15, up to 150 is CHF 20 and up to 200 is CHF 25, paid once by the host.',
+    a: 'Up to 200. Events with up to 50 guests and a limited roll are free; up to 100 guests is $14.99, up to 150 is $19.99 and up to 200 is $24.99, paid once by the host.',
   },
   {
     q: 'What if the venue has bad Wi-Fi or no signal?',
@@ -150,7 +150,7 @@ const jsonLd = [
   <section class="gallery" aria-label="Wedding photos taken by guests">
     <div class="wrap mosaic reveal">
       <Picture src={weddingCrowd} alt="Guests waving sparklers around the couple at night" formats={['avif', 'webp']} widths={[400, 800, 1200]} sizes="(min-width: 900px) 760px, 100vw" class="look-golden wide" />
-      <Picture src={weddingLaugh} alt="The bride and groom laughing among their guests" formats={['avif', 'webp']} widths={[320, 640]} sizes="(min-width: 900px) 380px, 50vw" width={640} height={800} fit="cover" class="look-golden" />
+      <Picture src={dinnerCandle} alt="Guests sharing a long dinner by candlelight" formats={['avif', 'webp']} widths={[320, 640]} sizes="(min-width: 900px) 380px, 50vw" width={640} height={800} fit="cover" class="look-golden" />
       <Picture src={weddingMono} alt="A packed wedding dance floor in black and white" formats={['avif', 'webp']} widths={[320, 640]} sizes="(min-width: 900px) 380px, 50vw" width={640} height={800} fit="cover" class="look-mono" />
       <Picture src={weddingDance} alt="A couple dancing in the middle of their guests, lit by flash" formats={['avif', 'webp']} widths={[400, 800, 1200]} sizes="(min-width: 900px) 760px, 100vw" class="look-golden wide" />
     </div>

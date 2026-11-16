@@ -42,6 +42,7 @@ import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
 import { Colors, Invite, Motion, Spacing } from '@/constants/theme';
 import { getEvent, listMyEvents, type Event } from '@/lib/events';
 import { inviteMessage, inviteUrl } from '@/lib/invite';
+import { askForPushOnce } from '@/lib/push';
 
 const EASING = Easing.bezier(...Motion.bezier).factory();
 
@@ -75,6 +76,12 @@ export default function InviteScreen() {
   // Captured rather than the whole screen, so a saved QR is the code on its white
   // card — not a crop of a near-black page that no scanner will read.
   const cardRef = useRef<ViewInstance>(null);
+
+  // The host has just made an event that ends later: ask now whether to tell
+  // them when it is developed. A guest arriving from the camera is asked there.
+  useEffect(() => {
+    if (!fromCamera) askForPushOnce();
+  }, [fromCamera]);
 
   useEffect(() => {
     let cancelled = false;

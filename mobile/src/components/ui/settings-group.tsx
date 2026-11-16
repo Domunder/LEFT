@@ -2,19 +2,10 @@
  * 20's grouped rows — a section label over a bordered card of hairline-separated
  * rows.
  *
- * **Why this is not `SettingRow`.** That component looks like the same thing and
- * disagrees on every measurement that matters:
- *
- *  - it renders its label through `<Label small>`, which is the uppercase eyebrow
- *    preset. 20's row labels are sentence case ("Someone films a clip") — as an
- *    eyebrow, a row label reads as a heading for the row below it.
- *  - its padding is `EndRow` (20 vertical, 2 horizontal), against 16/18 here.
- *  - its divider is `Colors.hairline` (0.1); a divider inside an already-bordered
- *    card has to be lighter than the card's own edge, so this one is 0.06.
- *
- * A `sentenceCase` variant would leave 04's picker rows and 20's list rows in one
- * component that agrees on nothing except "label left, control right". Sibling
- * instead — the same call `ShareButton` and `AuthButton` made against `PillButton`.
+ * Row labels are sentence case (`Typography.settingsRow`), not
+ * the uppercase eyebrow: as an eyebrow, a row label reads as a heading for the
+ * row below it. The divider inside the card is lighter (0.06) than the card's
+ * own edge.
  *
  * The last row in a group draws no divider. `SettingsGroup` works that out and
  * passes it down, rather than every caller counting its own children.

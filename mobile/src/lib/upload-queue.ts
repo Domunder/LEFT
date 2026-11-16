@@ -34,6 +34,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import * as Network from 'expo-network';
 import { AppState } from 'react-native';
 
+import { track } from './analytics';
 import { getSession } from './auth';
 import type { FilmLook } from './events';
 import { developPhoto } from './look-shader';
@@ -249,6 +250,8 @@ export async function enqueueShot(shot: {
   ];
   emit({ type: 'changed' });
   await persist();
+
+  track('photo_taken', { look: shot.look });
 
   void drain();
   return id;

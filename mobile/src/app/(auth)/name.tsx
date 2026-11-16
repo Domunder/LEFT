@@ -26,7 +26,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 
-import { BackgroundVideo } from '@/components/ui/background-video';
+import { BackgroundSlideshow } from '@/components/ui/background-slideshow';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
@@ -60,7 +60,7 @@ export default function NameScreen() {
 
   return (
     <Screen padded={false} edges={[]}>
-      <BackgroundVideo opacity={VideoOverlay.signUpVideoOpacity} />
+      <BackgroundSlideshow opacity={VideoOverlay.signUpVideoOpacity} />
 
       <LinearGradient
         colors={[...VideoOverlay.signUpGradientColors]}

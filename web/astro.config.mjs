@@ -2,7 +2,8 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
 // Pages that exist but must stay out of the index: the invite landing (one
-// page for every code) and the legal placeholders until M6 writes the texts.
+// page for every code) and the legal texts while they are an unreviewed draft (LEGAL_DRAFT in
+// mobile/src/constants/legal.ts) — take them out of this list when that flips.
 const UNLISTED = ['/j/', '/terms/', '/privacy/'];
 
 export default defineConfig({

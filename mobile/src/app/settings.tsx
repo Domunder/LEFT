@@ -3,7 +3,8 @@
  *
  * Reached from the gear on 15/16. Everything on it is real: the profile card
  * reads the live session, Log Out actually signs out, the legal rows open the
- * screens that exist, and both switches persist per user.
+ * screens that exist, and both switches persist per user and gate what the
+ * server sends to this phone.
  *
  * Deviations from the artboard, all deliberate:
  *
@@ -40,7 +41,15 @@
 import type { Session } from '@supabase/supabase-js';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { AmbientGlow } from '@/components/ui/ambient-glow';
 import { CircleIconButton } from '@/components/ui/circle-back-button';
@@ -51,6 +60,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Body, Display } from '@/components/ui/typography';
 import { Colors, Settings as S } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { ANALYTICS_CONFIGURED, isAnalyticsEnabled, setAnalyticsEnabled } from '@/lib/analytics';
 import { getSession, isAnonymous, resolveDisplayName, signOut } from '@/lib/auth';
 import { initialsFor, restorePurchases } from '@/lib/events';
 import { identify, PURCHASES_UNAVAILABLE, restore } from '@/lib/purchases';
@@ -60,6 +70,7 @@ import {
   writePref,
   type NotificationPrefs,
 } from '@/lib/notification-prefs';
+import { pushPermission, syncPush } from '@/lib/push';
 
 /** What the profile card shows, once the session has been read. */
 type Profile = {
@@ -86,7 +97,7 @@ function profileFrom(session: Session | null): Profile | null {
     return {
       name: 'Guest',
       initials: '?',
-      detail: 'Not signed in — your films live on this device.',
+      detail: 'Not signed in — your moments are tied to this phone.',
       guest: true,
     };
   }
@@ -108,6 +119,7 @@ export default function SettingsScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS);
   const [restoring, setRestoring] = useState(false);
+  const [usageData, setUsageData] = useState(true);
 
   /*
     On focus rather than on mount: linking an identity from 15's prompt changes
@@ -120,6 +132,9 @@ export default function SettingsScreen() {
 
       async function load() {
         try {
+          const enabled = await isAnalyticsEnabled();
+          if (!cancelled) setUsageData(enabled);
+
           const current = await getSession();
           if (cancelled) return;
           setSession(current);
@@ -153,7 +168,34 @@ export default function SettingsScreen() {
   const setPref = useCallback(
     (key: keyof NotificationPrefs, value: boolean) => {
       setPrefs((previous) => ({ ...previous, [key]: value }));
-      if (userId) void writePref(userId, key, value);
+      if (!userId) return;
+
+      void (async () => {
+        await writePref(userId, key, value);
+
+        /*
+          The server sends, so the server has to hear about it. Switching one on
+          is also a fair moment for the system prompt if it was never shown —
+          the user has just asked for exactly this. After a refusal only the
+          system settings can help, and saying so beats a switch that is on and
+          does nothing.
+        */
+        // Read before asking: someone who has just said no to the system prompt
+        // does not need a second dialog about it a moment later.
+        const refusedEarlier = (await pushPermission()) === 'denied';
+        const status = await syncPush({ ask: value });
+
+        if (value && refusedEarlier && status === 'denied') {
+          Alert.alert(
+            'Notifications are off',
+            'LEFT is not allowed to send notifications on this phone. You can change that in Settings.',
+            [
+              { text: 'Not now', style: 'cancel' },
+              { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+            ]
+          );
+        }
+      })();
     },
     [userId]
   );
@@ -221,7 +263,7 @@ export default function SettingsScreen() {
     Alert.alert(
       'Log out?',
       guest
-        ? 'You are signed in as a guest, so there is no account to come back to. Your films will stay on this device but you will not be able to reach them again.'
+        ? 'You are signed in as a guest, so there is no account to come back to. You will not be able to reach your moments and their photos again.'
         : 'You can sign back in at any time.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -281,28 +323,48 @@ export default function SettingsScreen() {
           ) : null}
 
           <SettingsGroup title="Notifications">
-            <SettingsListRow label="Someone joins your film">
+            {/*
+              Both are honoured by the server, per device: the choice travels
+              with the push token (lib/push.ts) and `notification_recipients()`
+              leaves this phone out of a kind that is switched off.
+            */}
+            <SettingsListRow label="Photos are developed">
               <ToggleSwitch
-                value={prefs.clipFilmed}
-                onValueChange={(next) => setPref('clipFilmed', next)}
-                accessibilityLabel="Notify me when someone joins my film"
+                value={prefs.developed}
+                onValueChange={(next) => setPref('developed', next)}
+                accessibilityLabel="Notify me when an event's photos are developed"
               />
             </SettingsListRow>
 
-            {/*
-              Recorded and honoured by nobody yet — there is no push
-              infrastructure in the app, so nothing raises a "film is ready"
-              notification to suppress. Drawn because the artboard draws it, and
-              read the moment there is something to gate. See notification-prefs.ts.
-            */}
-            <SettingsListRow label="Film is developed">
+            <SettingsListRow label="Reminder before it ends">
               <ToggleSwitch
-                value={prefs.filmReady}
-                onValueChange={(next) => setPref('filmReady', next)}
-                accessibilityLabel="Notify me when the film is developed"
+                value={prefs.reminder}
+                onValueChange={(next) => setPref('reminder', next)}
+                accessibilityLabel="Remind me about an hour before an event ends"
               />
             </SettingsListRow>
           </SettingsGroup>
+
+          {/*
+            Not on the artboard. The privacy policy names this switch as the way
+            to object to usage statistics, so it has to exist wherever they are
+            collected — and only there: without a key nothing is sent and a
+            switch would be decoration.
+          */}
+          {ANALYTICS_CONFIGURED ? (
+            <SettingsGroup title="Privacy">
+              <SettingsListRow label="Share usage data">
+                <ToggleSwitch
+                  value={usageData}
+                  onValueChange={(next) => {
+                    setUsageData(next);
+                    void setAnalyticsEnabled(next);
+                  }}
+                  accessibilityLabel="Share anonymous usage statistics and error reports"
+                />
+              </SettingsListRow>
+            </SettingsGroup>
+          ) : null}
 
           <SettingsGroup title="Account">
             <SettingsListRow

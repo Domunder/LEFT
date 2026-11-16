@@ -5,6 +5,7 @@
  * live in ./photos.ts.
  */
 
+import { track } from './analytics';
 import { subscribeToChanges } from './realtime';
 import type { RollSize } from './roll';
 import { getSupabase } from './supabase';
@@ -87,6 +88,15 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
 
   if (error) throw await describeFunctionError(error);
   if (!data?.event) throw new Error('The event was not created');
+
+  track('event_created', {
+    look: input.look,
+    event_type: input.eventType,
+    roll_size: input.rollSize,
+    max_members: input.maxMembers,
+    paid: Boolean(input.transactionId),
+  });
+
   return data.event;
 }
 
@@ -135,6 +145,8 @@ export async function joinEvent(inviteCode: string, displayName: string): Promis
     p_display_name: displayName,
   });
   if (error) throw error;
+
+  track('event_joined', {});
   return data;
 }
 

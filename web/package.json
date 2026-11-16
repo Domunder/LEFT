@@ -4,10 +4,11 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
+    "legal": "node scripts/sync-legal.mjs",
+    "dev": "npm run legal && astro dev",
+    "build": "npm run legal && astro build",
     "preview": "astro preview",
-    "check": "astro check",
+    "check": "npm run legal && astro check",
     "assets": "node scripts/static-assets.mjs",
     "preview:cf": "wrangler pages dev dist --port 8788"
   },

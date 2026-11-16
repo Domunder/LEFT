@@ -3,7 +3,7 @@
  *
  * Not a ChoicePill: it is never selectable, it carries a status dot instead of
  * an icon, and its metrics are smaller (6/13 against 11/16). The same call made
- * for EndRow.pill and LengthChoice.
+ * for AuthButton and ShareButton.
  */
 
 import { StyleSheet, Text, View } from 'react-native';

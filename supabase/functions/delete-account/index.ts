@@ -12,16 +12,19 @@
  *      cascade would otherwise leave violating `purchases_consumed_together`,
  *      and reports which storage objects are about to be orphaned. See the
  *      migration; the constraint hazard is spelled out there.
- *   2. Remove those objects from the `clips` bucket. **No foreign key reaches
- *      into storage**, so nothing else would ever delete them and the footage
- *      would outlive the account that owned it.
+ *   2. Remove those objects from the `photos` bucket. **No foreign key reaches
+ *      into storage**, so nothing else would ever delete them and the pictures
+ *      would outlive the account that owned them.
  *   3. `auth.admin.deleteUser()` — the cascades do the rest.
  *
- * **Clips filmed in other people's events are kept, unattributed.** That is
- * `clips.user_id`'s `on delete set null`, and it is deliberate: cascading them
- * would destroy footage inside films other people paid for and have already
- * watched. The user's name comes off; the clip stays. The delete confirmation
- * says this before anyone commits, and so does the privacy notice.
+ * **Photos taken in other people's events are kept, unattributed.** That is
+ * `photos.user_id`'s `on delete set null`, and it is deliberate: cascading them
+ * would tear holes in albums that belong to other groups. The user's name comes
+ * off; the picture stays until that event is deleted or purged. The delete
+ * confirmation says this before anyone commits, and so does the privacy policy
+ * (where it is marked for legal review).
+ *
+ * Verified end to end against the local stack on 2026-11-16.
  */
 
 import { createClient } from 'jsr:@supabase/supabase-js@2';
@@ -36,7 +39,7 @@ const json = (body: unknown, status: number) =>
 
 const BUCKET = 'photos';
 
-/** Storage rejects an oversized batch; clips are large but rows are cheap. */
+/** Storage rejects an oversized batch. */
 const REMOVE_BATCH = 100;
 
 Deno.serve(async (req) => {

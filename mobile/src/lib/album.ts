@@ -10,8 +10,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
-import { Share } from 'react-native';
+import { Platform, Share } from 'react-native';
 
+import { track } from './analytics';
 import { getSession } from './auth';
 import { getEvent, isDeveloped, listMembers, type Event } from './events';
 import { listPhotos, type Photo } from './photos';
@@ -142,11 +143,21 @@ export async function savePhoto(photo: AlbumPhoto): Promise<void> {
 /**
  * Open the system share sheet for one original.
  *
- * RN's own `Share` rather than `expo-sharing`: it needs no native module. On
- * Android it can only share text, so the sheet is iOS-only for now.
+ * iOS uses RN's own `Share`, which takes a file URL and needs no native module.
+ * Android's `Share` can only send text, so there the file goes through
+ * `expo-sharing` — required lazily, because a dev build made before the package
+ * was added does not contain it. **The Android path has never run on a device.**
  */
 export async function sharePhoto(photo: AlbumPhoto): Promise<void> {
   const file = await localOriginal(photo);
+
+  if (Platform.OS === 'android') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sharing = require('expo-sharing') as typeof import('expo-sharing');
+    await Sharing.shareAsync(file.uri, { mimeType: 'image/jpeg' });
+    return;
+  }
+
   await Share.share({ url: file.uri });
 }
 
@@ -163,7 +174,9 @@ export async function hasSeenReveal(eventId: string): Promise<boolean> {
   }
 }
 
-export async function markRevealSeen(eventId: string): Promise<void> {
+export async function markRevealSeen(eventId: string, photoCount: number): Promise<void> {
+  track('reveal_seen', { photos: photoCount });
+
   try {
     await AsyncStorage.setItem(REVEAL_PREFIX + eventId, '1');
   } catch {

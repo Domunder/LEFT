@@ -47,7 +47,16 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   give on press-in (`PressScale`), sheets drag (`SheetDrag`), the toast and
   10's chips move on springs. JS only, no new build. See "Album, viewer and
   glass (M3)" and the camera section.
-- **Next:** look at the glass over the viewfinder on a device, then M4.
+- **Done (M4, 2026-11-16), verified against the local stack, never on a
+  device:** push notifications — "developed" and a reminder an hour before the
+  end. See "Notifications (M4)" below. **Needs a new native build**
+  (`expo-notifications`, `expo-sharing`).
+- **Done (M6 parts, 2026-11-16):** the 6-month retention purge (verified
+  locally), legal texts rewritten for photos (an **unreviewed draft**), usage
+  statistics and error reports behind an env key, cleanup. What is left needs
+  accounts, a domain or a device — `docs/LAUNCH.md` is the ordered runbook.
+- **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
+  (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
 ## How we work together
 
@@ -69,6 +78,7 @@ then is code written.
 |---|---|
 | `mobile/design/LEFT App.dc.html` | The prototype. Pixel-accurate for the screens that still exist. |
 | `mobile/design/README.md` | The written handoff — tokens, type, motion. |
+| `docs/LAUNCH.md` | The launch runbook (German): everything only the user can do, in order. |
 
 **The visual language is final**: `#101010` dark, off-white `#f0ede8`, Newsreader
 headlines with italic emphasis, DM Serif numerals, Inter UI, pill buttons, glass
@@ -136,8 +146,9 @@ purchase per event.
   `shared.value = x` and patterns in the device-tuned camera files. Revisit in M6.
 - Gesture Handler 3 deprecates the builder API (`Gesture.Pan()`), which the
   camera's pinch and `PhotoViewer` use. It works; migrate both together.
-- `expo-video` stays for one thing only: the ambient background loop
-  (`components/ui/background-video.tsx`) and 03's preview cards.
+- **`expo-video` is unused since 2026-11-16** (the backdrop became a photo
+  slideshow) but stays installed with its config plugin: removing it changes
+  the native build. Prune it with the next build.
 
 ## Architecture
 
@@ -162,10 +173,18 @@ mobile/src/
   lib/                    supabase, auth, auth-errors, entry, events, photos,
                           storage, roll, tiers, purchases, realtime, invite,
                           event-end, film-status, film-tint, zoom,
-                          look-shader, upload-queue, notification-prefs,
-                          my-shots, album, covers, motion
+                          look-shader, upload-queue, notification-prefs, push,
+                          analytics, my-shots, album, covers, motion
   types/database.ts       generated — `npm run db:types` at the root
-supabase/                 migrations/ (baseline + price tiers), functions/, seed.sql
+supabase/
+  migrations/             baseline, price tiers, notifications, service_role
+                          grants, retention
+  functions/              create-event, delete-account, restore-purchases,
+                          revenuecat-webhook, send-notifications,
+                          purge-expired-events
+  seed.sql
+web/                      leftmoment.com (Astro, static) — web/README.md
+docs/                     MILESTONES.md, LAUNCH.md
 ```
 
 Vocabulary: an event is a **film**; a guest's allowance is their **roll**; an
@@ -254,7 +273,8 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   `[camera] frame` logs the real frame size in dev.
 - **Photos are captured at 4:3, up to 3024x4032**, as JPEG (`usePhotoOutput`).
 - **`GrainOverlay`'s tiled image does not repeat reliably over a large area**
-  (seen as one tile top-left over the viewfinder). Landing still uses it.
+  (seen as one tile top-left over the viewfinder). Nothing uses it any more;
+  the component is kept on purpose.
 - **The camera's chrome is glass inside the viewfinder** (2026-11-15): flash,
   roll counter and flip along its top edge, "Your shots", zoom and invite along
   its bottom edge (`Camera.overlay`), all plain views on `Glass` above the
@@ -334,8 +354,8 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   and at the end. Reduced motion: one cross-fade. Timings are `Album.reveal`.
 - **Save and share** go through `lib/album.ts`: the original is downloaded
   once into the cache, saved with `MediaLibrary.Asset.create`, shared with RN's
-  own `Share` (iOS only — Android's `Share` cannot send a file; `expo-sharing`
-  would need adding). Owner or host can delete (`deletePhoto`, RLS).
+  own `Share` on iOS and `expo-sharing` on Android (lazily required; **never
+  run**). Owner or host can delete (`deletePhoto`, RLS).
 - **`(auth)/keep` is reached when an anonymous guest leaves a developed album**
   (once, unless declined) — after the photos, never in front of them.
 - **The library is "Your Moments", a carousel of photo stacks** (decided
@@ -358,9 +378,8 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   rows are placed absolutely) and date formatters are built once
   (`labelDays()`) — mounting all ~350 rows and constructing
   `Intl.DateTimeFormat` per day per render made the screen slow to open.
-  **Not seen on a device:** whether a very hard fling outruns the window. The month grid, popover and value pill are deleted;
-  their tokens (`Picker`, `Popover`, parts of `EndRow`) are still in
-  `theme.ts` — prune in M6.
+  **Not seen on a device:** whether a very hard fling outruns the window. The month grid, popover and value pill are deleted,
+  and so are their tokens.
 
 ## The roll model
 
@@ -398,18 +417,22 @@ and upload queue that use it are described above.
   plus a thumbnail, with width/height, author and capture time on the row; go
   through one storage seam (`lib/storage.ts`) so the bucket can move to
   Cloudflare R2; never hard-delete before the retention window.
-- **Retention is 6 months after the event ends** (decided 2026-11-15, was 12).
-  Nothing implements it yet — there is no purge job (M6);
-  `constants/legal.ts` already states it.
+- **Retention is 6 months after the event was developed** (decided
+  2026-11-15, was 12) and it deletes the whole event: files, photo rows, roster
+  and the event row. `purge-expired-events` (edge function, woken daily by
+  pg_cron) removes the files through the storage API — SQL cannot delete
+  files — and then calls `purge_event()`. **"Never earlier" lives in the
+  database:** `purge_event()` refuses an event that is not developed, is
+  younger than `retention_period()`, or still has objects in the bucket.
 - **"Start the Event" stays** (decided 2026-11-15): the host's tap on 10 moves
   the event from `setup` to `live`; guests wait on 12 until then.
 - **No web album for now** (decided 2026-11-15). Developed albums are seen in
   the app only.
 
 - **Pricing (final, decided 2026-11-15, replacing "free up to 100, one SKU"):** free
-  up to 50 guests on a finite roll; `left_small` (~10 CHF) for the unlimited
-  roll in a group up to 50; `left_medium` (~15 CHF) up to 100 guests;
-  `left_large` (~20 CHF) up to 150; `left_unlimited` (~25 CHF) up to 200. One purchase per event, paid by the
+  up to 50 guests on a finite roll; `left_small` (US$9.99) for the unlimited
+  roll in a group up to 50; `left_medium` (US$14.99) up to 100 guests;
+  `left_large` (US$19.99) up to 150; `left_unlimited` (US$24.99) up to 200. One purchase per event, paid by the
   host at creation. A purchase unlocks a group size; `create_event()` is the
   authority (`free_max_members()`, `unlock_max_members()` — migration
   `20261115010000_price_tiers.sql`), `lib/tiers.ts` mirrors it for the button,
@@ -420,6 +443,54 @@ and upload queue that use it are described above.
 Statuses: `setup → live → developed`. Clients cannot write `status`, `ends_at`,
 `roll_size`, `max_members` or `shots_taken`, and cannot INSERT events or photos —
 `create_event()` and `claim_shot()` are the doors.
+
+## Notifications (M4)
+
+- **Two messages, decided and sent by the server.** "Your photos are
+  developed." when an event's status flips (trigger on `events`), and a
+  reminder `reminder_lead()` (60 min) before the end to guests who still have
+  shots, for events of at least 3 h (`enqueue_ending_reminders()`, every
+  minute). An event with no photos develops silently.
+- **The outbox is `public.notifications`**, one row per event and kind
+  (`unique`), which is what makes every writer idempotent.
+  `send-notifications` claims rows, asks `notification_recipients()` who gets
+  them — that function applies 20's two switches — sends through Expo's push
+  API and deletes tokens Expo reports dead. The copy lives in
+  `supabase/functions/_shared/expo-push.ts`.
+- **Postgres wakes edge functions through pg_net** (`invoke_edge_function()`),
+  reading `project_url` and `service_role_key` from **Vault**. Without those
+  two secrets nothing breaks — the outbox waits and the purge never runs. The
+  functions authenticate the caller by comparing the service-role key.
+- **`push_tokens` is keyed by token, not by user**: a phone has one token
+  whoever is signed in, the last to register owns it. Written only through
+  `register_push_token()` / `unregister_push_token()`.
+- **Client: `lib/push.ts`.** `expo-notifications` is `require()`d lazily, so a
+  dev build made before the package was added keeps running (without
+  notifications). The permission is asked in context, never on first launch:
+  a guest waiting on 12, the host on 09, about a second after the first shot
+  (`askForPushOnce()`). No foreground handler is set — nothing is shown while
+  the app is open. A tap opens the album or the camera (root layout).
+- **The switches** (`lib/notification-prefs.ts`) live in AsyncStorage and are
+  copied to the token row on every `syncPush()`.
+- **`service_role` needs explicit table grants.** On current Supabase a table
+  created by a migration gives it none, and RLS bypass does not help. A new
+  table an edge function touches needs a `grant … to service_role`
+  (`20261115030000_service_role_grants.sql` covers the existing ones — before
+  it, the purchase ledger could not be written at all).
+- **Real delivery is untested**: it needs APNs/FCM credentials and a device.
+
+## Analytics and legal texts
+
+- **`lib/analytics.ts`: PostHog (EU), JavaScript only, off without
+  `EXPO_PUBLIC_POSTHOG_KEY`** — the SDK is not even loaded. Four events
+  (`event_created`, `event_joined`, `photo_taken`, `reveal_seen`), fired from
+  `lib/`, plus uncaught JS errors. No `identify()`, no names, titles or codes
+  in properties. Native crashes are not covered. `mobile/docs/analytics.md`.
+- **`constants/legal.ts` is the one source for the app and the website**
+  (`web/src/components/LegalDocument.astro` imports it), so it must import
+  nothing. It is an **unreviewed draft**: `LEGAL_DRAFT` prints a notice above
+  the text in both places and keeps the web pages `noindex`. Never present it
+  as reviewed; `REVIEW:` comments mark what a lawyer should look at.
 
 ## Guests have no account
 
@@ -451,12 +522,18 @@ A large soft light that **travels and dims through onboarding**.
   root. **Breaking any of those three hides the glow.**
 - `(library)` and `(host)` get theirs from their layout. A viewfinder never has one.
 
-## Asset defect
+## The photo backdrop
 
-`assets/video/left-bg.mp4` has a malformed `tkhd` box (declares 16384x1080 instead
-of 1080x1920). `background-video.tsx` works around it with an explicit 9:16 box
-and `contentFit="fill"`. The real fix is a re-encode; then the workaround reverts
-to `absoluteFill` + `cover`.
+Landing (01), the join sheet (08) and the three auth screens sit on
+`components/ui/background-slideshow.tsx` (2026-11-16, replacing the looping
+video and its 8 MB file — the user's call: "fancy, but not a video"). Six
+photos (`assets/images/backdrop/`, 9:16 crops of the website's pictures) each
+travel slowly — zoom plus a slight drift, alternating direction — and the next
+dissolves in over the one before, which stays opaque underneath so the fade
+never dips to black. Timings and travel are `Backdrop` in `theme.ts`; the
+screens keep their `VideoOverlay` opacity and gradient. Reduced motion:
+cross-fade only. It advances only while its screen is focused. **Not seen on a
+device.**
 
 ## Open gaps
 
@@ -468,8 +545,17 @@ The launch list lives in `docs/MILESTONES.md`. Things that bite during developme
   stack ran, so `create-event` answered 503). `docker start
   supabase_edge_runtime_LEFT`, or restart the stack.
 - **Anonymous sign-ins must be enabled in the Supabase dashboard**, or every guest
-  join fails quietly ("Joining isn't available right now"). Turn on CAPTCHA and
-  the rate limit while there.
+  join fails quietly ("Joining isn't available right now"). Set the rate limit
+  while there. **Do not turn on CAPTCHA yet:** the app sends no captcha token,
+  so with it on no guest could join.
+- **A new or renamed edge function is not served locally until the stack
+  restarts** (`npm run db:stop && npm run db:start`): the edge runtime gets its
+  function list at start, and answers "Function not found" until then.
+- **Push and retention need two Vault secrets** (`project_url`,
+  `service_role_key`) — locally (README) and on the hosted project
+  (`docs/LAUNCH.md`).
+- **There is no "report photo"** — Apple's guideline 1.2 expects one for
+  user-generated content. Only the host's and the author's delete exist.
 - **`pg_cron` must be enabled on the hosted project** or events never end on their own.
 - **leftmoment.com is not bought yet, so invite links are dead** outside the dev scheme.
 - **`@react-native-google-signin` cannot be imported in Expo Go** — it is behind a
@@ -478,25 +564,24 @@ The launch list lives in `docs/MILESTONES.md`. Things that bite during developme
   `resolveDisplayName()` is empty; the name must be written before `createEvent()`.
 - **Onboarding draft state** is a Context mounted in the root layout; the
   `reset()` after a successful create is load-bearing.
-- **Settings' two notification switches gate nothing** — there is no push
-  infrastructure yet (M4).
-- **The seed host cannot sign in with its password** — `signInWithPassword` for
-  `devhost@left.local` answers "Database error querying schema" (seen 2026-11-15
-  against the local stack). Not investigated; the app has no password sign-in.
+- **A hand-inserted `auth.users` row needs `''` in its token columns**
+  (`confirmation_token`, `recovery_token`, `email_change_token_new`,
+  `email_change`), or GoTrue answers "Database error querying schema" on
+  password sign-in. `seed.sql` does this; the seed host can sign in.
 - **A local stack from before M1 has the old schema** — run `npm run db:reset`
   at the root once (it wipes local data).
-- `constants/legal.ts` still describes video; rewritten in M6.
 - The store products `left_small`, `left_medium`, `left_large` and `left_unlimited` do not
   exist yet (`mobile/docs/payments.md`).
-- Unused dependencies to prune in M6 unless a milestone picks them up:
-  `expo-device`, `expo-symbols`, `expo-web-browser`, `expo-linking`,
-  `@gorhom/bottom-sheet`. (`expo-image` is needed by M3.)
+- `react-native-vision-camera-skia` is unused but still installed: removing it
+  changes the native iOS build, which cannot be built here. `expo-linking` and
+  `expo-symbols` are peers of `expo-router` and stay; `expo-device` is read by
+  PostHog for the device model.
 
 ## Constraints
 
 - **Dark-only. Portrait-locked.**
 - **Expo Go covers navigation only.** Camera, Skia, media library, Google/Apple sign-in,
-  purchases, 09's "Save QR" and 08's QR scanner need a dev build
+  purchases, notifications, 09's "Save QR" and 08's QR scanner need a dev build
   (`mobile/docs/social-sign-in.md`).
 - **`.env` is optional, but data screens look broken without it.** Copy
   `mobile/.env.example` to `.env`. **On a device use the machine's LAN IP, not
