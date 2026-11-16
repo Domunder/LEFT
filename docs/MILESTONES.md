@@ -400,9 +400,10 @@ steht als Checkliste in [`LAUNCH.md`](LAUNCH.md).
 
 **Bewusst nicht gemacht**
 
-- `left-bg.mp4` neu encodieren: `ffmpeg` ist auf diesem Rechner nicht
-  installiert, Herunterladen war nicht erlaubt. Der Workaround in
-  `background-video.tsx` bleibt.
+- `left-bg.mp4` neu encodieren: erledigt sich — das Video ist seit dem
+  16.11.2026 durch eine Foto-Slideshow ersetzt und gelöscht
+  (`background-slideshow.tsx`, auf Wunsch). `expo-video` ist damit unbenutzt,
+  bleibt aber bis zum nächsten nativen Build installiert.
 - `react-native-vision-camera-skia` bleibt installiert: unbenutzt, aber das
   Entfernen ändert den nativen iOS-Build, und der lässt sich hier nicht bauen.
   Beim nächsten Build-Fenster entfernen und einzeln testen.

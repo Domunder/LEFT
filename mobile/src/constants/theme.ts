@@ -87,13 +87,14 @@ export const Colors = {
 } as const;
 
 /**
- * Full-bleed video treatment, shared by Landing (01), Format (03) and Sign Up (06).
+ * Full-bleed backdrop treatment, shared by Landing (01), the join sheet (08) and
+ * the auth screens. The backdrop was a video until 2026-11-16 — hence the name.
  *
  * The gradient darkens the frame from top to bottom so the glass panel pinned at
  * the bottom has something solid to sit against.
  */
 export const VideoOverlay = {
-  /** Video opacity on Landing. Sign Up uses 0.55. */
+  /** Backdrop opacity on Landing. The auth screens use 0.55. */
   videoOpacity: 0.85,
   signUpVideoOpacity: 0.55,
   /** linear-gradient(to bottom, ...) — colors and their stops, in order. */
@@ -120,6 +121,22 @@ export const VideoOverlay = {
   /** Tiling noise overlay — 160x160 tile at 3.5% opacity. */
   grainTile: 160,
   grainOpacity: 0.035,
+} as const;
+
+/**
+ * The photo backdrop's motion (`BackgroundSlideshow`): each photo travels
+ * slowly while it is shown and the next one dissolves in over it.
+ */
+export const Backdrop = {
+  /** How long a photo is shown before the next one starts to fade in. */
+  holdMs: 4800,
+  /** The dissolve. Long on purpose — it should be noticed late, if at all. */
+  fadeMs: 1800,
+  /** The slow zoom. `zoomFrom` is above 1 so the drift never shows an edge. */
+  zoomFrom: 1.06,
+  zoomTo: 1.16,
+  /** Sideways travel over one showing, in points. */
+  drift: 14,
 } as const;
 
 /**

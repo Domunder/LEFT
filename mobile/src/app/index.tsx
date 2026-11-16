@@ -2,7 +2,7 @@
  * 01 · Landing
  *
  * App entry / marketing splash, and now the app's **only** way in. Full-bleed
- * ambient video under a darkening gradient, the logo header on top, and a frosted
+ * photo slideshow under a darkening gradient, the logo header on top, and a frosted
  * glass panel pinned to the bottom carrying the three things a new user can do:
  * sign in with Google, sign in with Apple, or join somebody else's group.
  *
@@ -25,7 +25,7 @@ import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { AuthButton } from '@/components/ui/auth-button';
-import { BackgroundVideo } from '@/components/ui/background-video';
+import { BackgroundSlideshow } from '@/components/ui/background-slideshow';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
@@ -143,7 +143,7 @@ export default function LandingScreen() {
 
   return (
     <Screen padded={false} edges={[]}>
-      <BackgroundVideo opacity={VideoOverlay.videoOpacity} />
+      <BackgroundSlideshow opacity={VideoOverlay.videoOpacity} />
 
       <LinearGradient
         colors={[...VideoOverlay.gradientColors]}

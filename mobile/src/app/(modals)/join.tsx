@@ -30,7 +30,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BackgroundVideo } from '@/components/ui/background-video';
+import { BackgroundSlideshow } from '@/components/ui/background-slideshow';
 import { GlassPanel } from '@/components/ui/glass-panel';
 import { PressScale } from '@/components/ui/press-scale';
 import { QrScanner } from '@/components/ui/qr-scanner';
@@ -76,7 +76,7 @@ export default function JoinScreen() {
 
   return (
     <View style={styles.root}>
-      <BackgroundVideo opacity={VideoOverlay.videoOpacity} />
+      <BackgroundSlideshow opacity={VideoOverlay.videoOpacity} />
       <View style={styles.scrim} pointerEvents="none" />
 
       {/*

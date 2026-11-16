@@ -146,8 +146,9 @@ purchase per event.
   `shared.value = x` and patterns in the device-tuned camera files. Revisit in M6.
 - Gesture Handler 3 deprecates the builder API (`Gesture.Pan()`), which the
   camera's pinch and `PhotoViewer` use. It works; migrate both together.
-- `expo-video` stays for one thing only: the ambient background loop
-  (`components/ui/background-video.tsx`) and 03's preview cards.
+- **`expo-video` is unused since 2026-11-16** (the backdrop became a photo
+  slideshow) but stays installed with its config plugin: removing it changes
+  the native build. Prune it with the next build.
 
 ## Architecture
 
@@ -521,12 +522,18 @@ A large soft light that **travels and dims through onboarding**.
   root. **Breaking any of those three hides the glow.**
 - `(library)` and `(host)` get theirs from their layout. A viewfinder never has one.
 
-## Asset defect
+## The photo backdrop
 
-`assets/video/left-bg.mp4` has a malformed `tkhd` box (declares 16384x1080 instead
-of 1080x1920). `background-video.tsx` works around it with an explicit 9:16 box
-and `contentFit="fill"`. The real fix is a re-encode; then the workaround reverts
-to `absoluteFill` + `cover`.
+Landing (01), the join sheet (08) and the three auth screens sit on
+`components/ui/background-slideshow.tsx` (2026-11-16, replacing the looping
+video and its 8 MB file — the user's call: "fancy, but not a video"). Six
+photos (`assets/images/backdrop/`, 9:16 crops of the website's pictures) each
+travel slowly — zoom plus a slight drift, alternating direction — and the next
+dissolves in over the one before, which stays opaque underneath so the fade
+never dips to black. Timings and travel are `Backdrop` in `theme.ts`; the
+screens keep their `VideoOverlay` opacity and gradient. Reduced motion:
+cross-fade only. It advances only while its screen is focused. **Not seen on a
+device.**
 
 ## Open gaps
 
@@ -563,8 +570,6 @@ The launch list lives in `docs/MILESTONES.md`. Things that bite during developme
   password sign-in. `seed.sql` does this; the seed host can sign in.
 - **A local stack from before M1 has the old schema** — run `npm run db:reset`
   at the root once (it wipes local data).
-- `assets/video/left-bg.mp4` is still not re-encoded (no `ffmpeg` on the
-  machine).
 - The store products `left_small`, `left_medium`, `left_large` and `left_unlimited` do not
   exist yet (`mobile/docs/payments.md`).
 - `react-native-vision-camera-skia` is unused but still installed: removing it

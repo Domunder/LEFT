@@ -36,7 +36,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AuthButton } from '@/components/ui/auth-button';
-import { BackgroundVideo } from '@/components/ui/background-video';
+import { BackgroundSlideshow } from '@/components/ui/background-slideshow';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Body, Caption, Display, Em } from '@/components/ui/typography';
@@ -104,7 +104,7 @@ export default function CreateAccountScreen() {
 
   return (
     <Screen padded={false} edges={[]}>
-      <BackgroundVideo opacity={VideoOverlay.signUpVideoOpacity} />
+      <BackgroundSlideshow opacity={VideoOverlay.signUpVideoOpacity} />
 
       <LinearGradient
         colors={[...VideoOverlay.signUpGradientColors]}
