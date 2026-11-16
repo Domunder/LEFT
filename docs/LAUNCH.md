@@ -26,14 +26,15 @@ anders heissen.
 ## 0 · Vorab entscheiden
 
 - ☐ **Betreiber:** Name/Rechtsform, Postadresse, Kontakt-E-Mail (z. B.
-  `hello@leftmoment.com`). Diese drei Werte brauchen die Rechtstexte, beide
+  `support@leftmoment.com`). Diese drei Werte brauchen die Rechtstexte, beide
   Stores und die Website.
 - ☐ **Rechtstexte prüfen lassen.** Quelle: `mobile/src/constants/legal.ts`
   (App und Website lesen dieselbe Datei). Die Stellen für die Anwältin sind
   mit `REVIEW:` markiert: Mindestalter, Widerrufsrecht bei digitalen Inhalten,
   Haftung, Gerichtsstand, Rechtsgrundlage für abgebildete Dritte, Verbleib der
   Fotos eines gelöschten Kontos in fremden Alben, Auslandtransfers.
-- ☐ Danach in `legal.ts`: alle `[KLAMMER]`-Werte füllen, `LEGAL_DRAFT = false`,
+- ☑ (2026-11-16, ohne Rechtsprüfung, Entscheid des Betreibers; kein
+  EU-Vertreter benannt) In `legal.ts`: alle `[KLAMMER]`-Werte füllen, `LEGAL_DRAFT = false`,
   `LEGAL_UPDATED` setzen; in `web/astro.config.mjs` `/terms/` und `/privacy/`
   aus `UNLISTED` nehmen; `contactEmail` in `web/src/site.ts` setzen.
 - ☐ **Die Entscheide der Nacht-Session bestätigen** (`docs/MILESTONES.md`,
@@ -49,7 +50,7 @@ anders heissen.
    Die Website importiert `mobile/src/constants/legal.ts` — Pages klont das
    ganze Repo, das funktioniert ohne Zusatz.
 3. ☐ Custom domain `leftmoment.com` (und `www` → Weiterleitung) aufschalten.
-4. ☐ E-Mail: Cloudflare Email Routing für `hello@leftmoment.com` → dein Postfach.
+4. ☐ E-Mail: Cloudflare Email Routing für `support@leftmoment.com` → dein Postfach.
 5. ☐ Prüfen (erst sinnvoll nach Schritt 4, wenn Team-ID und Fingerprint drin sind):
    - `https://leftmoment.com/.well-known/apple-app-site-association` → 200,
      `application/json`, keine Weiterleitung
@@ -204,7 +205,7 @@ Ein **neuer nativer Build ist nötig** (neu seit dem letzten Build:
 - ☐ Einstellungen: beide Schalter; aus → keine Mitteilung dieser Art; bei
   verweigerter Berechtigung erscheint der Hinweis mit „Open Settings"
 - ☐ Abmelden → das Gerät bekommt keine Mitteilungen des alten Kontos mehr
-- ☐ Rechtstexte in der App (Entwurfs-Hinweis sichtbar, solange `LEGAL_DRAFT`)
+- ☐ Rechtstexte in der App (kein Entwurfs-Hinweis mehr seit 2026-11-16)
 - ☐ Blitz zündet wirklich, Speicheranzeige im Sucher bleibt flach, Querformat-Foto,
   App-Kill und Funkloch (aus M2 offen)
 - ☐ Löschen als Host und als Gast, „Reduce Motion", „Reduce Transparency" (aus M3 offen)

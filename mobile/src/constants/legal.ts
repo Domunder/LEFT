@@ -8,14 +8,17 @@
  * ---------------------------------------------------------------------------
  * NOT LEGALLY REVIEWED. These texts were drafted against how the app actually
  * works (2026-11-15); they are not legal advice and no lawyer has seen them.
- * While `LEGAL_DRAFT` is true, the app and the website both print a notice
- * saying so above the text, and the web pages stay `noindex`.
+ * `LEGAL_DRAFT` (a notice above the text, web pages `noindex`) was switched
+ * off on 2026-11-16 for the release, by the operator's decision and without a
+ * review. The texts are published as they are.
  *
  * BEFORE RELEASE
  *
  *  1. Have them reviewed — Swiss law (FADP/DSG, CO/OR) and the GDPR. The points
  *     a reviewer should look at first are marked `REVIEW:` below.
- *  2. Fill in every [BRACKETED] value:
+ *  2. Fill in every [BRACKETED] value. Filled 2026-11-16 (sole proprietor,
+ *     Supabase in eu-west-1). No [EU REPRESENTATIVE] is appointed — see the
+ *     REVIEW note under "Who is responsible".
  *
  *       [LEGAL ENTITY NAME]   the company or sole proprietor operating LEFT
  *       [POSTAL ADDRESS]      required by Swiss law, the GDPR and both stores
@@ -26,7 +29,7 @@
  *                             delete the line
  *       [BACKUP RETENTION]    how long database backups are kept
  *
- *  3. Set `LEGAL_DRAFT` to false and bump `LEGAL_UPDATED`.
+ *  3. Bump `LEGAL_UPDATED` when the wording changes.
  * ---------------------------------------------------------------------------
  */
 
@@ -38,19 +41,25 @@ export type LegalSection = {
   blocks: LegalBlock[];
 };
 
-/** True until a lawyer has reviewed the texts and the placeholders are filled. */
-export const LEGAL_DRAFT = true;
+/**
+ * Shows the draft notice and keeps the web pages `noindex` while true.
+ *
+ * Off since 2026-11-16 by the operator's decision, for the release — **not**
+ * because a lawyer has reviewed the texts: nobody has. The `REVIEW:` marks
+ * below still stand.
+ */
+export const LEGAL_DRAFT = false;
 
 /** Printed above both documents while `LEGAL_DRAFT` is true. */
 export const LEGAL_DRAFT_NOTICE =
-  'Draft. This text has not been legally reviewed yet and still contains placeholders.';
+  'Draft. This text has not been legally reviewed yet.';
 
 /** Bump whenever the wording changes materially. */
-export const LEGAL_UPDATED = '2026-11-15';
+export const LEGAL_UPDATED = '2026-11-16';
 
-const ENTITY = '[LEGAL ENTITY NAME]';
-const EMAIL = '[CONTACT EMAIL]';
-const ADDRESS = '[POSTAL ADDRESS]';
+const ENTITY = 'Dominik Rüegg';
+const EMAIL = 'support@leftmoment.com';
+const ADDRESS = 'Speerstrasse 14, 8640 Rapperswil, Switzerland';
 
 // ---------------------------------------------------------------------------
 // Terms
@@ -226,8 +235,8 @@ export const TERMS_SECTIONS: LegalSection[] = [
     blocks: [
       // REVIEW: governing law and venue — Swiss law / seat of the entity is the
       // obvious choice; consumers keep their mandatory local protections.
-      'These terms are governed by the law of [JURISDICTION]. The courts of ' +
-        '[JURISDICTION] have jurisdiction, unless mandatory consumer law gives ' +
+      'These terms are governed by Swiss law. The courts of Rapperswil-Jona, ' +
+        'Switzerland, have jurisdiction, unless mandatory consumer law gives ' +
         'you the right to bring a claim where you live.',
     ],
   },
@@ -254,7 +263,9 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     blocks: [
       `${ENTITY} is the controller of the personal data described here.`,
       `${ENTITY}\n${ADDRESS}\n${EMAIL}`,
-      '[EU REPRESENTATIVE — name and address under GDPR Art. 27; delete this line if none is required]',
+      // REVIEW: no EU representative (GDPR Art. 27) is appointed. LEFT is offered
+      // worldwide, the EU included — the operator's decision of 2026-11-16, taken
+      // knowing that Art. 27 will normally require one. Name it here once appointed.
     ],
   },
   {
@@ -331,7 +342,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
         'the link only with people who belong to the event.',
       'We use the following service providers, who process data on our behalf:',
       { bullets: [
-        'Supabase — database, sign-in and photo storage, hosted in [HOSTING REGION].',
+        'Supabase — database, sign-in and photo storage, hosted in the European Union (Ireland).',
         'Apple and Google — sign-in, in-app purchases through their stores, and delivery of push notifications.',
         'RevenueCat — validation and records of in-app purchases.',
         'Expo — delivery of push notifications to Apple and Google.',
@@ -347,7 +358,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
     blocks: [
       // REVIEW: complete once the hosting region and the processors' DPAs/SCCs
       // are settled; list the countries for FADP art. 19.
-      'Our database and photo storage are located in [HOSTING REGION]. Some of ' +
+      'Our database and photo storage are located in the European Union (Ireland). Some of ' +
         'the providers named above are based in, or may access data from, other ' +
         'countries, including the United States. Where data is transferred to a ' +
         'country without an adequate level of data protection, we rely on the ' +
@@ -367,7 +378,7 @@ export const PRIVACY_SECTIONS: LegalSection[] = [
         'Push tokens: until you sign out, delete your account, or the token stops working.',
         'Purchase records in our database: until you delete your account. The app stores, and our own accounting, keep transaction records for as long as tax and accounting law requires — in Switzerland ten years.',
         'Server logs, usage statistics and error reports: a short rolling period, normally no longer than 90 days.',
-        'Backups: deleted data can remain in encrypted backups for up to [BACKUP RETENTION] before it is overwritten.',
+        'Backups: deleted data can remain in encrypted backups for up to 7 days before it is overwritten.',
       ] },
     ],
   },

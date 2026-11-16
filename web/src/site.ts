@@ -14,7 +14,7 @@ export const SITE = {
   playStoreUrl: null as string | null,
   /** The app's custom scheme (mobile/app.json → scheme). */
   scheme: 'left',
-  contactEmail: null as string | null,
+  contactEmail: 'support@leftmoment.com' as string | null,
 } as const;
 
 export const NAV = [

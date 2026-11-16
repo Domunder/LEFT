@@ -504,9 +504,11 @@ Statuses: `setup → live → developed`. Clients cannot write `status`, `ends_a
   in properties. Native crashes are not covered. `mobile/docs/analytics.md`.
 - **`constants/legal.ts` is the one source for the app and the website**
   (`web/src/components/LegalDocument.astro` imports it), so it must import
-  nothing. It is an **unreviewed draft**: `LEGAL_DRAFT` prints a notice above
-  the text in both places and keeps the web pages `noindex`. Never present it
-  as reviewed; `REVIEW:` comments mark what a lawyer should look at.
+  nothing. **No lawyer has reviewed it.** `LEGAL_DRAFT` (a notice above the
+  text, web pages `noindex`) is off since 2026-11-16 — the user's decision for
+  a worldwide release, knowing the gaps (no EU representative under GDPR
+  Art. 27). Never present it as reviewed; `REVIEW:` comments mark what a
+  lawyer should look at.
 
 ## Guests have no account
 

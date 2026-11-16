@@ -357,8 +357,9 @@ statisch, für Cloudflare Pages; nur Englisch. Details und Befehle:
   Android-Signaturschlüssels in `assetlinks.json` (beide als `REPLACE_WITH_…`
   markiert).
 
-**Wartet auf die Rechtsprüfung:** danach `LEGAL_DRAFT` ausschalten und die
-Seiten aus `UNLISTED` nehmen.
+**Rechtstexte (2026-11-16):** Platzhalter gefüllt, `LEGAL_DRAFT` aus, Seiten aus
+`UNLISTED` genommen — Entscheid des Betreibers für den weltweiten Start, **ohne
+Rechtsprüfung** und ohne EU-Vertreter (DSGVO Art. 27). Die Prüfung bleibt offen.
 
 **Offen / nicht gebaut:**
 

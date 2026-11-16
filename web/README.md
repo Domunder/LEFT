@@ -38,8 +38,8 @@ frame PNG and geometry are used at build time).
 | App Store / Play Store links | `src/site.ts` (`appStoreUrl`, `playStoreUrl`) | the store listings. Until then the buttons read "Coming soon" and `/j/{CODE}` does not forward to a store. |
 | Apple Team ID | `public/.well-known/apple-app-site-association` (`REPLACE_WITH_APPLE_TEAM_ID`) | Apple Developer account → Membership |
 | Android signing fingerprint | `public/.well-known/assetlinks.json` (`REPLACE_WITH_SHA256_SIGNING_CERT_FINGERPRINT`) | `eas credentials` (or Play Console → App signing) |
-| Terms and Privacy | `../mobile/src/constants/legal.ts` | legal review and the `[BRACKETED]` values; then set `LEGAL_DRAFT = false` (drops the notice and `noindex`) and remove the two entries from `UNLISTED` (`astro.config.mjs`) |
-| Contact address | `src/site.ts` (`contactEmail`) | not shown anywhere yet |
+| Terms and Privacy | `../mobile/src/constants/legal.ts` | filled in and published 2026-11-16 (`LEGAL_DRAFT = false`) without a legal review — still worth having one |
+| Contact address | `src/site.ts` (`contactEmail`) | set; not shown anywhere yet except in the legal texts |
 
 ## Deploying (once the domain exists)
 
