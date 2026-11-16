@@ -167,7 +167,11 @@ export async function listMyEvents(): Promise<Event[]> {
 }
 
 /** An event plus its roster size — one row per card on 15/16. */
-export type EventSummary = Event & { memberCount: number };
+export type EventSummary = Event & {
+  memberCount: number;
+  /** Frames the whole group has taken so far — the roster's `shots_taken`, summed. */
+  shotsTaken: number;
+};
 
 /**
  * The Films library (15/16), in one round trip.
@@ -184,16 +188,21 @@ export type EventSummary = Event & { memberCount: number };
 export async function listMyEventSummaries(): Promise<EventSummary[]> {
   const { data, error } = await getSupabase()
     .from('events')
-    .select('*, event_members(count)')
+    .select('*, event_members(shots_taken)')
     .order('created_at', { ascending: false });
   if (error) throw error;
 
-  return (data ?? []).map(({ event_members, ...event }) => ({
-    ...(event as Event),
-    // The aggregate comes back as a one-element array, and as nothing at all for
-    // an event whose roster is somehow empty.
-    memberCount: (event_members as { count: number }[] | null)?.[0]?.count ?? 0,
-  }));
+  return (data ?? []).map(({ event_members, ...event }) => {
+    // The roster itself, one small row per member (a group is capped at 200):
+    // its length is the group size, and its counters are the only way to say
+    // how many photos exist before the reveal — the photo rows are hidden.
+    const roster = (event_members as { shots_taken: number }[] | null) ?? [];
+    return {
+      ...(event as Event),
+      memberCount: roster.length,
+      shotsTaken: roster.reduce((sum, member) => sum + (member.shots_taken ?? 0), 0),
+    };
+  });
 }
 
 export async function listMembers(eventId: string): Promise<EventMember[]> {

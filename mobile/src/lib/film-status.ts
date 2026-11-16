@@ -56,14 +56,9 @@ export function filmPhase(event: Event, now: Date = new Date()): FilmPhase {
   return isDeveloped(event, now) ? 'developed' : 'live';
 }
 
-/**
- * The poster's status capsule: the countdown while the film is live, and what
- * is in the album once it is developed.
- */
-export function posterStatus(event: Event, photoCount: number, now: Date = new Date()): string {
-  const label = statusLabel(event, now);
-  if (filmPhase(event, now) !== 'developed') return label;
-  return `${label} · ${photoCount} ${photoCount === 1 ? 'photo' : 'photos'}`;
+/** "42 photos" / "1 photo" — beside the group size on a moment's card. */
+export function photoLabel(count: number): string {
+  return `${count} ${count === 1 ? 'photo' : 'photos'}`;
 }
 
 /** Whether this card's badge counts down, and so needs a ticking clock. */
