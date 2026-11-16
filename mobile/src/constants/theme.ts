@@ -95,16 +95,23 @@ export const Colors = {
  */
 export const VideoOverlay = {
   /** Backdrop opacity on Landing. The auth screens use 0.55. */
-  videoOpacity: 0.85,
+  videoOpacity: 0.95,
   signUpVideoOpacity: 0.55,
   /** linear-gradient(to bottom, ...) — colors and their stops, in order. */
+  /*
+    Landing only. Since 2026-11-16 its copy and buttons stand on this gradient
+    alone, with no glass panel: dark behind the logo, clear over the upper half
+    where the people in the photos are, and dark again from where the headline
+    starts.
+  */
   gradientColors: [
-    'rgba(6,6,8,0.25)',
-    'rgba(6,6,8,0.15)',
-    'rgba(6,6,8,0.7)',
+    'rgba(6,6,8,0.35)',
+    'rgba(6,6,8,0)',
+    'rgba(6,6,8,0.1)',
+    'rgba(6,6,8,0.78)',
     'rgba(6,6,8,0.97)',
   ] as const,
-  gradientLocations: [0, 0.4, 0.68, 1] as const,
+  gradientLocations: [0, 0.2, 0.42, 0.64, 1] as const,
   /*
     06 Sign Up darkens differently from Landing: it starts far darker at the top
     (0.55 vs 0.25) and lifts in the upper third rather than the middle, because its
@@ -319,8 +326,9 @@ export const LandingHeader = {
 
 /** Landing bottom glass panel (01) — pinned, not padded by Screen. */
 export const LandingPanel = {
-  inset: 16,
-  bottom: 36,
+  /** Side inset of the copy and buttons, which stand directly on the photos (= Spacing.screenX). */
+  inset: 28,
+  bottom: 44,
   /** Headline -> subcopy. */
   headlineGap: 6,
   /** Subcopy -> the provider row. */
@@ -455,6 +463,18 @@ export const Invite = {
   qrRadius: 24,
   /** The light card's padding, which doubles as the QR's quiet zone. */
   qrPadding: 20,
+  /**
+   * The card's paper: warm white running a little warmer towards the bottom.
+   * Both ends stay far lighter than the modules need for a scanner.
+   */
+  qrPaper: ['#fbf8f2', '#efe3d2'] as const,
+  /** Corner radii in module units: a run of modules, a finder's ring and its eye. */
+  qrModuleRadius: 0.5,
+  qrFinderRadius: 2,
+  qrEyeRadius: 1,
+  /** The matrix -> the line under it ("LEFT · Scan to join"). */
+  qrFooterGap: 14,
+  qrFooterMuted: 'rgba(11,11,12,0.5)',
   /** The artboard's subcopy is 0.38; Colors.textDim is 0.42. */
   subcopy: 'rgba(240,237,232,0.38)',
   /**
@@ -995,6 +1015,10 @@ export const Camera = {
     sideWidth: 76,
     /** Event name -> counter. */
     nameGap: 2,
+    /** The countdown is a button (to the film's developing state): its chevron and reach. */
+    chevronSize: 12,
+    chevronGap: 2,
+    countdownHitSlop: 14,
   },
 
   /** "17 left" — the roll. */
@@ -1265,6 +1289,8 @@ export const Films = {
     /** An empty frame, where no photo exists yet. */
     emptyIconSize: 16,
     fadeMs: 220,
+    /** The "Sample" tag on the first tile of a strip of stand-in pictures. */
+    sampleTag: { inset: 5, height: 18, paddingX: 7 },
   },
 
   /**
@@ -1642,6 +1668,10 @@ export const Album = {
     frameGap: 6,
     frameRadius: 4,
     frameFill: 'rgba(255,255,255,0.035)',
+    /** A frame that holds a photo: blurred past recognition, and dimmed. */
+    frameBlur: 22,
+    frameDim: 'rgba(8,8,10,0.25)',
+    frameFadeMs: 320,
     stripGap: 40,
     actionsGap: 12,
     actionsBottom: 12,
@@ -1677,10 +1707,11 @@ export const Album = {
 export const ScrollEdge = {
   /** Heights of the two edges. The list is padded by the same amounts. */
   top: 24,
-  bottom: 40,
+  /** Above the screen's bottom inset, which the edge covers as well. */
+  bottom: 56,
   /** Stacked blurs, each shorter than the last, so the blur grows towards the edge. */
   blurSteps: 3,
-  blurIntensity: 8,
+  blurIntensity: 10,
   /** `Colors.bg`, opaque -> clear. Not 'transparent': that fades through black. */
   colors: [Colors.bg, 'rgba(16,16,16,0)'] as const,
 } as const;

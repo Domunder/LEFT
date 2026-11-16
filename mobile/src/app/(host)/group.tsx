@@ -133,6 +133,9 @@ export default function GroupScreen() {
   }, [event, starting, router]);
 
   const count = members.length;
+  /** `max_members` is a hard cap: `join_event()` refuses the next guest. */
+  const capacity = event?.max_members ?? 0;
+  const spotsLeft = Math.max(capacity - count, 0);
 
   return (
     <Screen transparent style={styles.screen}>
@@ -147,7 +150,7 @@ export default function GroupScreen() {
       */}
       {event ? (
         <Display size="lg" style={styles.headline}>
-          <Em>{count}</Em> {count === 1 ? 'person' : 'people'}
+          <Em>{count}</Em>/{capacity} people
           {'\n'}
           {count === 1 ? 'has joined.' : 'have joined.'}
         </Display>
@@ -213,21 +216,20 @@ export default function GroupScreen() {
         {event ? (
           <>
             {/*
-              A plain count, not a count against a cap.
-
-              This used to read "34/50 joined" beside a "16 spots left" pill, and
-              both were wrong the moment the group stopped being a limit:
-              `max_members` is the host's estimate now — it sizes the budget and
-              prices the unlock, and `join_event` admits anyone with the code. A
-              readout against it would invite the question "what happens at 51?",
-              whose answer is "nothing".
-
-              The artboard has no readout here at all; it relies on the host
-              counting chips, which stops working somewhere around a dozen people.
+              The headline counts against the group's size ("3/50 people",
+              2026-11-16, the user's call); this says what is left of it. The
+              size is a real limit again — it is what the host paid for, and
+              `join_event()` refuses whoever comes after the last spot.
             */}
             <StatusPill
-              label={count === 1 ? '1 joined' : `${count} joined`}
-              dotColor={Colors.green}
+              label={
+                spotsLeft === 0
+                  ? 'Group is full'
+                  : spotsLeft === 1
+                    ? '1 spot left'
+                    : `${spotsLeft} spots left`
+              }
+              dotColor={spotsLeft === 0 ? Colors.gold : Colors.green}
             />
           </>
         ) : null}

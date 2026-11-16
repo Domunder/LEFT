@@ -197,7 +197,7 @@ export default function InviteScreen() {
           // The ref goes on a plain wrapper rather than the card: captureRef needs a
           // host view, and it keeps the capture free of the shadow's spill.
           <View ref={cardRef} collapsable={false} style={styles.capture}>
-            <QrCode value={url} />
+            <QrCode value={url} caption={event?.name} />
           </View>
         ) : (
           <QrCodePlaceholder style={styles.capture} />

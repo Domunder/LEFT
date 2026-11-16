@@ -82,7 +82,7 @@ import { ShutterButton } from '@/components/ui/shutter-button';
 import { Spinner } from '@/components/ui/spinner';
 import { Body, Display, Em, Label } from '@/components/ui/typography';
 import { ZoomSelector } from '@/components/ui/zoom-selector';
-import { Camera as T, Glass as GlassTokens } from '@/constants/theme';
+import { Camera as T, Colors, Glass as GlassTokens } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { useCameraSession } from '@/hooks/use-camera-session';
 import type { FilmLook } from '@/lib/events';
@@ -253,6 +253,12 @@ export default function CameraScreen() {
       shotsLeft={session.shotsLeft}
       pending={session.pending}
       onClose={leave}
+      onOpenFilm={() =>
+        router.push({
+          pathname: '/(library)/album/[id]',
+          params: { id: event.id },
+        })
+      }
       onOpenShots={() =>
         router.push({
           pathname: '/(capture)/roll',
@@ -339,6 +345,8 @@ type ViewfinderProps = {
   shotsLeft: number | null;
   pending: number;
   onClose: () => void;
+  /** The album's "developing" state: the count so far, and the host's "develop now". */
+  onOpenFilm: () => void;
   onOpenShots: () => void;
   onOpenInvite: () => void;
 };
@@ -352,6 +360,7 @@ function Viewfinder({
   shotsLeft,
   pending,
   onClose,
+  onOpenFilm,
   onOpenShots,
   onOpenInvite,
 }: ViewfinderProps) {
@@ -666,8 +675,22 @@ function Viewfinder({
           <RollCounter shotsLeft={shotsLeft} />
         </View>
 
+        {/*
+          The countdown is the way to the film's "developing" state, as the
+          status capsule is on a moment's card. On an unlimited roll the
+          roll-empty screen never comes, and this is the only way from here to
+          the host's "develop now" (2026-11-16).
+        */}
         <View style={[styles.headerSide, styles.headerRight]}>
-          <EventCountdown endsAt={endsAt} />
+          <PressScale
+            accessibilityRole="button"
+            accessibilityLabel="See how the film is doing"
+            hitSlop={T.header.countdownHitSlop}
+            onPress={onOpenFilm}
+            style={styles.headerCountdown}>
+            <EventCountdown endsAt={endsAt} />
+            <Feather name="chevron-right" size={T.header.chevronSize} color={Colors.textMuted} />
+          </PressScale>
         </View>
       </View>
 
@@ -824,6 +847,11 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     alignItems: 'flex-end',
+  },
+  headerCountdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.header.chevronGap,
   },
   headerCenter: {
     flex: 1,

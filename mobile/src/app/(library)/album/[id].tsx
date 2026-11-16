@@ -26,7 +26,7 @@
  * they have seen the photos, never in front of them.
  */
 
-import { Image } from 'expo-image';
+import { Image, type ImageSource } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -49,6 +49,7 @@ import { RevealVeil, revealDurationMs } from '@/components/ui/reveal-veil';
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
 import { Body } from '@/components/ui/typography';
+import { samplesFor } from '@/constants/samples';
 import { Album as T, Colors, Glass as GlassTokens } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import {
@@ -66,6 +67,7 @@ import {
 import { getSession, isAnonymous } from '@/lib/auth';
 import { messageFor } from '@/lib/auth-errors';
 import { endEvent, subscribeToEventStatus } from '@/lib/events';
+import { loadMyShots } from '@/lib/my-shots';
 import { deletePhoto, reportPhoto } from '@/lib/photos';
 import { isPromptDismissed } from '@/lib/prompt-dismissal';
 
@@ -73,6 +75,8 @@ type LoadState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; albu
 
 /** `waiting` holds the sheet dark; `playing` develops it; `done` is a plain album. */
 type Reveal = 'waiting' | 'playing' | 'done';
+
+const NO_THUMBS: readonly string[] = [];
 
 const plural = (count: number, one: string, many: string) =>
   `${count} ${count === 1 ? one : many}`;
@@ -123,6 +127,32 @@ export default function AlbumScreen() {
     useCallback(() => {
       void load();
     }, [load])
+  );
+
+  /*
+    What the developing state's frames hold under their blur: the viewer's own
+    latest frames, then stand-ins. Other people's photos cannot be fetched
+    before the reveal (RLS), and at that blur a stand-in says the same thing —
+    there is a picture here, and it cannot be seen yet.
+  */
+  const [ownThumbs, setOwnThumbs] = useState<readonly string[]>(NO_THUMBS);
+  const waiting = state.kind === 'ready' && !state.album.developed;
+  useEffect(() => {
+    if (!id || !waiting) return;
+    let cancelled = false;
+    void loadMyShots(id).then((shots) => {
+      if (!cancelled) setOwnThumbs(shots.slice(0, T.developing.frames).map((shot) => shot.thumbUri));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, waiting]);
+  const hiddenFrames = useMemo<ImageSource[]>(
+    () => [
+      ...ownThumbs.map((uri) => ({ uri })),
+      ...samplesFor(id ?? '', T.developing.frames),
+    ],
+    [id, ownThumbs]
   );
 
   // The host developing early, or the scheduled job catching up with the clock.
@@ -477,6 +507,7 @@ export default function AlbumScreen() {
           endsAt={album.event.ends_at}
           shotsTaken={album.shotsTaken}
           memberCount={album.memberCount}
+          photos={hiddenFrames}
           canDevelop={album.isHost && album.event.status === 'live'}
           developing={developing}
           onDevelop={develop}

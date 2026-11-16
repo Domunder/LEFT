@@ -7,9 +7,10 @@
  * depends on, to fit one screen, costs more than a small sibling — the call made
  * for AuthButton before it.
  *
- * The fill is `Colors.glassButton` flat, without PillButton's BlurView: there is no
- * video behind this screen, only the near-black page and the ambient glow, so a
- * blur would cost a native view per button and blur nothing.
+ * The `glass` variant is drawn on `Glass` — Liquid Glass on iOS 26+ — since
+ * 2026-11-16 (the user's call). It was a flat fill before, on the reasoning
+ * that 09 has no picture behind it; the camera's controls set the precedent
+ * for glass on the dark page, where the material picks up the ambient glow.
  *
  * 17 reuses this for its Download/Share row and needs the *light* half of that
  * artboard pair — an off-white fill with dark text — hence `variant`. It also
@@ -22,8 +23,9 @@ import { Feather } from '@expo/vector-icons';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 
-import { Colors, Invite, PillPaddingY, Radii } from '@/constants/theme';
+import { Colors, Glass as GlassTokens, Invite, PillPaddingY, Radii } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { Glass } from './glass';
 import { PressScale } from './press-scale';
 
 type ShareButtonProps = {
@@ -60,19 +62,8 @@ export function ShareButton({
   // Everything on the light fill has to invert, including the spinner.
   const foreground = light ? Colors.onLightDeep : Colors.text;
 
-  return (
-    <PressScale
-      accessibilityRole="button"
-      accessibilityState={{ disabled: disabled || busy, busy }}
-      disabled={disabled || busy}
-      onPress={onPress}
-      style={[
-        styles.base,
-        { paddingVertical: paddingY },
-        light ? styles.light : styles.glass,
-        disabled && styles.disabled,
-        style,
-      ]}>
+  const content = (
+    <>
       {/*
         Fixed-size slot, as on AuthButton: swapping the icon for the spinner must
         not reflow the label, or the pair of buttons twitches on every tap.
@@ -85,6 +76,24 @@ export function ShareButton({
         )}
       </View>
       <Text style={[styles.label, light && styles.lightLabel]}>{label}</Text>
+    </>
+  );
+
+  return (
+    <PressScale
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || busy, busy }}
+      disabled={disabled || busy}
+      scale={light ? undefined : GlassTokens.pressScale}
+      onPress={onPress}
+      style={[styles.base, disabled && styles.disabled, style]}>
+      {light ? (
+        <View style={[styles.row, styles.light, { paddingVertical: paddingY }]}>{content}</View>
+      ) : (
+        <Glass radius={Radii.pill} interactive style={[styles.row, { paddingVertical: paddingY }]}>
+          {content}
+        </Glass>
+      )}
     </PressScale>
   );
 }
@@ -92,16 +101,13 @@ export function ShareButton({
 const styles = StyleSheet.create({
   base: {
     flex: 1,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: Invite.button.gap,
     borderRadius: Radii.pill,
-  },
-  glass: {
-    backgroundColor: Colors.glassButton,
-    borderWidth: 1,
-    borderColor: Colors.hairlineStrong,
   },
   /*
     No border, and weight 600 against the glass button's 500 — the artboard draws

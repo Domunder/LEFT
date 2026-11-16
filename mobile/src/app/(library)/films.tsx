@@ -16,8 +16,8 @@
  *  - Otherwise a vertical list of compact cards (`MomentCard`): name, photo
  *    and people counts, status, and a strip of four photos whose last tile is
  *    blurred and reads "+N" when there are more. A developed moment shows its
- *    album; one that is not shows the viewer's own frames so far, or empty
- *    frames. Starting and joining are the header's plus and people buttons.
+ *    album; one that is not shows the viewer's own frames so far. With
+ *    nothing to show, the strip holds sample pictures tagged "Sample". Starting and joining are the header's plus and people buttons.
  *
  * Where a tap goes: a running moment opens its camera — unless the viewer's
  * roll is used up, then the album's "developing" state; a finished one opens
@@ -26,8 +26,8 @@
  *
  * Other deviations from the artboard, all flagged in CLAUDE.md:
  *  - the title is "Moments" (was "Your Films", then "Your Moments")
- *  - the list blurs and dissolves into the page at its top and bottom edge
- *    (`ScrollEdge`) instead of being cut off there
+ *  - the list blurs and dissolves into the page at its top edge and at the
+ *    very bottom of the screen (`ScrollEdge`) instead of being cut off there
  *  - the header carries a third control, Join, between the gear and the plus
  *  - a moment reads three phases (not started / live with a countdown /
  *    developed) where the artboard draws two
@@ -41,6 +41,7 @@ import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CircleIconButton } from '@/components/ui/circle-back-button';
 import { NewMomentCard } from '@/components/ui/film-poster';
@@ -55,7 +56,7 @@ import { Body, Display } from '@/components/ui/typography';
 import { samplesFor } from '@/constants/samples';
 import { Colors, Films, Glass, ScrollEdge as Edge } from '@/constants/theme';
 import { getSession, isAnonymous } from '@/lib/auth';
-import { loadCovers, type FilmCover } from '@/lib/covers';
+import { loadCovers, STRIP_SIZE, type FilmCover } from '@/lib/covers';
 import { isDeveloped, listMyEventSummaries, type EventSummary } from '@/lib/events';
 import { destinationFor, filmPhase, statusLabel, tickIntervalMs } from '@/lib/film-status';
 import { tintFor } from '@/lib/film-tint';
@@ -65,6 +66,7 @@ import { dismissPrompt, isPromptDismissed } from '@/lib/prompt-dismissal';
 const EMPTY: EventSummary[] = [];
 const NO_COVERS = new Map<string, FilmCover>();
 const NO_PHOTOS: readonly string[] = [];
+const TOP_ONLY = ['top'] as const;
 
 /** Seeds the new-moment stack's samples and tint, the way an event id does. */
 const NEW_SEED = 'new-moment';
@@ -76,6 +78,9 @@ type LoadState =
 
 export default function FilmsScreen() {
   const router = useRouter();
+  // The list runs to the screen's physical bottom edge and dissolves there, so
+  // the bottom inset is this screen's to hand out, not `<Screen>`'s.
+  const insets = useSafeAreaInsets();
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [covers, setCovers] = useState(NO_COVERS);
@@ -204,6 +209,10 @@ export default function FilmsScreen() {
           photoCount={developed ? (cover?.photoCount ?? event.shotsTaken) : event.shotsTaken}
           photos={cover?.uris ?? NO_PHOTOS}
           stripCount={cover?.photoCount ?? 0}
+          // Nothing to show yet — nobody has shot, or only others have, and
+          // theirs are hidden until the reveal: stand-ins, tagged as such.
+          // Only once the covers are known, so real photos never follow samples.
+          samples={cover && cover.uris.length === 0 ? samplesFor(event.id, STRIP_SIZE) : undefined}
           // Nothing left to shoot: the camera would only say so. Go and wait.
           onPress={() => router.push(rollEmpty ? album : destinationFor(event, user?.id))}
           // A running moment opens its camera; the capsule is the way to its
@@ -232,7 +241,7 @@ export default function FilmsScreen() {
   ) : null;
 
   return (
-    <Screen transparent padded={false}>
+    <Screen transparent padded={false} edges={TOP_ONLY}>
       {/* Only the empty state has a picture to be lit by; the list sits on the page's glow. */}
       {empty ? (
         <View style={styles.backdrop} pointerEvents="none">
@@ -298,7 +307,7 @@ export default function FilmsScreen() {
       ) : empty ? (
         <>
           {prompt}
-          <View style={styles.emptyStack}>
+          <View style={[styles.emptyStack, { paddingBottom: Films.empty.paddingBottom + insets.bottom }]}>
             <NewMomentCard
               photos={samplesFor(NEW_SEED)}
               tint={tintFor(NEW_SEED)}
@@ -316,11 +325,14 @@ export default function FilmsScreen() {
             renderItem={renderMoment}
             ListHeaderComponent={prompt ?? undefined}
             ItemSeparatorComponent={Separator}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[
+              styles.list,
+              { paddingBottom: Math.max(Films.list.paddingBottom, Edge.bottom) + insets.bottom },
+            ]}
             showsVerticalScrollIndicator={false}
           />
           <ScrollEdge edge="top" />
-          <ScrollEdge edge="bottom" />
+          <ScrollEdge edge="bottom" inset={insets.bottom} />
         </View>
       )}
     </Screen>
@@ -365,7 +377,6 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: Films.empty.sideInset,
     paddingTop: Films.empty.paddingTop,
-    paddingBottom: Films.empty.paddingBottom,
   },
   fill: {
     flex: 1,
@@ -379,7 +390,6 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: Films.list.paddingX,
     paddingTop: Edge.top,
-    paddingBottom: Math.max(Films.list.paddingBottom, Edge.bottom),
   },
   separator: {
     height: Films.list.gap,

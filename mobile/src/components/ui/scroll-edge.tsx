@@ -22,13 +22,18 @@ import { ScrollEdge as T } from '@/constants/theme';
 
 type ScrollEdgeProps = {
   edge: 'top' | 'bottom';
+  /**
+   * Extra height past the token's — the screen's safe-area inset, for a list
+   * that runs to the physical edge of the screen.
+   */
+  inset?: number;
 };
 
 const STEPS = Array.from({ length: T.blurSteps }, (_, index) => index);
 
-export function ScrollEdge({ edge }: ScrollEdgeProps) {
+export function ScrollEdge({ edge, inset = 0 }: ScrollEdgeProps) {
   const top = edge === 'top';
-  const height = T[edge];
+  const height = T[edge] + inset;
 
   return (
     <View pointerEvents="none" style={[styles.edge, top ? styles.top : styles.bottom, { height }]}>

@@ -9,7 +9,8 @@
  *
  * The strip has `STRIP_SIZE` tiles. With more photos than tiles the last one is
  * blurred and carries "+N" — the rest of the album. Where there is no photo
- * yet the tile is an empty frame. Which photos those are is the caller's
+ * yet the strip shows `samples`, dimmed and tagged "Sample" (2026-11-16), or
+ * empty frames while the caller has not said yet. Which photos those are is the caller's
  * business (`lib/covers.ts`): the album's once developed, the viewer's own
  * before that.
  *
@@ -23,7 +24,7 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { Image } from 'expo-image';
+import { Image, type ImageSource } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PressScale } from './press-scale';
@@ -54,6 +55,11 @@ type MomentCardProps = {
   /** Set when the strip leads somewhere other than the card does. */
   onPressPhotos?: () => void;
   photosLabel?: string;
+  /**
+   * Stand-in pictures for a moment with no photo to show yet. Drawn dimmed and
+   * tagged "Sample", so they are never taken for the group's own.
+   */
+  samples?: readonly ImageSource[];
 };
 
 export function MomentCard({
@@ -68,8 +74,10 @@ export function MomentCard({
   onPressStatus,
   onPressPhotos,
   photosLabel,
+  samples,
 }: MomentCardProps) {
   const shown = photos.slice(0, STRIP_SIZE);
+  const sampled = shown.length === 0 && samples !== undefined && samples.length > 0;
   // The last tile gives way to the count, so it stands for itself and the rest.
   const more = stripCount > STRIP_SIZE ? stripCount - (STRIP_SIZE - 1) : 0;
 
@@ -78,6 +86,25 @@ export function MomentCard({
       {Array.from({ length: STRIP_SIZE }, (_, i) => {
         const uri = shown[i];
         const counted = more > 0 && i === STRIP_SIZE - 1;
+
+        if (sampled) {
+          return (
+            <View key={i} style={styles.tile}>
+              <Image
+                source={samples[i % samples.length]}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                transition={T.fadeMs}
+              />
+              <View style={[StyleSheet.absoluteFill, styles.sampleDim]} />
+              {i === 0 ? (
+                <View style={styles.sampleTag}>
+                  <Text style={styles.sampleText}>Sample</Text>
+                </View>
+              ) : null}
+            </View>
+          );
+        }
 
         if (!uri) {
           return (
@@ -124,7 +151,7 @@ export function MomentCard({
   return (
     <PressScale
       accessibilityRole="button"
-      accessibilityLabel={`${title}. ${status}. ${photoLabel(photoCount)}, ${memberLabel(members)}.`}
+      accessibilityLabel={`${title}. ${status}. ${photoLabel(photoCount)}, ${memberLabel(members)}.${sampled ? ' Showing sample pictures.' : ''}`}
       scale={T.pressScale}
       onPress={onPress}
       style={styles.card}>
@@ -251,6 +278,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: T.moreDim,
+  },
+  sampleDim: {
+    backgroundColor: Films.stack.sampleDim,
+  },
+  sampleTag: {
+    position: 'absolute',
+    top: T.sampleTag.inset,
+    left: T.sampleTag.inset,
+    height: T.sampleTag.height,
+    paddingHorizontal: T.sampleTag.paddingX,
+    borderRadius: T.sampleTag.height / 2,
+    backgroundColor: Films.stack.sampleTag.bg,
+    justifyContent: 'center',
+  },
+  sampleText: {
+    ...Typography.clipBadge,
+    color: Colors.text,
   },
   more: {
     ...Typography.stripMore,

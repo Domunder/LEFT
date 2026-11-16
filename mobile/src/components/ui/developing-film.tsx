@@ -2,9 +2,18 @@
  * The album before the reveal — a countdown, a count, and nothing to see.
  *
  * Not in the prototype. Deliberately quiet: the choreography belongs to the
- * reveal, not to the wait. The strip of blank frames is the film, undeveloped.
+ * reveal, not to the wait. The strip of frames is the film, undeveloped: a
+ * frame is filled for every photo that exists (up to the strip's length),
+ * blurred so far that it only says "there is a picture here" (2026-11-16, the
+ * user's call, replacing blank frames).
+ *
+ * What is under the blur is the caller's business (`photos`). It cannot be
+ * other people's photos: RLS does not hand those out before the reveal. The
+ * album passes the viewer's own frames and stand-ins for the rest; at this
+ * blur neither can be told apart from the other.
  */
 
+import { Image, type ImageSource } from 'expo-image';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -21,6 +30,8 @@ type DevelopingFilmProps = {
   endsAt: string;
   shotsTaken: number;
   memberCount: number;
+  /** What the filled frames hold under their blur, first frame first. */
+  photos: readonly ImageSource[];
   /** The host may end the event early. */
   canDevelop: boolean;
   developing: boolean;
@@ -38,6 +49,7 @@ export function DevelopingFilm({
   endsAt,
   shotsTaken,
   memberCount,
+  photos,
   canDevelop,
   developing,
   onDevelop,
@@ -95,9 +107,26 @@ export function DevelopingFilm({
         </Body>
 
         <View style={styles.strip} accessibilityElementsHidden importantForAccessibility="no">
-          {Array.from({ length: T.frames }, (_, i) => (
-            <View key={i} style={styles.frame} />
-          ))}
+          {Array.from({ length: T.frames }, (_, i) => {
+            // Never more filled frames than there are photos.
+            const source = i < shotsTaken ? photos[i] : undefined;
+            return (
+              <View key={i} style={styles.frame}>
+                {source ? (
+                  <>
+                    <Image
+                      source={source}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      blurRadius={T.frameBlur}
+                      transition={T.frameFadeMs}
+                    />
+                    <View style={[StyleSheet.absoluteFill, styles.frameDim]} />
+                  </>
+                ) : null}
+              </View>
+            );
+          })}
         </View>
       </View>
 
@@ -167,6 +196,10 @@ const styles = StyleSheet.create({
     backgroundColor: T.frameFill,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: Colors.hairline,
+    overflow: 'hidden',
+  },
+  frameDim: {
+    backgroundColor: T.frameDim,
   },
   actions: {
     gap: T.actionsGap,

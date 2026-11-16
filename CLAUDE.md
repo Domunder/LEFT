@@ -378,6 +378,20 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   which no client can read. Nothing notifies the operator and the photo stays
   visible until someone acts — the daily query is in `docs/LAUNCH.md` §11.
   The copy promises a look within 24 hours. **Not seen on a device.**
+- **Seven changes of 2026-11-16 (the user's list), none seen on a device:**
+  the camera's countdown is a button to the film's developing state (the only
+  way to the host's "develop now" on an unlimited roll, where the roll-empty
+  screen never comes); a moment's strip with nothing to show holds sample
+  pictures tagged "Sample" (`MomentCard`'s `samples`); the developing state's
+  frames are filled per existing photo and blurred past recognition — the
+  viewer's own frames, then stand-ins, because RLS hands out nobody else's;
+  the Moments list runs to the physical bottom edge and dissolves there
+  (`Screen edges={['top']}`, `ScrollEdge`'s `inset`); 09's two buttons are
+  drawn on `Glass` and the QR has round modules, rounded finders, warm paper
+  and a line with the event's name (**scan it once on a device**); 10 reads
+  "3/50 people" and "47 spots left"; Landing has no glass panel — copy and
+  buttons stand on the gradient (`VideoOverlay.gradientColors`) so the
+  people in the photos stay visible.
 - **The library's title is "Moments"** (2026-11-16, the user; was "Your
   Moments"), and its list blurs and dissolves into the page at the top and
   bottom edge instead of being cut off (`components/ui/scroll-edge.tsx`,
@@ -633,8 +647,8 @@ The launch list lives in `docs/MILESTONES.md`. Things that bite during developme
 - **Push and retention need two Vault secrets** (`project_url`,
   `service_role_key`) — locally (README) and on the hosted project
   (`docs/LAUNCH.md`).
-- **There is no "report photo"** — Apple's guideline 1.2 expects one for
-  user-generated content. Only the host's and the author's delete exist.
+- **Reports notify nobody and there is no user blocking** — the operator has
+  to run the daily query (`docs/LAUNCH.md` §11).
 - **`pg_cron` must be enabled on the hosted project** or events never end on their own.
 - **leftmoment.com is not bought yet, so invite links are dead** outside the dev scheme.
 - **`@react-native-google-signin` cannot be imported in Expo Go** — it is behind a

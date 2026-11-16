@@ -2,9 +2,14 @@
  * 01 · Landing
  *
  * App entry / marketing splash, and now the app's **only** way in. Full-bleed
- * photo slideshow under a darkening gradient, the logo header on top, and a frosted
- * glass panel pinned to the bottom carrying the three things a new user can do:
- * sign in with Google, sign in with Apple, or join somebody else's group.
+ * photo slideshow under a darkening gradient, the logo header on top, and at
+ * the bottom the three things a new user can do: sign in with Google, sign in
+ * with Apple, or join somebody else's group.
+ *
+ * The copy and buttons stand directly on the photos (2026-11-16, the user's
+ * call): the framed glass panel that used to carry them covered the lower half
+ * of every picture, and with it most of the people in them. The gradient alone
+ * keeps the text readable now.
  *
  * Identity comes first here rather than at the end of onboarding. A host used to
  * walk 02→05.1 before the app knew who they were, which meant screen 06 owned the
@@ -26,7 +31,6 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { AuthButton } from '@/components/ui/auth-button';
 import { BackgroundSlideshow } from '@/components/ui/background-slideshow';
-import { GlassPanel } from '@/components/ui/glass-panel';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Em } from '@/components/ui/typography';
@@ -170,7 +174,7 @@ export default function LandingScreen() {
         </View>
       </View>
 
-      <GlassPanel style={styles.panel}>
+      <View style={styles.panel}>
         <Display size="lg" style={styles.headline}>
           Only one{'\n'}
           <Em>moment left?</Em>
@@ -244,7 +248,7 @@ export default function LandingScreen() {
             Privacy Policy
           </Text>
         </Caption>
-      </GlassPanel>
+      </View>
     </Screen>
   );
 }
