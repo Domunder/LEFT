@@ -17,6 +17,8 @@
  *  - **Edges rubber-band** — first and last page, zoom limits, a zoomed photo's
  *    borders.
  *  - **Reduced motion** swaps the travel for a cross-fade.
+ *  - A photo taken for a mission carries it as a glass caption above the
+ *    actions ("Mission · …"), fading with the rest of the chrome.
  *
  * Rendered as an overlay inside the screen that owns the grid, not as a route
  * or a `Modal`: the tile's rect and the viewer then share one coordinate space.
@@ -25,6 +27,7 @@
  * favour of hooks — as does the camera's pinch. Migrate both together.
  */
 
+import { Feather } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { BackHandler, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -43,7 +46,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { Glass, GlassButton } from './glass';
-import { Colors, Glass as GlassTokens, Springs, Viewer as T } from '@/constants/theme';
+import {
+  Colors,
+  Glass as GlassTokens,
+  MissionsCamera as MissionTokens,
+  Springs,
+  Viewer as T,
+} from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { clamp, clampWithRubber, project } from '@/lib/motion';
 
@@ -59,6 +68,8 @@ export type ViewerPhoto = {
   height?: number | null;
   /** Who took it — shown under the counter in the album. */
   caption?: string;
+  /** The mission it was for — "Mission · …" above the actions. */
+  mission?: string;
 };
 
 type PhotoViewerProps = {
@@ -528,11 +539,29 @@ export function PhotoViewer({
         <View style={styles.spacer} />
       </Animated.View>
 
-      {renderActions && photo ? (
+      {photo && (renderActions || photo.mission) ? (
         <Animated.View
           style={[styles.bottom, { bottom: insets.bottom + T.chromeInset }, chromeStyle]}
           pointerEvents={chromeShown ? 'box-none' : 'none'}>
-          {renderActions(photo, index)}
+          {photo.mission ? (
+            <Glass radius={MissionTokens.caption.radius} style={styles.mission}>
+              <Feather
+                name="target"
+                size={MissionTokens.caption.iconSize}
+                color={Colors.textMuted}
+              />
+              <Text
+                style={styles.missionText}
+                numberOfLines={MissionTokens.caption.lines}
+                accessibilityLabel={`Mission: ${photo.mission}`}>
+                <Text style={styles.missionLabel}>Mission · </Text>
+                {photo.mission}
+              </Text>
+            </Glass>
+          ) : null}
+          {renderActions ? (
+            <View style={styles.actions}>{renderActions(photo, index)}</View>
+          ) : null}
         </Animated.View>
       ) : null}
     </Animated.View>
@@ -663,9 +692,30 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: T.chromeInset,
     right: T.chromeInset,
+    alignItems: 'center',
+  },
+  actions: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: T.chromeGap,
+  },
+  // Its own piece of glass above the actions: glass next to glass, never on it.
+  mission: {
+    maxWidth: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: MissionTokens.caption.gap,
+    paddingVertical: MissionTokens.caption.paddingY,
+    paddingHorizontal: MissionTokens.caption.paddingX,
+    marginBottom: MissionTokens.caption.marginBottom,
+  },
+  missionText: {
+    ...Typography.bodySm,
+    flexShrink: 1,
+    color: Colors.text,
+  },
+  missionLabel: {
+    color: Colors.textMuted,
   },
 });

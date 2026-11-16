@@ -33,6 +33,13 @@
  *    blinks shut on the same frame. No sound: a party is loud enough.
  *  - Shooting works offline. The frame is on disk and in the queue before the
  *    shutter has finished opening (`lib/upload-queue.ts`).
+ *  - **Missions** (2026-11-17), for a guest who was dealt some: a "Missions
+ *    1/3" glass capsule under the roll counter opens the list
+ *    (`MissionListSheet`); tapping an open one arms the next shot, shown as
+ *    "Next photo: …" at the viewfinder's top edge with an × to let it go. The
+ *    next press of the shutter queues the frame with that mission and
+ *    disarms. The first visit per event opens the list with an explanation
+ *    (`left:missions-intro:{eventId}`). No new haptics.
  *
  * States the roll model requires, each a screen of its own rather than a
  * disabled camera: permission denied, roll empty, film developed, and no
@@ -46,6 +53,7 @@
 'use no memo';
 
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useNetworkState } from 'expo-network';
@@ -74,6 +82,8 @@ import { CircleIconButton } from '@/components/ui/circle-back-button';
 import { EventCountdown } from '@/components/ui/event-countdown';
 import { FilmCamera, type FilmCameraRef } from '@/components/ui/film-camera';
 import { Glass, GlassButton } from '@/components/ui/glass';
+import { MissionArmedNote, MissionCapsule } from '@/components/ui/mission-chrome';
+import { MissionListSheet } from '@/components/ui/mission-sheet';
 import { PillButton } from '@/components/ui/pill-button';
 import { PressScale } from '@/components/ui/press-scale';
 import { RollCounter } from '@/components/ui/roll-counter';
@@ -86,6 +96,7 @@ import { Camera as T, Colors, Glass as GlassTokens } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { useCameraSession } from '@/hooks/use-camera-session';
 import type { FilmLook } from '@/lib/events';
+import type { Mission } from '@/lib/missions';
 import { latestShotThumb } from '@/lib/my-shots';
 import { at } from '@/lib/pair';
 import { askForPushOnce } from '@/lib/push';
@@ -252,6 +263,7 @@ export default function CameraScreen() {
       userId={session.userId}
       shotsLeft={session.shotsLeft}
       pending={session.pending}
+      missions={session.missions}
       onClose={leave}
       onOpenFilm={() =>
         router.push({
@@ -344,6 +356,8 @@ type ViewfinderProps = {
   userId: string;
   shotsLeft: number | null;
   pending: number;
+  /** The guest's missions, queued tags applied. Empty: no capsule, no intro. */
+  missions: Mission[];
   onClose: () => void;
   /** The album's "developing" state: the count so far, and the host's "develop now". */
   onOpenFilm: () => void;
@@ -359,6 +373,7 @@ function Viewfinder({
   userId,
   shotsLeft,
   pending,
+  missions,
   onClose,
   onOpenFilm,
   onOpenShots,
@@ -452,6 +467,45 @@ function Viewfinder({
       unsubscribe();
     };
   }, [eventId]);
+
+  // --- missions -----------------------------------------------------------
+
+  /** The mission the next shot is for. Only an open one counts. */
+  const [armedId, setArmedId] = useState<string | null>(null);
+  const armed = missions.find((mission) => mission.id === armedId && mission.photoId === null);
+  const armedFor = armed?.id ?? null;
+  const missionsDone = missions.filter((mission) => mission.photoId !== null).length;
+  const [missionSheet, setMissionSheet] = useState<'closed' | 'list' | 'intro'>('closed');
+
+  // The first visit with missions dealt explains them, once per event and phone.
+  const introKey = `left:missions-intro:${eventId}`;
+  const dealt = missions.length > 0;
+  useEffect(() => {
+    if (!dealt) return;
+    let cancelled = false;
+    AsyncStorage.getItem(introKey)
+      .then((seen) => {
+        if (!cancelled && !seen) setMissionSheet((current) => (current === 'closed' ? 'intro' : current));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [dealt, introKey]);
+
+  // Seen once it is closed — by "Got it", a drag, the scrim, or arming a mission from it.
+  const closeMissionSheet = useCallback(() => {
+    if (missionSheet === 'intro') void AsyncStorage.setItem(introKey, '1').catch(() => {});
+    setMissionSheet('closed');
+  }, [introKey, missionSheet]);
+
+  const arm = useCallback(
+    (mission: Mission) => {
+      setArmedId(mission.id);
+      closeMissionSheet();
+    },
+    [closeMissionSheet]
+  );
 
   /** A capture is in flight. A ref: two taps in one frame must not both pass. */
   const busy = useRef(false);
@@ -552,6 +606,8 @@ function Viewfinder({
       nothing in the library reports an LED the system refuses to light.
     */
     const lit = flash;
+    /** Read at the press: the mission the guest was looking at when they fired. */
+    const missionId = armedFor;
     const controller = camera.current?.controller;
     if (DEV) {
       console.log('[camera] fire', {
@@ -616,7 +672,10 @@ function Viewfinder({
         capturedUri: `file://${picture.filePath}`,
         width: picture.width,
         height: picture.height,
+        missionId,
       });
+      // Shot for it: the mission reads as done (the queue owes its tag) and lets go.
+      if (missionId) setArmedId((current) => (current === missionId ? null : current));
 
       // A frame now exists that will be developed later — the moment to ask
       // whether to say when. Once per run, after the shutter has settled.
@@ -643,6 +702,7 @@ function Viewfinder({
     userId,
     look,
     flash,
+    armedFor,
   ]);
 
   // --- status -------------------------------------------------------------
@@ -673,6 +733,13 @@ function Viewfinder({
             {eventName}
           </Label>
           <RollCounter shotsLeft={shotsLeft} />
+          {dealt ? (
+            <MissionCapsule
+              done={missionsDone}
+              total={missions.length}
+              onPress={() => setMissionSheet('list')}
+            />
+          ) : null}
         </View>
 
         {/*
@@ -725,6 +792,8 @@ function Viewfinder({
               style={[StyleSheet.absoluteFill, styles.blackout, blackoutStyle]}
               pointerEvents="none"
             />
+
+            {armed ? <MissionArmedNote body={armed.body} onDisarm={() => setArmedId(null)} /> : null}
 
             {note ? (
               <View style={styles.note} accessibilityLiveRegion="polite">
@@ -811,6 +880,17 @@ function Viewfinder({
           </PressScale>
         </View>
       </View>
+
+      {/* Over the whole screen: an absolute child ignores the safe area's padding. */}
+      {missionSheet !== 'closed' && dealt ? (
+        <MissionListSheet
+          missions={missions}
+          armedId={armedFor}
+          intro={missionSheet === 'intro'}
+          onArm={arm}
+          onClose={closeMissionSheet}
+        />
+      ) : null}
     </Screen>
   );
 }

@@ -5,7 +5,8 @@ import { AmbientGlow } from '@/components/ui/ambient-glow';
 import { Colors } from '@/constants/theme';
 
 /**
- * Host-side group setup (screens 09, 10).
+ * Host-side group setup (screens 09, 10, and Missions). The Stack picks the
+ * routes up from the folder; none is listed here.
  *
  * The glow is mounted here rather than in the screen, the same three-part setup
  * onboarding uses: painted once on this root, a transparent Stack content style so

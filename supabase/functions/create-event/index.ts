@@ -43,6 +43,8 @@ type CreateEventBody = {
   maxMembers?: number;
   /** 5, 10, 16, 24, 36 — or null for the unlimited roll. */
   rollSize?: number | null;
+  /** 1–3 missions per guest, or null/absent for none. */
+  missionsPerGuest?: number | null;
   transactionId?: string | null;
 };
 
@@ -60,7 +62,8 @@ Deno.serve(async (req) => {
     return json({ error: 'invalid body' }, 400);
   }
 
-  const { name, eventType, look, endsAt, maxMembers, rollSize, transactionId } = body;
+  const { name, eventType, look, endsAt, maxMembers, rollSize, missionsPerGuest, transactionId } =
+    body;
 
   /*
     Shape checks only. Every *rule* — the ending being in the future, the group
@@ -74,6 +77,9 @@ Deno.serve(async (req) => {
     return json({ error: 'invalid ending time' }, 400);
   }
   if (!Number.isInteger(maxMembers)) return json({ error: 'invalid group size' }, 400);
+  if (missionsPerGuest != null && !Number.isInteger(missionsPerGuest)) {
+    return json({ error: 'invalid missions per guest' }, 400);
+  }
   if (rollSize != null && !Number.isInteger(rollSize)) {
     return json({ error: 'invalid roll size' }, 400);
   }
@@ -118,6 +124,7 @@ Deno.serve(async (req) => {
     p_ends_at: endsAt,
     p_max_members: maxMembers,
     p_roll_size: rollSize ?? null,
+    p_missions_per_guest: missionsPerGuest ?? null,
     /*
       Only an ORDER BY preference among this user's unspent purchases, never
       proof of payment — so when the reconcile failed, the client's id is still

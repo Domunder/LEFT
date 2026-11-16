@@ -10,6 +10,11 @@
  * **A free event never touches any of this.** `tierFor()` short-circuits
  * straight to `createEvent()` with no transaction id, and the server skips its
  * claim for the same events. The free tier is enforced there, not here.
+ *
+ * **Missions ride along and never price the event.** `input.missionsPerGuest`
+ * (null = off) goes to `createEvent()` untouched on both paths; `tierFor()`
+ * reads only the group and the roll, so switching missions on cannot change
+ * what the host is charged.
  */
 
 import { useRef, useState } from 'react';
@@ -113,7 +118,7 @@ export function useEventCreation(): EventCreation {
       const tier = tierFor(input.maxMembers, input.rollSize);
       if (!tier) {
         setPhase({ kind: 'creating' });
-        return await createEvent(input);
+        return await createEvent({ ...input, missionsPerGuest: input.missionsPerGuest ?? null });
       }
 
       // Only charge if this session has not already paid. Re-entering after a
@@ -142,7 +147,11 @@ export function useEventCreation(): EventCreation {
       }
 
       setPhase({ kind: 'creating' });
-      const event = await createSettling({ ...input, transactionId: paidTransaction.current });
+      const event = await createSettling({
+        ...input,
+        missionsPerGuest: input.missionsPerGuest ?? null,
+        transactionId: paidTransaction.current,
+      });
 
       /*
         Cleared only once the event exists. The receipt is spent at that point —

@@ -30,6 +30,8 @@ export type CreateEventInput = {
   maxMembers: number;
   /** Shots per guest: 5, 10, 16, 24, 36, or null for the unlimited roll (paid). */
   rollSize: RollSize;
+  /** Missions each guest is dealt, 1–3. Null or absent: missions are off. */
+  missionsPerGuest?: number | null;
   /**
    * The store transaction just made, when this event needed paying for.
    *
@@ -82,6 +84,7 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
       endsAt: input.endsAt.toISOString(),
       maxMembers: input.maxMembers,
       rollSize: input.rollSize,
+      missionsPerGuest: input.missionsPerGuest ?? null,
       transactionId: input.transactionId ?? null,
     },
   });
@@ -94,6 +97,7 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
     event_type: input.eventType,
     roll_size: input.rollSize,
     max_members: input.maxMembers,
+    missions: input.missionsPerGuest ?? 0,
     paid: Boolean(input.transactionId),
   });
 

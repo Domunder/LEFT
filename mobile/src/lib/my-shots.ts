@@ -8,10 +8,13 @@
  * the event is developed RLS returns only the caller's own.
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { getSession } from './auth';
+import { getMyMissions, type Mission } from './missions';
 import { listMyPhotos } from './photos';
 import { signedUrls } from './storage';
-import { localShots } from './upload-queue';
+import { localShots, owedMissionTags } from './upload-queue';
 
 export type MyShot = {
   id: string;
@@ -68,4 +71,62 @@ export async function latestShotThumb(eventId: string): Promise<string | null> {
   const local = queued(eventId).sort(newestFirst)[0];
   if (local) return local.thumbUri;
   return (await loadMyShots(eventId))[0]?.thumbUri ?? null;
+}
+
+// --- missions ----------------------------------------------------------------
+//
+// A guest's missions as the camera and "Your shots" show them: the server's
+// last answer, with the tags still in the upload queue laid over it. The
+// server stays the judge of what was dealt; the overlay only says which photo
+// the guest has already marked, so a mission reads as done the moment the
+// shutter fires, with or without a signal.
+
+const missionsKey = (eventId: string, userId: string) => `left.missions.${eventId}.${userId}`;
+
+/** The last answer this phone had, for opening with no signal. */
+export async function cachedMissions(eventId: string, userId: string): Promise<Mission[] | null> {
+  try {
+    const stored = await AsyncStorage.getItem(missionsKey(eventId, userId));
+    const parsed: unknown = stored ? JSON.parse(stored) : null;
+    return Array.isArray(parsed) ? (parsed as Mission[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Ask the server (which deals on the first call of a live event) and keep the answer. */
+export async function fetchMissions(eventId: string, userId: string): Promise<Mission[]> {
+  const missions = await getMyMissions(eventId);
+  void AsyncStorage.setItem(missionsKey(eventId, userId), JSON.stringify(missions)).catch(() => {});
+  return missions;
+}
+
+/**
+ * Mark `photoId` as the photo for `missionId` (null: for none), as the server
+ * does it: the photo leaves whatever mission it held, and the mission drops
+ * whatever photo it had.
+ */
+export function applyMissionTag(
+  missions: readonly Mission[],
+  photoId: string,
+  missionId: string | null
+): Mission[] {
+  return missions.map((mission) => {
+    if (mission.id === missionId) return { ...mission, photoId };
+    if (mission.photoId === photoId) return { ...mission, photoId: null };
+    return mission;
+  });
+}
+
+/** The server's answer with the queue's owed tags over it, newest last. */
+export function withQueuedTags(eventId: string, missions: readonly Mission[]): Mission[] {
+  return owedMissionTags(eventId).reduce<Mission[]>(
+    (current, owed) => applyMissionTag(current, owed.photoId, owed.missionId),
+    [...missions]
+  );
+}
+
+/** The mission a photo is for, if any. */
+export function missionOf(missions: readonly Mission[], photoId: string): Mission | undefined {
+  return missions.find((mission) => mission.photoId === photoId);
 }

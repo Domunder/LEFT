@@ -22,12 +22,34 @@
  *
  * The artboard draws no header and no back button. Kept as drawn: a guest
  * arriving by link has nothing behind them.
+ *
+ * **Missions: "Are you one of these?"** (2026-11-17, not in the prototype). A
+ * host with missions on can list names ("Tom") and write personal missions for
+ * them; the guest who is Tom picks the name here (`NamePicker`). Reading the
+ * names needs a session, so the anonymous sign-in now also starts when the
+ * screen opens — idempotent, and Continue waits for that same attempt rather
+ * than racing it into a second anonymous user. Nothing about the join depends
+ * on the list: if it fails or is empty, the section is simply not drawn and the
+ * screen is the artboard's. On Continue, after the join, a chosen name is
+ * claimed (`claimName`):
+ *   - taken by someone else meanwhile: the guest stays joined, the list is
+ *     reloaded and they choose again or continue without (no second join);
+ *   - missions already dealt: they keep the cards they have — silently;
+ *   - anything else: logged, never in the way of joining.
  */
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
+import { NamePicker } from '@/components/ui/name-picker';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
@@ -35,6 +57,13 @@ import { Colors, Guest, Radii, Spacing } from '@/constants/theme';
 import { FontFamily } from '@/constants/typography';
 import { getSession, resolveDisplayName, setDisplayName, signInAnonymously } from '@/lib/auth';
 import { joinEvent } from '@/lib/events';
+import {
+  claimName,
+  listUnclaimedNames,
+  MissionNameTakenError,
+  MissionsDealtError,
+  type MissionName,
+} from '@/lib/missions';
 
 /** Matches the `char_length(display_name) between 1 and 60` check on event_members. */
 const MAX_NAME_LENGTH = 60;
@@ -46,6 +75,20 @@ export default function GuestNameScreen() {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /** Names the host listed that nobody has claimed. Empty hides the section. */
+  const [names, setNames] = useState<MissionName[]>([]);
+  /** null is "None of these" — the default, and a fine answer. */
+  const [chosen, setChosen] = useState<MissionName | null>(null);
+
+  /** The sign-in started on open, so Continue waits for it instead of racing it. */
+  const signingIn = useRef<Promise<unknown> | null>(null);
+  /**
+   * Set once join_event succeeded. A name taken in the meantime keeps the guest
+   * on this screen as a member; the next Continue only re-joins if they changed
+   * their name (join_event updates it), never just to retry the claim.
+   */
+  const joined = useRef<{ eventId: string; name: string } | null>(null);
 
   /*
     Reaching this screen without a code cannot be recovered from — there is no
@@ -68,7 +111,8 @@ export default function GuestNameScreen() {
       try {
         const session = await getSession();
         const existing = session?.user ? resolveDisplayName(session.user) : null;
-        if (!cancelled && existing) setName(existing);
+        // Functional: a chip tapped before this resolved has already filled it.
+        if (!cancelled && existing) setName((current) => (current === '' ? existing : current));
       } catch {
         // No session or no credentials — an empty field is the right answer.
       }
@@ -80,6 +124,50 @@ export default function GuestNameScreen() {
     };
   }, []);
 
+  /*
+    The names need a session (the RPC refuses an anonymous caller without
+    one), so sign in now rather than on Continue. Any failure here only hides
+    the section — Continue signs in again and reports what goes wrong.
+  */
+  useEffect(() => {
+    if (!code) return;
+    let cancelled = false;
+
+    const ready = signInAnonymously();
+    signingIn.current = ready;
+
+    ready
+      .then(() => listUnclaimedNames(code))
+      .then((list) => {
+        if (!cancelled) setNames(list);
+      })
+      .catch((e: unknown) => {
+        if (__DEV__) console.warn('[join] names not loaded', e);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code]);
+
+  /*
+    Picking a name writes it into the field — but only over an empty field or
+    the previous chip's name, never over what the guest typed themselves.
+  */
+  const handleChoose = useCallback(
+    (person: MissionName | null) => {
+      if (person) {
+        const current = name.trim();
+        if (current === '' || (chosen !== null && current === chosen.name)) {
+          setName(person.name);
+        }
+      }
+      setChosen(person);
+      setError(null);
+    },
+    [name, chosen]
+  );
+
   const trimmed = name.trim();
   const canContinue = trimmed.length > 0 && !busy;
 
@@ -89,30 +177,76 @@ export default function GuestNameScreen() {
     setBusy(true);
     setError(null);
 
-    try {
-      // Silent. The guest never learns they were signed in, which is the point.
-      await signInAnonymously();
+    let eventId = joined.current?.name === trimmed ? joined.current.eventId : null;
 
-      // Before the join: add_host_as_member() reads user metadata at insert time,
-      // and this guest may host their own event later from the same identity.
-      await setDisplayName(trimmed);
+    if (!eventId) {
+      try {
+        // The attempt started on open, if it is still running. Its failure is
+        // not this one's: the call below tries again and throws for real.
+        await signingIn.current?.catch(() => undefined);
 
-      const eventId = await joinEvent(code, trimmed);
+        // Silent. The guest never learns they were signed in, which is the point.
+        await signInAnonymously();
 
-      // `replace`, not `push` — there is nothing behind this worth returning to.
-      router.replace({ pathname: '/(guest)/waiting', params: { eventId } });
-    } catch (e) {
-      setError(describeJoinError(e));
-      setBusy(false);
+        // Before the join: add_host_as_member() reads user metadata at insert time,
+        // and this guest may host their own event later from the same identity.
+        await setDisplayName(trimmed);
+
+        eventId = await joinEvent(code, trimmed);
+        joined.current = { eventId, name: trimmed };
+      } catch (e) {
+        setError(describeJoinError(e));
+        setBusy(false);
+        return;
+      }
     }
-  }, [code, canContinue, trimmed, router]);
+
+    if (chosen) {
+      try {
+        await claimName(eventId, chosen.id);
+      } catch (e) {
+        if (e instanceof MissionNameTakenError) {
+          // Still a member. Show who is left and let them choose again.
+          const taken = chosen.id;
+          setChosen(null);
+          setError('Someone already picked that name. Choose another, or continue without.');
+          setNames((current) => current.filter((n) => n.id !== taken));
+          try {
+            setNames(await listUnclaimedNames(code));
+          } catch {
+            // The local list without the taken name is good enough.
+          }
+          setBusy(false);
+          return;
+        }
+        // Dealt already: they keep the cards they have. Anything else must not
+        // stand between a guest and the event.
+        if (!(e instanceof MissionsDealtError) && __DEV__) {
+          console.warn('[join] name not claimed', e);
+        }
+      }
+    }
+
+    // `replace`, not `push` — there is nothing behind this worth returning to.
+    router.replace({ pathname: '/(guest)/waiting', params: { eventId } });
+  }, [code, canContinue, trimmed, chosen, router]);
 
   return (
     <Screen edges={['bottom']} style={styles.screen}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.flex}>
+        {/*
+          Scrolls only when it has to — the names under large text, or with the
+          keyboard up. With no names it fits, and does not bounce, as before.
+          Taps reach the chips without first dismissing the keyboard.
+        */}
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.content}
+          alwaysBounceVertical={false}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
           <Label style={styles.eyebrow}>Welcome</Label>
 
           <Display size="xxl" style={styles.headline}>
@@ -144,6 +278,15 @@ export default function GuestNameScreen() {
             This is how the group will see you during the event.
           </Caption>
 
+          {names.length > 0 ? (
+            <NamePicker
+              names={names}
+              selectedId={chosen?.id ?? null}
+              onSelect={handleChoose}
+              disabled={busy}
+            />
+          ) : null}
+
           {/*
             Reserved whether or not there is an error, so the CTA does not jump up
             the screen the moment a join fails.
@@ -155,7 +298,7 @@ export default function GuestNameScreen() {
               </Body>
             ) : null}
           </View>
-        </View>
+        </ScrollView>
 
         <PillButton
           label={busy ? 'Joining…' : 'Continue'}
@@ -198,6 +341,9 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  content: {
+    flexGrow: 1,
   },
   eyebrow: {
     marginBottom: Guest.eyebrowGap,
