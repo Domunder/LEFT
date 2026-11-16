@@ -44,6 +44,12 @@ type Props = {
   title?: string;
   shotsLeft?: number;
   eager?: boolean;
+  /**
+   * Scales the resolution of every picture (not its size on the page). The
+   * site leaves it at 1; the store screenshots (src/store/Shot.astro) are
+   * rendered at three device pixels per point and ask for more.
+   */
+  detail?: number;
   class?: string;
 };
 
@@ -54,10 +60,14 @@ const {
   title = 'Mia & Jonas',
   shotsLeft = 17,
   eager = false,
+  detail = 1,
   class: className,
 } = Astro.props;
 
 const loading = eager ? 'eager' : 'lazy';
+/** A picture's pixel size and JPEG quality at this `detail`. */
+const px = (points: number) => Math.round(points * detail);
+const q = (quality: number) => (detail > 1 ? Math.min(90, quality + 24) : quality);
 /** Where the display sits in the frame, from the device's config. */
 const pct = (fraction: number) => `${(fraction * 100).toFixed(4)}%`;
 const screenWidth = device.framePngWidth * device.screenWidthFraction;
@@ -169,10 +179,10 @@ const ICON = {
                 <Image
                   src={photo}
                   alt=""
-                  width={720}
-                  height={960}
+                  width={px(720)}
+                  height={px(960)}
                   fit="cover"
-                  quality={64}
+                  quality={q(64)}
                   loading={loading}
                   fetchpriority={eager ? 'high' : 'auto'}
                   class="look-golden"
@@ -193,7 +203,7 @@ const ICON = {
             </div>
             <div class="shutter-bar">
               <span class="tile glass">
-                <Image src={weddingFriends} alt="" width={140} height={140} fit="cover" quality={55} loading={loading} class="look-golden" />
+                <Image src={weddingFriends} alt="" width={px(140)} height={px(140)} fit="cover" quality={q(55)} loading={loading} class="look-golden" />
               </span>
               <span class="shutter"><i /></span>
               <span class="tile glass">
@@ -223,7 +233,7 @@ const ICON = {
             <div class="cards">
               {LOOKS.map((look, index) => (
                 <div class:list={['card', { on: index === 0 }]} style={`--n:${index}`}>
-                  <Image src={photo} alt="" width={340} height={425} fit="cover" quality={58} loading={loading} class={`look-${look.id}`} />
+                  <Image src={photo} alt="" width={px(340)} height={px(425)} fit="cover" quality={q(58)} loading={loading} class={`look-${look.id}`} />
                   <span class="card-text">
                     <b>{look.name}</b>
                     <small>{look.blurb}</small>
@@ -243,7 +253,7 @@ const ICON = {
         screen === 'moments' && (
           <div class="s moments">
             <div class="lib-head">
-              <p class="headline sm">Your Moments</p>
+              <p class="headline sm">Moments</p>
               <span class="round lg glass">
                 <svg viewBox="0 0 24 24"><path d={ICON.settings} /></svg>
               </span>
@@ -286,10 +296,10 @@ const ICON = {
                           <Image
                             src={image}
                             alt=""
-                            width={counted ? 24 : 170}
-                            height={counted ? 32 : 227}
+                            width={counted ? 24 : px(170)}
+                            height={counted ? 32 : px(227)}
                             fit="cover"
-                            quality={52}
+                            quality={q(52)}
                             loading={loading}
                             class="look-golden"
                           />
@@ -311,7 +321,7 @@ const ICON = {
         screen === 'album' && (
           <div class="s album">
             <div class="hero-print">
-              <Image src={photo} alt="" width={720} height={1040} fit="cover" quality={64} loading={loading} class="look-golden" />
+              <Image src={photo} alt="" width={px(720)} height={px(1040)} fit="cover" quality={q(64)} loading={loading} class="look-golden" />
               <span class="veil" style="--n:0" />
               <span class="shade" />
               <div class="hero-text">
@@ -330,7 +340,7 @@ const ICON = {
             <div class="grid">
               {prints.map((print, index) => (
                 <span>
-                  <Image src={print.src} alt="" width={370} height={494} fit="cover" quality={56} loading={loading} class="look-golden" />
+                  <Image src={print.src} alt="" width={px(370)} height={px(494)} fit="cover" quality={q(56)} loading={loading} class="look-golden" />
                   <em>{print.by}</em>
                   <span class="veil" style={`--n:${index + 1}`} />
                 </span>
@@ -421,10 +431,10 @@ const ICON = {
     src={frame}
     alt=""
     class="frame"
-    widths={[320, 480, 640, 960]}
-    sizes="(min-width: 900px) 300px, 70vw"
+    widths={detail > 1 ? [960, device.framePngWidth] : [320, 480, 640, 960]}
+    sizes={detail > 1 ? '100vw' : '(min-width: 900px) 300px, 70vw'}
     width={640}
-    quality={80}
+    quality={q(80)}
     loading={loading}
     decoding="async"
   />
