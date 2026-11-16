@@ -162,7 +162,7 @@ mobile/src/
     (host)/               09 Invite · 10 Your group
     (guest)/              11 Name · 12 Waiting
     (capture)/            13 Camera · Your shots (roll)
-    (library)/            15/16 Your Moments (list of cards) · album/[id] (developing → reveal → album)
+    (library)/            15/16 Moments (list of cards) · album/[id] (developing → reveal → album)
     (modals)/             08 Join sheet · Delete account
     settings.tsx          20 Settings
     +native-intent.ts     invite link -> 11
@@ -368,7 +368,12 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   run**). Owner or host can delete (`deletePhoto`, RLS).
 - **`(auth)/keep` is reached when an anonymous guest leaves a developed album**
   (once, unless declined) — after the photos, never in front of them.
-- **The library is "Your Moments", a list of compact cards** (decided
+- **The library's title is "Moments"** (2026-11-16, the user; was "Your
+  Moments"), and its list blurs and dissolves into the page at the top and
+  bottom edge instead of being cut off (`components/ui/scroll-edge.tsx`,
+  tokens `ScrollEdge`): stacked blurs under a gradient in `Colors.bg`, since
+  RN has no progressive blur. **Not seen on a device.**
+- **The library is a list of compact cards** (decided
   2026-11-16 by the user, replacing the full-screen carousel of photo stacks
   of 2026-11-15 — thumbnails blown up to the screen looked soft and only one
   moment fitted; do not go back). Each moment is a `MomentCard`

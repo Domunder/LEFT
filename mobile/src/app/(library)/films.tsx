@@ -1,5 +1,5 @@
 /**
- * 15/16 · Your Moments
+ * 15/16 · Moments
  *
  * The app's home screen for a returning user: the root layout replaces onto it
  * when a session already exists, and a sign-in on Landing lands here whenever
@@ -25,7 +25,9 @@
  * state (the host's "develop now" lives there) and the strip "Your shots".
  *
  * Other deviations from the artboard, all flagged in CLAUDE.md:
- *  - the title is "Your Moments" (was "Your Films")
+ *  - the title is "Moments" (was "Your Films", then "Your Moments")
+ *  - the list blurs and dissolves into the page at its top and bottom edge
+ *    (`ScrollEdge`) instead of being cut off there
  *  - the header carries a third control, Join, between the gear and the plus
  *  - a moment reads three phases (not started / live with a countdown /
  *    developed) where the artboard draws two
@@ -47,10 +49,11 @@ import { KeepYourFilm } from '@/components/ui/keep-your-film';
 import { MomentCard } from '@/components/ui/moment-card';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
+import { ScrollEdge } from '@/components/ui/scroll-edge';
 import { Spinner } from '@/components/ui/spinner';
 import { Body, Display } from '@/components/ui/typography';
 import { samplesFor } from '@/constants/samples';
-import { Colors, Films, Glass } from '@/constants/theme';
+import { Colors, Films, Glass, ScrollEdge as Edge } from '@/constants/theme';
 import { getSession, isAnonymous } from '@/lib/auth';
 import { loadCovers, type FilmCover } from '@/lib/covers';
 import { isDeveloped, listMyEventSummaries, type EventSummary } from '@/lib/events';
@@ -246,7 +249,7 @@ export default function FilmsScreen() {
       ) : null}
 
       <View style={styles.header}>
-        <Display size="md">Your Moments</Display>
+        <Display size="md">Moments</Display>
 
         <View style={styles.headerButtons}>
           <GlassButton
@@ -306,15 +309,19 @@ export default function FilmsScreen() {
           </View>
         </>
       ) : (
-        <FlatList
-          data={events}
-          keyExtractor={(event) => event.id}
-          renderItem={renderMoment}
-          ListHeaderComponent={prompt ?? undefined}
-          ItemSeparatorComponent={Separator}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-        />
+        <View style={styles.listArea}>
+          <FlatList
+            data={events}
+            keyExtractor={(event) => event.id}
+            renderItem={renderMoment}
+            ListHeaderComponent={prompt ?? undefined}
+            ItemSeparatorComponent={Separator}
+            contentContainerStyle={styles.list}
+            showsVerticalScrollIndicator={false}
+          />
+          <ScrollEdge edge="top" />
+          <ScrollEdge edge="bottom" />
+        </View>
       )}
     </Screen>
   );
@@ -363,9 +370,16 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
   },
+  // Starts right under the header, so the top edge has room to dissolve in;
+  // the list's own padding keeps the first card clear of it at rest.
+  listArea: {
+    flex: 1,
+    marginTop: -Films.header.gap,
+  },
   list: {
     paddingHorizontal: Films.list.paddingX,
-    paddingBottom: Films.list.paddingBottom,
+    paddingTop: Edge.top,
+    paddingBottom: Math.max(Films.list.paddingBottom, Edge.bottom),
   },
   separator: {
     height: Films.list.gap,

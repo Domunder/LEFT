@@ -1669,3 +1669,18 @@ export const Album = {
     prefetchTimeoutMs: 2500,
   },
 } as const;
+
+/**
+ * Where a scrolling list meets the edge of its area: it blurs and dissolves
+ * into the page instead of being cut off (`components/ui/scroll-edge.tsx`).
+ */
+export const ScrollEdge = {
+  /** Heights of the two edges. The list is padded by the same amounts. */
+  top: 24,
+  bottom: 40,
+  /** Stacked blurs, each shorter than the last, so the blur grows towards the edge. */
+  blurSteps: 3,
+  blurIntensity: 8,
+  /** `Colors.bg`, opaque -> clear. Not 'transparent': that fades through black. */
+  colors: [Colors.bg, 'rgba(16,16,16,0)'] as const,
+} as const;
