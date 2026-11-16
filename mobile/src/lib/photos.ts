@@ -162,3 +162,16 @@ export async function deletePhoto(photo: Photo): Promise<void> {
   const { error } = await getSupabase().from('photos').delete().eq('id', photo.id);
   if (error) throw error;
 }
+
+/**
+ * Flag someone else's picture for the operator to look at.
+ *
+ * `report_photo()` is the only door: it checks that the caller can see the
+ * photo, and a second report of the same picture by the same person is a
+ * no-op, so a double tap or a retry is safe. Nothing can be read back — a
+ * report is never visible to a client.
+ */
+export async function reportPhoto(photoId: string): Promise<void> {
+  const { error } = await getSupabase().rpc('report_photo', { p_photo_id: photoId });
+  if (error) throw error;
+}

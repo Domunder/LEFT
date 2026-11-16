@@ -2,7 +2,7 @@
   "applinks": {
     "details": [
       {
-        "appIDs": ["REPLACE_WITH_APPLE_TEAM_ID.com.leftmoment.app"],
+        "appIDs": ["ZFJBLRVHLD.com.leftmoment.app"],
         "components": [
           {
             "/": "/j/*",

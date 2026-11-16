@@ -319,14 +319,24 @@ Fotos darin: eigene Bilder mit Einwilligung der Abgebildeten, keine Stockfotos.
   Löschen des Kontos unter Settings → Delete Account liegt.
 - ☐ **Risiko bei der Prüfung (Apple 1.2, nutzergenerierte Inhalte):** verlangt
   werden Melden, Blockieren und eine Kontaktadresse. Vorhanden: Host kann jedes
-  Foto löschen, jeder sein eigenes. **Nicht vorhanden: „Foto melden".** Entweder
-  vor dem Einreichen bauen (kleiner Schritt: Melden-Knopf im Viewer + Tabelle +
-  Mail an dich) oder in den Review-Notizen begründen (private Gruppen auf
-  Einladung, Host moderiert). Empfehlung: bauen.
+  Foto löschen, jeder sein eigenes, und **„Foto melden"** im Viewer (Fahne bei
+  fremden Fotos → `report_photo()` → Tabelle `photo_reports`; seit 2026-11-16).
+  In den Review-Notizen erwähnen. **Offen:** Es gibt keine Benachrichtigung an
+  dich — die Meldungen muss jemand täglich ansehen (Abfrage in Abschnitt 11),
+  denn App und AGB versprechen eine Prüfung innert 24 Stunden. Ebenfalls nicht
+  vorhanden: einen Nutzer blockieren.
 - ☐ Export Compliance: `ITSAppUsesNonExemptEncryption = false` steht schon in `app.json`.
 
 ## 11 · Nach dem Launch im Auge behalten
 
+- **Täglich: gemeldete Fotos.** Offene Meldungen:
+  ```sql
+  select id, created_at, event_id, photo_id, photo_owner_id, storage_path
+    from public.photo_reports where resolved_at is null order by created_at;
+  ```
+  Foto ansehen: Storage → Bucket `photos` → `storage_path`. Entfernen: die Datei
+  und die Zeile in `public.photos` löschen. Danach
+  `update public.photo_reports set resolved_at = now(), resolution = '<was getan wurde>' where id = '<id>';`
 - `select * from cron.job_run_details order by start_time desc limit 20;` — laufen die drei Jobs?
 - `select kind, skipped, count(*) from public.notifications group by 1,2;`
 - Supabase: Storage-Grösse und Egress; RevenueCat: Käufe = Zeilen in `public.purchases`

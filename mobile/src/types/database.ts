@@ -155,6 +155,60 @@ export type Database = {
           },
         ]
       }
+      photo_reports: {
+        Row: {
+          created_at: string
+          event_id: string | null
+          id: string
+          photo_id: string | null
+          photo_owner_id: string | null
+          reason: string
+          reporter_id: string | null
+          resolution: string | null
+          resolved_at: string | null
+          storage_path: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          photo_id?: string | null
+          photo_owner_id?: string | null
+          reason?: string
+          reporter_id?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          storage_path?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          photo_id?: string | null
+          photo_owner_id?: string | null
+          reason?: string
+          reporter_id?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "photo_reports_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "photo_reports_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: false
+            referencedRelation: "photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       photos: {
         Row: {
           created_at: string
@@ -429,6 +483,10 @@ export type Database = {
       }
       reminder_lead: { Args: never; Returns: string }
       reminder_min_event_length: { Args: never; Returns: string }
+      report_photo: {
+        Args: { p_photo_id: string; p_reason?: string }
+        Returns: undefined
+      }
       retention_period: { Args: never; Returns: string }
       start_event: {
         Args: { p_event_id: string }

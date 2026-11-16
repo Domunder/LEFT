@@ -150,6 +150,10 @@ export const TERMS_SECTIONS: LegalSection[] = [
       ] },
       'We may remove content or block access where these rules are broken, and ' +
         'without notice where the content appears seriously harmful or unlawful.',
+      'There is no tolerance for objectionable content or abusive behaviour. ' +
+        'Every member can report a photo from the album; the host of an event can ' +
+        'delete any photo in it. We look at reports within 24 hours, remove ' +
+        `what breaks these rules and can exclude the person who posted it. You can also write to ${EMAIL}.`,
     ],
   },
   {

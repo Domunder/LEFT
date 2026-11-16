@@ -66,7 +66,7 @@ import {
 import { getSession, isAnonymous } from '@/lib/auth';
 import { messageFor } from '@/lib/auth-errors';
 import { endEvent, subscribeToEventStatus } from '@/lib/events';
-import { deletePhoto } from '@/lib/photos';
+import { deletePhoto, reportPhoto } from '@/lib/photos';
 import { isPromptDismissed } from '@/lib/prompt-dismissal';
 
 type LoadState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; album: Album };
@@ -374,6 +374,35 @@ export default function AlbumScreen() {
     [guarded, say]
   );
 
+  /*
+    Reporting, for a picture that is neither the viewer's nor in their event to
+    moderate — the host and the photographer delete instead. Both stores require
+    it for user content. The report goes to the operator; the picture stays in
+    the album until someone acts on it, and the alert says so rather than
+    implying it is gone.
+  */
+  const report = useCallback(
+    (photo: AlbumPhoto) => {
+      Alert.alert(
+        'Report this photo?',
+        'We look at reported photos within 24 hours and remove what breaks the rules. The host of this event can delete it right away.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Report',
+            style: 'destructive',
+            onPress: () =>
+              void guarded(async () => {
+                await reportPhoto(photo.id);
+                say('Reported. Thank you.');
+              }, "Couldn't send the report."),
+          },
+        ]
+      );
+    },
+    [guarded, say]
+  );
+
   // --- viewer ---------------------------------------------------------------
 
   const viewerPhotos = useMemo<ViewerPhoto[]>(
@@ -594,7 +623,14 @@ export default function AlbumScreen() {
                     disabled={busy}
                     onPress={() => remove(photo)}
                   />
-                ) : null}
+                ) : (
+                  <GlassButton
+                    icon="flag"
+                    accessibilityLabel="Report this photo"
+                    disabled={busy}
+                    onPress={() => report(photo)}
+                  />
+                )}
               </>
             );
           }}

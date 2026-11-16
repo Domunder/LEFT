@@ -368,6 +368,12 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   run**). Owner or host can delete (`deletePhoto`, RLS).
 - **`(auth)/keep` is reached when an anonymous guest leaves a developed album**
   (once, unless declined) — after the photos, never in front of them.
+- **A member can report someone else's photo** (2026-11-16, required by both
+  stores): the flag in the album viewer, where the host and the photographer
+  have the bin instead. `reportPhoto()` → `report_photo()` → `photo_reports`,
+  which no client can read. Nothing notifies the operator and the photo stays
+  visible until someone acts — the daily query is in `docs/LAUNCH.md` §11.
+  The copy promises a look within 24 hours. **Not seen on a device.**
 - **The library's title is "Moments"** (2026-11-16, the user; was "Your
   Moments"), and its list blurs and dissolves into the page at the top and
   bottom edge instead of being cut off (`components/ui/scroll-edge.tsx`,
