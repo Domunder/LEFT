@@ -2,8 +2,8 @@
  * The web camera's upload queue — the browser's copy of
  * `mobile/src/lib/upload-queue.ts`, on IndexedDB.
  *
- * The shutter only develops the frame and writes it here; claim → upload →
- * mark happen in `drain()`, each step recorded, so a tab closed mid-upload or
+ * The shutter only develops the frame and writes it here; claim → tag →
+ * upload → mark happen in `drain()`, each step recorded, so a tab closed mid-upload or
  * a venue with no signal loses nothing that was taken: the next visit to the
  * link drains what is left. The photo id is minted at the shutter, which makes
  * the claim idempotent — a retry never spends a second frame.
@@ -14,11 +14,14 @@
  */
 
 import {
+  answeredByServer,
   claimShot,
   EventClosedError,
   markPhotoUploaded,
   photoPath,
   RollEmptyError,
+  setPhotoMission,
+  tagRefusedForGood,
   thumbPath,
   uploadJpeg,
 } from './api';
@@ -34,7 +37,16 @@ export type Shot = {
   height: number;
   claimed: boolean;
   uploaded: boolean;
+  /** The mission this photo is for; null "none". Absent on entries from before missions. */
+  missionId?: string | null;
+  /** False while `missionId` still has to reach the server. */
+  missionTagged?: boolean;
+  /** How often the server refused the tag; it is dropped after a few. */
+  tagAttempts?: number;
 };
+
+/** How often the server may refuse a tag before it is dropped. A tag never costs a photo. */
+const MAX_TAG_ATTEMPTS = 3;
 
 const DB_NAME = 'left-shoot';
 const STORE = 'shots';
@@ -79,11 +91,28 @@ async function put(shot: Shot) {
   await tx('readwrite', (s) => s.put(shot));
 }
 
+/**
+ * Write some fields of a stored entry. Never `put` a whole entry held across an
+ * await: the guest may have re-tagged it meanwhile from Your shots.
+ */
+async function update(id: string, patch: Partial<Shot>): Promise<Shot | undefined> {
+  const stored = await get(id);
+  if (!stored) return undefined;
+  const next = { ...stored, ...patch };
+  await put(next);
+  return next;
+}
+
 async function remove(id: string) {
   await tx('readwrite', (s) => s.delete(id));
 }
 
-type Listener = (event: { kind: 'claimed'; shotsLeft: number | null } | { kind: 'done' | 'dropped'; id: string; reason?: 'roll_empty' | 'event_closed' }) => void;
+type Listener = (
+  event:
+    | { kind: 'claimed'; shotsLeft: number | null }
+    | { kind: 'done' | 'dropped'; id: string; reason?: 'roll_empty' | 'event_closed' }
+    | { kind: 'mission'; id: string }
+) => void;
 const listeners = new Set<Listener>();
 
 export function onQueue(listener: Listener): () => void {
@@ -122,7 +151,7 @@ async function send(shot: Shot) {
     try {
       const roll = await claimShot(shot.eventId, shot.id, shot.takenAt);
       shot.claimed = true;
-      await put(shot);
+      await update(shot.id, { claimed: true });
       listeners.forEach((l) => l({ kind: 'claimed', shotsLeft: roll.shotsLeft }));
     } catch (e) {
       if (e instanceof RollEmptyError || e instanceof EventClosedError) {
@@ -134,6 +163,8 @@ async function send(shot: Shot) {
       throw e;
     }
   }
+
+  await tag(shot);
 
   if (!shot.uploaded) {
     try {
@@ -152,14 +183,64 @@ async function send(shot: Shot) {
       }
     }
     shot.uploaded = true;
-    await put(shot);
+    await update(shot.id, { uploaded: true });
   }
 
   await markPhotoUploaded(shot.id, shot.width, shot.height);
   await finish(shot);
 }
 
+/**
+ * The tag step, after the claim (the tag needs the photo's row) and before the
+ * upload (the upload ends the entry). Unreachable server: throws, the entry
+ * keeps owing it. A refusal for good, or one too many: the tag is dropped and
+ * the photo goes on untagged.
+ */
+async function tag(shot: Shot) {
+  for (let round = 0; round < 4; round += 1) {
+    const stored = await get(shot.id);
+    if (!stored || stored.missionTagged !== false) return;
+    const missionId = stored.missionId ?? null;
+    let dropped = false;
+    try {
+      await setPhotoMission(shot.id, missionId);
+    } catch (e) {
+      const attempts = (stored.tagAttempts ?? 0) + (answeredByServer(e) ? 1 : 0);
+      if (!tagRefusedForGood(e) && attempts < MAX_TAG_ATTEMPTS) {
+        await update(shot.id, { tagAttempts: attempts });
+        throw e;
+      }
+      dropped = true;
+    }
+    // Re-tagged while this one was on its way: send that instead.
+    const now = await get(shot.id);
+    if (!dropped && now && (now.missionId ?? null) !== missionId) continue;
+    await update(shot.id, { missionTagged: true, tagAttempts: 0 });
+    listeners.forEach((l) => l({ kind: 'mission', id: shot.id }));
+    return;
+  }
+  throw new Error('The mission kept changing; it is sent on the next pass.');
+}
+
+async function get(id: string): Promise<Shot | undefined> {
+  return (await tx('readonly', (s) => s.get(id))) as Shot | undefined;
+}
+
+/**
+ * "This queued photo was for that mission" — from Your shots. Returns false
+ * when the photo is no longer in the queue (it was uploaded): the caller then
+ * tags it on the server directly.
+ */
+export async function setQueuedMission(id: string, missionId: string | null): Promise<boolean> {
+  const next = await update(id, { missionId, missionTagged: false, tagAttempts: 0 });
+  if (!next) return false;
+  void drain();
+  return true;
+}
+
 async function finish(shot: Shot) {
+  // A tag the guest changed during the upload goes out before the entry ends.
+  await tag(shot);
   await remove(shot.id);
   listeners.forEach((l) => l({ kind: 'done', id: shot.id }));
 }

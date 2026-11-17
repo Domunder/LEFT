@@ -195,6 +195,89 @@ export async function reportPhoto(photoId: string): Promise<void> {
   if (error) throw error;
 }
 
+// ---------------------------------------------------------------------------
+// Missions — mirrors the guest half of `mobile/src/lib/missions.ts`
+// ---------------------------------------------------------------------------
+
+/** What a guest was dealt. `photoId` is the photo that fulfils it, if any. */
+export type Mission = { id: string; body: string; personal: boolean; photoId: string | null };
+export type MissionName = { id: string; name: string };
+
+export class MissionNameTakenError extends Error {
+  constructor() {
+    super('Someone else is already using that name');
+    this.name = 'MissionNameTakenError';
+  }
+}
+
+/** The guest's missions. The first call while the event is live deals them; empty when off. */
+export async function getMyMissions(eventId: string): Promise<Mission[]> {
+  const { data, error } = await db().rpc('my_missions', { p_event_id: eventId });
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.mission_id,
+    body: row.body,
+    personal: row.personal,
+    photoId: row.photo_id,
+  }));
+}
+
+/** "This photo was for that mission." Null: for none. Needs the photo's row (after the claim). */
+export async function setPhotoMission(photoId: string, missionId: string | null): Promise<void> {
+  const { error } = await db().rpc('set_photo_mission', {
+    p_photo_id: photoId,
+    p_mission_id: missionId ?? undefined,
+  });
+  if (error) throw error;
+}
+
+/** `photoId -> mission text`. RLS: your own photos' tags, everyone's once developed. */
+export async function listPhotoMissions(eventId: string): Promise<Map<string, string>> {
+  const { data, error } = await db()
+    .from('member_missions')
+    .select('photo_id, event_missions ( body )')
+    .eq('event_id', eventId)
+    .not('photo_id', 'is', null);
+  if (error) throw error;
+  const byPhoto = new Map<string, string>();
+  for (const row of data ?? []) {
+    const body = row.event_missions?.body;
+    if (row.photo_id && body) byPhoto.set(row.photo_id, body);
+  }
+  return byPhoto;
+}
+
+/** The names the host listed for personal missions that nobody has claimed yet. */
+export async function listUnclaimedNames(code: string): Promise<MissionName[]> {
+  const { data, error } = await db().rpc('mission_people_for_invite', { p_invite_code: code });
+  if (error) throw error;
+  return (data ?? []).map((row) => ({ id: row.person_id, name: row.name }));
+}
+
+/** "That's me." Refused with `taken`; `already_dealt` is ignored by the caller. */
+export async function claimName(eventId: string, personId: string): Promise<void> {
+  const { error } = await db().rpc('claim_mission_person', {
+    p_event_id: eventId,
+    p_person_id: personId,
+  });
+  if (error) {
+    if (error.hint === 'taken') throw new MissionNameTakenError();
+    throw error;
+  }
+}
+
+/** The server refuses this tag for good: developed, not the guest's, no such photo. */
+export function tagRefusedForGood(error: unknown): boolean {
+  const e = error as { code?: string; hint?: string } | null;
+  return e?.hint === 'event_closed' || e?.hint === 'not_yours' || e?.code === 'P0002';
+}
+
+/** The server answered (rather than being unreachable, which has an empty code). */
+export function answeredByServer(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === 'string' && code.length > 0;
+}
+
 /**
  * A sentence for any failure. Supabase errors are plain objects, not `Error`s,
  * so `String(e)` would print "[object Object]".

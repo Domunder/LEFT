@@ -9,26 +9,34 @@
  */
 
 import {
+  claimName,
   currentUserId,
   deletePhoto,
   ensureGuest,
   getEvent,
   getMyMember,
+  getMyMissions,
   isConfigured,
   isDeveloped,
   joinEvent,
   listMembers,
+  listPhotoMissions,
   listPhotos,
+  listUnclaimedNames,
   MAX_NAME_LENGTH,
   messageFor,
+  MissionNameTakenError,
   reportPhoto,
+  setPhotoMission,
   signedUrls,
   type Event,
+  type Mission,
+  type MissionName,
   type Photo,
 } from './api';
 import { BrowserCamera, CameraError, type CameraFailure } from './camera';
 import { develop, LookRenderer } from './look-gl';
-import { drain, enqueue, onQueue, pending, startQueue, type Shot } from './queue';
+import { drain, enqueue, onQueue, pending, setQueuedMission, startQueue, type Shot } from './queue';
 
 type View = 'loading' | 'join' | 'waiting' | 'camera' | 'developing' | 'album' | 'error';
 
@@ -67,6 +75,12 @@ const state = {
   queued: 0,
   poll: null as ReturnType<typeof setInterval> | null,
   tick: null as ReturnType<typeof setInterval> | null,
+  /** The guest's missions, with the queue's not-yet-sent tags applied. */
+  missions: [] as Mission[],
+  /** The mission the next shot is for. */
+  armedId: null as string | null,
+  /** Which mission each photo is for, as text — the viewer's caption. */
+  captions: new Map<string, string>(),
 };
 
 // ---------------------------------------------------------------------------
@@ -153,8 +167,11 @@ export async function start() {
     /* fall through to the join form */
   }
   show('join');
+  showJoin();
   $<HTMLInputElement>('join-name').focus({ preventScroll: true });
 }
+
+let showJoin = () => undefined as void;
 
 // ---------------------------------------------------------------------------
 // Join
@@ -172,6 +189,47 @@ function setUpJoin() {
   input.addEventListener('input', sync);
   sync();
 
+  // Missions: a name the host listed ("Tom") for personal missions. Reading the
+  // list needs a session, so the anonymous sign-in starts as the form shows.
+  // Nothing about joining depends on it: no list, no section.
+  let chosen: MissionName | null = null;
+  let joined: { eventId: string; name: string } | null = null;
+  const fieldset = $('join-names');
+  const chips = $('join-name-chips');
+
+  const renderNames = (names: MissionName[]) => {
+    fieldset.hidden = names.length === 0;
+    const option = (label: string, person: MissionName | null) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip press';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String((chosen?.id ?? null) === (person?.id ?? null)));
+      b.textContent = label;
+      b.addEventListener('click', () => {
+        // Over an empty field or the previous chip's name only — never over what the guest typed.
+        const typed = input.value.trim();
+        if (person && (typed === '' || (chosen && typed === chosen.name))) input.value = person.name;
+        chosen = person;
+        error.textContent = '';
+        sync();
+        renderNames(names);
+      });
+      return b;
+    };
+    chips.replaceChildren(...names.map((n) => option(n.name, n)), option('None of these', null));
+    chips.setAttribute('role', 'radiogroup');
+  };
+  const loadNames = async () => {
+    try {
+      await ensureGuest();
+      renderNames(await listUnclaimedNames(state.code));
+    } catch {
+      renderNames([]);
+    }
+  };
+  showJoin = () => void loadNames();
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = input.value.trim();
@@ -180,17 +238,39 @@ function setUpJoin() {
     submit.disabled = true;
     submit.textContent = 'Joining…';
     error.textContent = '';
+    let eventId = joined?.name === name ? joined.eventId : null;
     try {
-      state.userId = await ensureGuest();
-      const eventId = await joinEvent(state.code, name);
-      store.set(`left:web:event:${state.code}`, eventId);
-      store.set('left:web:name', name);
-      await enter(eventId);
+      if (!eventId) {
+        state.userId = await ensureGuest();
+        eventId = await joinEvent(state.code, name);
+        joined = { eventId, name };
+        store.set(`left:web:event:${state.code}`, eventId);
+        store.set('left:web:name', name);
+      }
     } catch (err) {
       error.textContent = messageFor(err);
       submit.textContent = 'Start shooting';
       sync();
+      return;
     }
+
+    if (chosen) {
+      try {
+        await claimName(eventId, chosen.id);
+      } catch (err) {
+        if (err instanceof MissionNameTakenError) {
+          // Still a member. Show who is left; choose again or continue without.
+          chosen = null;
+          error.textContent = 'Someone already picked that name. Choose another, or continue without.';
+          await loadNames();
+          submit.textContent = 'Start shooting';
+          sync();
+          return;
+        }
+        // Already dealt, or anything else: never in the way of joining.
+      }
+    }
+    await enter(eventId);
   });
 }
 
@@ -212,7 +292,8 @@ async function enter(eventId: string) {
   if (!listening) listening = onQueue((change) => {
     if (change.kind === 'dropped' && change.reason === 'roll_empty') toast('Your roll was already used up.');
     if (change.kind === 'dropped' && change.reason === 'event_closed') toast('The film was developed before that photo was sent.');
-    void refreshRoll();
+    if (change.kind === 'mission' || change.kind === 'done') void loadMissions();
+    if (change.kind !== 'mission') void refreshRoll();
   });
 
   if (state.poll) clearInterval(state.poll);
@@ -229,6 +310,7 @@ async function refreshEvent() {
     const changed = next.status !== state.event.status || next.ends_at !== state.event.ends_at;
     state.event = next;
     if (changed) await route();
+    else if (root().dataset.view === 'camera') void loadMissions();
   } catch {
     /* offline: try again on the next tick */
   }
@@ -301,6 +383,9 @@ function setUpCamera() {
   $('my-shots').addEventListener('click', () => void openMyShots());
   $('invite').addEventListener('click', () => void invite());
   $('ends-in').addEventListener('click', () => showDeveloping(false));
+  $('missions').addEventListener('click', () => openMissionList(false));
+  $('armed-clear').addEventListener('click', () => arm(null));
+  setUpMissionSheet();
 
   document.addEventListener('visibilitychange', () => {
     if (root().dataset.view !== 'camera') return;
@@ -315,6 +400,14 @@ async function showCamera() {
   renderEndsIn();
   startTick();
   void showLastShot();
+  void loadMissions().then(() => {
+    // First time on this event: the list opens once, with the explanation.
+    const key = `left:web:missions-intro:${state.event!.id}`;
+    if (state.missions.length && store.get(key) === null && root().dataset.view === 'camera') {
+      store.set(key, '1');
+      openMissionList(true);
+    }
+  });
   await openCamera();
 }
 
@@ -441,8 +534,22 @@ async function shoot() {
     if (lit) void camera.torch(false);
     $('front-flash').classList.remove('on');
 
-    const shot: Shot = { id, eventId: event.id, userId: state.userId, takenAt, ...print, claimed: false, uploaded: false };
+    const missionId = state.armedId;
+    const shot: Shot = {
+      id,
+      eventId: event.id,
+      userId: state.userId,
+      takenAt,
+      ...print,
+      claimed: false,
+      uploaded: false,
+      ...(missionId ? { missionId, missionTagged: false, tagAttempts: 0 } : {}),
+    };
     await enqueue(shot);
+    if (missionId) {
+      arm(null);
+      void loadMissions();
+    }
     state.queued += 1;
     renderCount();
     setLastShot(URL.createObjectURL(print.thumb));
@@ -628,7 +735,7 @@ async function signOne(path: string): Promise<string> {
 }
 
 async function openMyShots() {
-  const prints = await myShots().catch(() => []);
+  const [prints] = await Promise.all([myShots().catch(() => []), loadMissions()]);
   if (prints.length === 0) return toast('No photos yet.');
   openViewer(prints, prints.length - 1, null);
 }
@@ -643,9 +750,14 @@ async function showAlbum() {
   let photos: Photo[];
   let names: Map<string, string>;
   try {
-    const [rows, members] = await Promise.all([listPhotos(event.id), listMembers(event.id)]);
+    const [rows, members, captions] = await Promise.all([
+      listPhotos(event.id),
+      listMembers(event.id),
+      listPhotoMissions(event.id).catch(() => new Map<string, string>()),
+    ]);
     photos = rows;
     names = new Map(members.map((m) => [m.user_id, m.display_name]));
+    state.captions = captions;
   } catch (e) {
     return fail('Couldn’t <em>open the album.</em>', messageFor(e), () => void showAlbum());
   }
@@ -755,6 +867,10 @@ function setUpViewer() {
   $('viewer-save').addEventListener('click', () => void save());
   $('viewer-delete').addEventListener('click', () => void remove());
   $('viewer-report').addEventListener('click', () => void report());
+  $('viewer-tag').addEventListener('click', () => {
+    const print = viewing[current];
+    if (print) openMissionList(false, print.id);
+  });
 }
 
 function openViewer(prints: Print[], index: number, from: HTMLElement | null) {
@@ -802,6 +918,12 @@ function updateViewer() {
   const print = viewing[current];
   if (!print) return;
   $('viewer-caption').textContent = `${print.author} · ${current + 1} of ${viewing.length}`;
+  const mission = state.captions.get(print.id);
+  $('viewer-mission').textContent = mission ? `Mission · ${mission}` : '';
+  $('viewer-mission').hidden = !mission;
+  // Your shots, before the reveal: say which mission a photo was for.
+  const tagging = viewing !== album && state.missions.length > 0 && !!state.event && !isDeveloped(state.event);
+  $('viewer-tag').hidden = !tagging;
 
   const host = state.event?.host_id === state.userId;
   const mine = print.photo?.user_id === state.userId;
@@ -871,4 +993,175 @@ async function report() {
   } catch (e) {
     toast(messageFor(e));
   }
+}
+
+// ---------------------------------------------------------------------------
+// Missions — as on the app's 13: a capsule, the list, the armed next shot
+// ---------------------------------------------------------------------------
+
+/**
+ * The guest's missions from the server, with the queue's tags that have not
+ * reached it yet applied: a mission armed for a frame still in the queue is
+ * done already, as far as the guest is concerned.
+ */
+let serverMissions: Mission[] = [];
+
+async function loadMissions() {
+  const event = state.event;
+  if (!event || event.missions_per_guest === null || event.status !== 'live') {
+    state.missions = [];
+    return renderMissions();
+  }
+  try {
+    // Offline, the last list the server gave; the queue is local and always readable.
+    const [fresh, queue] = await Promise.all([
+      getMyMissions(event.id).catch(() => null),
+      pending(event.id, state.userId),
+    ]);
+    if (fresh) serverMissions = fresh;
+    const missions = serverMissions.map((m) => ({ ...m }));
+    for (const shot of queue) {
+      if (shot.missionTagged !== false) continue;
+      for (const m of missions) if (m.photoId === shot.id) m.photoId = null;
+      const target = missions.find((m) => m.id === shot.missionId);
+      if (target) target.photoId = shot.id;
+    }
+    state.missions = missions;
+  } catch {
+    /* offline: keep what we had */
+  }
+  state.captions = new Map(state.missions.filter((m) => m.photoId).map((m) => [m.photoId!, m.body]));
+  if (state.armedId && !state.missions.some((m) => m.id === state.armedId && m.photoId === null)) state.armedId = null;
+  renderMissions();
+}
+
+function renderMissions() {
+  const capsule = $('missions');
+  const total = state.missions.length;
+  const done = state.missions.filter((m) => m.photoId !== null).length;
+  capsule.hidden = total === 0;
+  capsule.textContent = `Missions ${done}/${total}`;
+  capsule.setAttribute('aria-label', `Missions, ${done} of ${total} done`);
+
+  const armed = state.missions.find((m) => m.id === state.armedId);
+  $('armed').hidden = !armed;
+  $('armed-text').textContent = armed?.body ?? '';
+  if (!$('viewer').hidden) updateViewer();
+}
+
+function arm(missionId: string | null) {
+  state.armedId = missionId;
+  renderMissions();
+}
+
+
+function setUpMissionSheet() {
+  $('mission-scrim').addEventListener('click', closeMissionList);
+  $('mission-done').addEventListener('click', closeMissionList);
+  addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('mission-sheet').hidden) {
+      e.stopImmediatePropagation();
+      closeMissionList();
+    }
+  }, { capture: true });
+}
+
+function missionRow(body: string, opts: { personal?: boolean; detail?: string; state?: string; current?: boolean; disabled?: boolean; done?: boolean }, onPick: () => void) {
+  const li = document.createElement('li');
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = `mission press${opts.done ? ' done' : ''}`;
+  b.disabled = !!opts.disabled;
+  if (opts.current) b.setAttribute('aria-current', 'true');
+  const text = document.createElement('span');
+  text.className = 'mission-body';
+  if (opts.personal) {
+    const tag = document.createElement('small');
+    tag.textContent = 'Just for you';
+    text.append(tag);
+  }
+  text.append(document.createTextNode(body));
+  if (opts.detail) {
+    const d = document.createElement('i');
+    d.textContent = opts.detail;
+    text.append(d);
+  }
+  b.append(text);
+  if (opts.state) {
+    const st = document.createElement('span');
+    st.className = 'mission-state';
+    st.textContent = opts.state;
+    b.append(st);
+  }
+  b.addEventListener('click', onPick);
+  li.append(b);
+  return li;
+}
+
+function openMissionList(intro: boolean, photoId: string | null = null) {
+  const missions = state.missions;
+  const list = $('mission-list');
+  const done = missions.filter((m) => m.photoId !== null).length;
+
+  if (photoId) {
+    $('mission-title').innerHTML = 'Which <em>mission?</em>';
+    $('mission-lede').textContent = 'Pick the mission this photo was for.';
+    const held = missions.find((m) => m.photoId === photoId)?.id ?? null;
+    list.replaceChildren(
+      ...missions.map((m) =>
+        missionRow(
+          m.body,
+          {
+            personal: m.personal,
+            current: m.id === held,
+            state: m.id === held ? 'This photo' : undefined,
+            detail: m.photoId && m.id !== held ? 'Done with another photo. Picking it moves it here.' : undefined,
+          },
+          () => void tagPhoto(photoId, m.id)
+        )
+      ),
+      missionRow('Not a mission', { current: held === null, state: held === null ? 'This photo' : undefined }, () => void tagPhoto(photoId, null))
+    );
+  } else {
+    $('mission-title').innerHTML = 'Your <em>missions.</em>';
+    $('mission-lede').textContent = intro
+      ? `Small challenges from the host — ${missions.length === 1 ? 'one' : missions.length} for you. Tap Missions, pick one, then take the photo. Already took it? Mark it in Your shots. Nobody sees them until the film is developed.`
+      : done === missions.length
+        ? 'All done. Nobody sees them until the film is developed.'
+        : 'Pick one, then take the photo. Already took it? Mark it in Your shots.';
+    list.replaceChildren(
+      ...missions.map((m) => {
+        const isDone = m.photoId !== null;
+        const isArmed = m.id === state.armedId;
+        return missionRow(
+          m.body,
+          { personal: m.personal, done: isDone, disabled: isDone, current: isArmed, state: isDone ? 'Done' : isArmed ? 'Next photo' : undefined },
+          () => {
+            arm(m.id);
+            closeMissionList();
+          }
+        );
+      })
+    );
+  }
+  $('mission-done').hidden = !intro;
+  $('mission-sheet').hidden = false;
+  list.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus({ preventScroll: true });
+}
+
+function closeMissionList() {
+  $('mission-sheet').hidden = true;
+}
+
+/** From Your shots: the queue carries it if the photo is still there, else the server directly. */
+async function tagPhoto(photoId: string, missionId: string | null) {
+  closeMissionList();
+  try {
+    const queued = await setQueuedMission(photoId, missionId);
+    if (!queued) await setPhotoMission(photoId, missionId);
+  } catch (e) {
+    toast(messageFor(e));
+  }
+  await loadMissions();
+  updateViewer();
 }

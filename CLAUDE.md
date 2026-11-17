@@ -521,6 +521,15 @@ cannot UPDATE a photo row or DELETE a roster row — `create_event()`,
 - **Upload queue on IndexedDB** (`web/src/shoot/queue.ts`), the app's order and
   refusal handling. The counter is the server's minus unclaimed queued frames.
 - **No push on the web**: a calendar reminder and a 15 s poll.
+- **Missions on the web (2026-11-17)**, the guest half only, through the same
+  RPCs (`api.ts`): "Are you one of these?" on the join form, the "Missions
+  1/3" capsule and the armed "Next photo: …" in the camera, the intro sheet
+  once per event, "Mission" in Your shots' viewer (re-tag or "Not a
+  mission"), and the caption in the album. The queue tags after the claim
+  (claim → tag → upload) and drops a refused tag, never the photo; writes to
+  a queued entry merge (`update()`), so a re-tag during the upload survives.
+  Run against the local stack with a synthetic camera, online and offline —
+  never on a phone. Hosts still plan missions in the app only.
 - **The App Clip came second** (decided 2026-11-16): a QR-invoked App Clip
   must stay under 15 MB, which the RN app with Skia and VisionCamera cannot,
   so it is a small native SwiftUI target — "The App Clip" below. On an iPhone
@@ -641,7 +650,10 @@ Decided by the user — do not re-litigate:
 - **The reveal holds**: before developing, a guest reads only their own cards
   and their own photos' tags (RLS on `member_missions`, `event_missions`).
 - **Not built:** the mission push notifications (a halfway nudge, the count in
-  the last-hour reminder). **Nothing seen on a device.**
+  the last-hour reminder); **missions in the App Clip** (decided 2026-11-17:
+  after the clip's first successful build — until then a clip guest is dealt
+  missions they cannot see). The web camera has them. **Nothing seen on a
+  device.**
 
 ## Notifications (M4)
 
