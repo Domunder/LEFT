@@ -11,5 +11,8 @@
         ]
       }
     ]
+  },
+  "appclips": {
+    "apps": ["ZFJBLRVHLD.com.leftmoment.app.Clip"]
   }
 }

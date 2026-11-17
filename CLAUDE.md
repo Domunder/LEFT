@@ -61,7 +61,11 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   on a device.**
 - **Built (2026-11-16), branch `feature/web-camera`, run against the local
   stack in a desktop browser with a synthetic camera — never on a phone: the
-  web camera.** See "The web camera" below. The App Clip is a follow-up.
+  web camera.** See "The web camera" below.
+- **Built (2026-11-16), same branch, never compiled — the user is on Windows
+  and it builds only on EAS: the App Clip.** A SwiftUI target that a scanned
+  invite opens without installing the app. See "The App Clip" below. **Needs
+  a new native build** (the clip, the App Group, `@bacons/apple-targets`).
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -181,8 +185,11 @@ mobile/src/
                           storage, roll, tiers, purchases, realtime, invite,
                           event-end, film-status, film-tint, zoom,
                           look-shader, upload-queue, notification-prefs, push,
-                          analytics, my-shots, album, covers, motion
+                          analytics, my-shots, album, covers, motion,
+                          clip-handoff
   types/database.ts       generated — `npm run db:types` at the root
+mobile/targets/clip/      the App Clip (SwiftUI) — see "The App Clip"
+mobile/plugins/           with-worklets-headers, with-app-clip
 supabase/
   migrations/             baseline, price tiers, notifications, service_role
                           grants, retention, photo reports, security hardening
@@ -510,12 +517,95 @@ cannot UPDATE a photo row or DELETE a roster row — `create_event()`,
 - **Upload queue on IndexedDB** (`web/src/shoot/queue.ts`), the app's order and
   refusal handling. The counter is the server's minus unclaimed queued frames.
 - **No push on the web**: a calendar reminder and a 15 s poll.
-- **The App Clip is a follow-up** (decided 2026-11-16): a QR-invoked App Clip
+- **The App Clip came second** (decided 2026-11-16): a QR-invoked App Clip
   must stay under 15 MB, which the RN app with Skia and VisionCamera cannot,
-  so it will be a small native SwiftUI target. Web first.
+  so it is a small native SwiftUI target — "The App Clip" below. On an iPhone
+  the clip's card appears over `/j/` (the `apple-itunes-app` meta tag,
+  `Base.astro`'s `appClip`); the web camera stays for everyone else.
 - **Not seen on a phone:** real camera resolution in Safari/Chrome, the torch
   (only Chrome on Android exposes it), the white front flash, save via the
   share sheet, in-app browsers.
+
+## The App Clip (2026-11-16)
+
+**Never compiled.** The user is on Windows; the clip builds only on EAS, and
+nothing in it has run. Decided with the user: shoot + developing (no album in
+the clip), hand-off through the App Group, `com.leftmoment.app.Clip`,
+`@bacons/apple-targets`.
+
+- **Scanning an invite opens a native clip, no install:** name (11) →
+  waiting (12) → camera (13) → the developing state with a countdown and
+  "Get LEFT" (`SKOverlay`). The album is the full app's. A phone *with* the
+  app opens the app (universal link); without either, Safari shows the web
+  camera with the clip's card on top.
+- **SwiftUI and system frameworks only** (`mobile/targets/clip/*.swift`): no
+  React Native, no Supabase SDK, no packages. That is what keeps it far under
+  the 15 MB limit for QR invocation (iOS 17+, the clip's deployment target).
+  Fonts are the app's (Newsreader, Inter, DM Serif — ~1 MB in `Fonts/`).
+  Expected 2–4 MB; App Store Connect shows the real size per build.
+- **How it gets into the build:** `@bacons/apple-targets` reads
+  `targets/clip/expo-target.config.js`, adds the target (product type
+  on-demand-install-capable), the "Embed App Clips" phase and the clip's
+  entitlements (`appclips:leftmoment.com`, the App Group, the parent app id).
+  **`exportJs: false` is load-bearing** — the package bundles React Native
+  into a clip by default. `plugins/with-app-clip.js` then gives the clip the
+  app's version (the package hardcodes 1.0; the store rejects a mismatch),
+  passes `EXPO_PUBLIC_SUPABASE_URL` and the key into its Info.plist (as
+  scheme + host: an unquoted `//` in project.pbxproj reads as a comment), and
+  regenerates the looks. **It must stay listed before `@bacons/apple-targets`
+  in app.json** — mods run in reverse order, and its Xcode action needs the
+  target to exist. `ios.appleTeamId` is set because the package needs it.
+- **`targets/clip/Info.plist` is ours, not generated** (the package writes one
+  only when none exists, with a storyboard the clip does not have).
+  `Assets.xcassets` in that folder *is* generated on every prebuild and is
+  gitignored.
+- **Same server doors as the app and the web camera** (`Server.swift` mirrors
+  `web/src/shoot/api.ts`): anonymous sign-in (`/auth/v1/signup`), refresh,
+  `join_event`, `claim_shot`, uploads to the pinned paths with `x-upsert`,
+  `mark_photo_uploaded`. No migration. A door that changes for the app
+  changes in `Server.swift` too.
+- **The looks are a Metal port of the SkSL** (`LookRenderer.swift`), compiled
+  from source at runtime (`makeLibrary(source:)`) so the target needs no
+  Metal build flags. The recipes, `LENS`, `GRAIN_CELLS` and `PhotoOutput` are
+  generated into `LooksGenerated.swift` from `constants/looks.ts` by
+  `scripts/sync-clip-looks.mjs` — on every prebuild, and committed. **The
+  shader's maths now lives in three places** (SkSL, WebGL, Metal); change all
+  three. The maths runs on sRGB-encoded values, as Skia's does: textures are
+  `unorm`, never `_srgb`.
+- **The viewfinder shows the film** (no grain): AVFoundation BGRA frames →
+  `CVMetalTextureCache` (no copy) → the shader → a `CAMetalLayer`, drawn on
+  the camera's queue. Metal may be used from any thread — the Skia
+  per-thread-context crash of the app's camera does not apply here.
+- **Photos:** 4:3, at most 12 MP (a 48 MP sensor would only be scaled down to
+  the 3000 px print), JPEG, oriented by `RotationCoordinator` (a sideways
+  phone takes a landscape picture), selfies mirrored on the connection as
+  previewed. `Developer` bakes the look: original 3000 px at 0.88, thumbnail
+  640 px at 0.72 — the app's `PhotoOutput`. Back flash is the system flash;
+  the front flash is a white screen for `leadMs` (320 ms). Zoom is pinch only
+  (no lens stops).
+- **Upload queue on files in the App Group folder** (`UploadQueue.swift`,
+  `clip-shots/`): the app's order (claim → upload both → mark), its refusal
+  handling, retry on reconnect (`NWPathMonitor`), on foreground and with
+  backoff. The counter is the server's last `shots_left` minus unclaimed and
+  still-developing frames.
+- **Hand-off to the full app: the App Group** `group.com.leftmoment.app`
+  (both targets carry it). The clip keeps its session (access + refresh
+  token, user id) under `left.clip.session` in the group's UserDefaults and
+  re-reads it before every refresh. On the app's first launch
+  `lib/clip-handoff.ts` adopts it with `auth.setSession()` — only when the app
+  has no session of its own — and deletes it; the root layout runs it before
+  its session check. Same user, same roll; the film is in Moments.
+  `ExtensionStorage` (from `@bacons/apple-targets`) is the native reader; in
+  a build without it, its JS is a no-op.
+- **Accepted:** frames still queued in the clip when the app replaces it stay
+  in the App Group folder, undrained by the app. A refresh token the clip can
+  no longer use (revoked, or rotated by the app) ends that identity; the next
+  join is a new member with a fresh roll — the known gap.
+- **Polling, no realtime:** waiting and camera re-read the event every 15 s
+  and on foreground.
+- **The user's steps** (App Group identifier, EAS credentials for the clip,
+  App Clip experiences in App Store Connect, local experience for testing,
+  the size check) are `docs/LAUNCH.md` §7a; device checks in §8.
 
 ## Notifications (M4)
 

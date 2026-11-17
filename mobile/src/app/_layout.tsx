@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ToastProvider } from '@/components/ui/toast-host';
 import { startAnalytics } from '@/lib/analytics';
 import { getSession } from '@/lib/auth';
+import { adoptClipSession } from '@/lib/clip-handoff';
 import { OnboardingProvider } from '@/lib/onboarding-draft';
 import { onPushOpened, syncPush } from '@/lib/push';
 import { isSupabaseConfigured } from '@/lib/supabase';
@@ -95,7 +96,9 @@ export default function RootLayout() {
             session is still valid once the read completes.
           */
           const session = await Promise.race([
-            getSession(),
+            // A guest who shot with the App Clip first becomes this app's
+            // user (same roll, same photos) — see lib/clip-handoff.ts.
+            adoptClipSession().then(() => getSession()),
             new Promise<null>((resolve) => {
               timer = setTimeout(() => resolve(null), SESSION_CHECK_TIMEOUT_MS);
             }),

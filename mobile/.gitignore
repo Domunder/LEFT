@@ -48,3 +48,6 @@ example
 # copied in so CocoaPods compiles it into the local module. Edit the original
 # in plugins/live-activity/.
 modules/left-live-activity/ios/LeftBudgetAttributes.swift
+
+# App Clip: written by @bacons/apple-targets on every prebuild (icon, colours)
+targets/clip/Assets.xcassets/

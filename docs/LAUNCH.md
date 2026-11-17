@@ -203,6 +203,36 @@ Ein **neuer nativer Build ist nötig** (neu seit dem letzten Build:
 - ☐ Vor dem Produktions-Build: `EXPO_PUBLIC_*`-Werte in der EAS-Umgebung
   „production" setzen (Supabase, Google, RevenueCat, optional PostHog).
 
+### 7a · App Clip (seit 2026-11-16, noch nie gebaut)
+
+Die App Clip (`mobile/targets/clip`, CLAUDE.md → „The App Clip") wird mit
+jedem iOS-Build gebaut und in die App eingebettet. Vor dem ersten Build:
+
+- ☐ developer.apple.com → Identifiers: **App Group**
+  `group.com.leftmoment.app` anlegen und bei `com.leftmoment.app` aktivieren.
+  Für `com.leftmoment.app.Clip` legt EAS den Identifier an; dort ebenfalls
+  App Group und Associated Domains aktivieren, falls EAS es nicht tut.
+- ☐ Erster Build: `eas build -p ios --profile production`. Fragt EAS nach
+  Zugangsdaten für `com.leftmoment.app.Clip` oder scheitert die Signierung
+  der Clip, einmal `cd mobile && eas credentials` → iOS → das Profil
+  „production" → für **beide** Bundle-IDs Zertifikat und Provisioning Profile
+  erzeugen lassen. (`@bacons/apple-targets` sagt selbst, dass die Signierung
+  von App Clips auf EAS noch nicht ganz automatisch ist.)
+- ☐ **Größe prüfen:** App Store Connect → der Build → App Clip → „App Clip
+  Size". Muss unter **15 MB** liegen (Aufruf per QR-Code, ab iOS 17).
+  Erwartet: 2–4 MB.
+- ☐ App Store Connect → App → App Clip: **Default App Clip Experience**
+  (Titel „Join the film", Untertitel, Bild 1800×1200, Aktion „Open") und
+  eine **Advanced App Clip Experience** für die URL
+  `https://leftmoment.com/j/` (Präfix — gilt für alle Codes).
+- ☐ Die Website mit dem `appclips`-Eintrag in
+  `.well-known/apple-app-site-association` muss live sein, bevor Apple die
+  Domain prüft (App Store Connect zeigt den Status der Experience).
+- ☐ Testen ohne Store: auf dem iPhone Einstellungen → Entwickler → „App Clips
+  Testing" → „Local Experiences" → URL-Präfix `https://leftmoment.com/j/`,
+  Bundle-ID `com.leftmoment.app.Clip`. Danach öffnet ein QR-Code die Clip
+  (die volle App vorher löschen, sonst öffnet sie den Link).
+
 ## 8 · Auf dem Gerät prüfen (noch nie gesehen)
 
 - ☐ Glas über dem Sucher (Blitz/Zähler/Wechsel oben, Shots/Zoom/Einladung unten)
@@ -216,6 +246,12 @@ Ein **neuer nativer Build ist nötig** (neu seit dem letzten Build:
 - ☐ Blitz zündet wirklich, Speicheranzeige im Sucher bleibt flach, Querformat-Foto,
   App-Kill und Funkloch (aus M2 offen)
 - ☐ Löschen als Host und als Gast, „Reduce Motion", „Reduce Transparency" (aus M3 offen)
+- ☐ **App Clip** (ohne installierte App): QR scannen → Karte → Name →
+  Warten/Kamera; Live-Look im Sucher entspricht dem Look des Films; Foto mit
+  Blitz (hinten) und weißem Bildschirm (vorne); Querformat; Zähler sinkt;
+  Funkloch → Fotos landen später; nach dem Entwickeln „Get LEFT"
+- ☐ **Übergabe:** nach Fotos in der Clip die App installieren und öffnen →
+  derselbe Gast, der Film steht in Moments, der Zähler stimmt
 
 ## 9 · TestFlight-Beta an einer echten Party
 
