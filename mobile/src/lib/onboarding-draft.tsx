@@ -64,6 +64,11 @@ export type OnboardingDraft = {
    */
   /** Undefined until 05.1 is answered; null is the unlimited roll. */
   rollSize?: RollSize;
+  /**
+   * 05.1 · Missions each guest is dealt, 1–3. Null is "missions off", and so is
+   * undefined (never asked) — off is the default. Free: it never prices the event.
+   */
+  missionsPerGuest?: number | null;
 };
 
 /** Why a draft cannot be turned into an event yet. */
@@ -95,7 +100,7 @@ export function draftToCreateEventInput(
   draft: OnboardingDraft,
   now: Date = new Date()
 ): DraftNarrowing {
-  const { eventType, filmName, look, endsAt, maxMembers, rollSize } = draft;
+  const { eventType, filmName, look, endsAt, maxMembers, rollSize, missionsPerGuest } = draft;
 
   if (!eventType || !filmName?.trim() || !look || !endsAt || !maxMembers) {
     return { ok: false, problem: 'incomplete' };
@@ -115,6 +120,8 @@ export function draftToCreateEventInput(
       maxMembers,
       // `undefined` is "never asked"; null is a deliberate unlimited roll.
       rollSize: rollSize === undefined ? DEFAULT_ROLL_SIZE : rollSize,
+      // Off unless 05.1 switched them on. The server checks the 1–3 range.
+      missionsPerGuest: missionsPerGuest ?? null,
     },
   };
 }
@@ -151,6 +158,7 @@ export function OnboardingProvider({ children }: PropsWithChildren) {
     setDraft((prev) => ({ ...prev, ...partial }));
   }, []);
 
+  // Clears every field, `missionsPerGuest` included: the next event starts with missions off.
   const reset = useCallback(() => setDraft({}), []);
 
   const value = useMemo(

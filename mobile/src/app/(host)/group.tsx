@@ -10,22 +10,27 @@
  * whether their party had arrived.
  *
  * "Start the Event" is the one thing that moves `events.status` off 'setup'.
- * Screen 12 waits on exactly that transition.
+ * Screen 12 waits on exactly that transition. It also deals the missions, which
+ * is why their row ("Missions · On · 1 per guest", to `(host)/missions`) sits
+ * just above it: the list is locked from that tap on.
  *
  * The ambient glow lives in (host)/_layout.tsx, which is why this is `transparent`.
  */
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { MemberChip } from '@/components/ui/member-chip';
 import { PillButton } from '@/components/ui/pill-button';
+import { PressScale } from '@/components/ui/press-scale';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { StatusPill } from '@/components/ui/status-pill';
 import { Body, Display, Em, Label } from '@/components/ui/typography';
-import { Colors, Group, Spacing } from '@/constants/theme';
+import { Colors, Group, MissionsEditor, Press, Spacing } from '@/constants/theme';
+import { Typography } from '@/constants/typography';
 import {
   getEvent,
   listMembers,
@@ -40,6 +45,11 @@ type LoadState =
   | { kind: 'loading' }
   | { kind: 'ready'; event: Event }
   | { kind: 'error' };
+
+/** The Missions row's status — "On · 1 per guest" or "Off". */
+function missionsStatus(perGuest: number | null): string {
+  return perGuest === null ? 'Off' : `On · ${perGuest} per guest`;
+}
 
 export default function GroupScreen() {
   const router = useRouter();
@@ -112,6 +122,26 @@ export default function GroupScreen() {
     if (!liveEventId) return;
     return subscribeToMembers(liveEventId, setMembers);
   }, [liveEventId, setMembers]);
+
+  /*
+    Coming back from the Missions screen: re-read the event so the row's
+    "On · 2 per guest" is what the host just set. A failed re-read keeps the
+    row as it was.
+  */
+  useFocusEffect(
+    useCallback(() => {
+      if (!liveEventId) return;
+      let cancelled = false;
+      getEvent(liveEventId)
+        .then((fresh) => {
+          if (!cancelled) setState({ kind: 'ready', event: fresh });
+        })
+        .catch(() => {});
+      return () => {
+        cancelled = true;
+      };
+    }, [liveEventId])
+  );
 
   const handleStart = useCallback(async () => {
     if (!event || starting) return;
@@ -235,6 +265,33 @@ export default function GroupScreen() {
         ) : null}
       </View>
 
+      {/*
+        Missions (2026-11-17). Here, just above the start, because the start is
+        what deals them and locks the list: the last thing to check before the
+        tap. Opens read-only once the event is running.
+      */}
+      {event ? (
+        <PressScale
+          accessibilityRole="button"
+          accessibilityLabel={`Missions, ${missionsStatus(event.missions_per_guest)}`}
+          onPress={() =>
+            router.push({ pathname: '/(host)/missions', params: { eventId: event.id } })
+          }
+          scale={Press.cardScale}
+          style={styles.missions}>
+          <Feather name="target" size={MissionsEditor.entry.iconSize} color={Colors.textMuted} />
+          <Text style={styles.missionsLabel}>Missions</Text>
+          <Text style={styles.missionsStatus} numberOfLines={1}>
+            {missionsStatus(event.missions_per_guest)}
+          </Text>
+          <Feather
+            name="chevron-right"
+            size={MissionsEditor.entry.chevronSize}
+            color={Colors.textFaint}
+          />
+        </PressScale>
+      ) : null}
+
       {error ? (
         <Body small color={Colors.textMuted} style={styles.error}>
           {error}
@@ -296,6 +353,28 @@ const styles = StyleSheet.create({
   },
   centered: {
     textAlign: 'center',
+  },
+  missions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: MissionsEditor.entry.gap,
+    paddingVertical: MissionsEditor.entry.paddingY,
+    paddingHorizontal: MissionsEditor.entry.paddingX,
+    borderRadius: MissionsEditor.entry.radius,
+    borderWidth: 1,
+    borderColor: MissionsEditor.card.border,
+    backgroundColor: MissionsEditor.card.bg,
+    marginBottom: MissionsEditor.entry.marginBottom,
+  },
+  missionsLabel: {
+    ...Typography.settingsRow,
+    color: Colors.textStrong,
+    flex: 1,
+  },
+  missionsStatus: {
+    ...Typography.metaMd,
+    color: Colors.textFaint,
+    flexShrink: 1,
   },
   error: {
     textAlign: 'center',

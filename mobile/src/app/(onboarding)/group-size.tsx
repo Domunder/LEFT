@@ -15,8 +15,18 @@
  * The price is on the button that charges it; under the choices a paid event
  * says only "No subscription." (the user's call, 2026-11-15).
  *
+ * **Missions (2026-11-17)** sit under both answers as an optional third one:
+ * a switch, off by default, and when on "Missions per guest" 1 · 2 · 3
+ * (`MissionsSetup`). They are free — `tierFor()` never sees them, so the price
+ * on the button cannot move when the switch does. The server seeds the list
+ * from the event type; the host edits it before the start, not here.
+ *
  * Deviations from the prototype (which drew a film-length dial here, for video):
  *  - The roll row replaces the dial and its legend.
+ *  - The Missions section is not in the prototype at all (see above). Turning
+ *    it on grows the centred content, so every section moves on a layout
+ *    spring rather than jumping, and the page scrolls the new row into view
+ *    when it no longer fits.
  *  - The artboard pads this screen to 24px; it keeps the flow's standard 28.
  *  - The CTA carries no arrow icon, unlike 02/03/04.
  *
@@ -26,17 +36,26 @@
 
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
+import { useRef, useState } from 'react';
+import { Platform, ScrollView, StyleSheet, Text, type ScrollViewInstance } from 'react-native';
+import Animated, { Easing, FadeInDown, LinearTransition } from 'react-native-reanimated';
 
 import { GroupSizeRow } from '@/components/ui/group-size-row';
+import { MissionsSetup } from '@/components/ui/missions-setup';
 import { PillButton } from '@/components/ui/pill-button';
 import { RollChoices } from '@/components/ui/roll-choices';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
-import { Colors, GroupRow, LengthChoice, Motion, Spacing } from '@/constants/theme';
+import {
+  Colors,
+  GroupRow,
+  LengthChoice,
+  MissionsSetup as MissionsTokens,
+  Motion,
+  Spacing,
+  Springs,
+} from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { useEventCreation, type CreationPhase } from '@/hooks/use-event-creation';
 import { draftToCreateEventInput, useGlow, useOnboarding, useStep } from '@/lib/onboarding-draft';
@@ -45,12 +64,21 @@ import { ctaLabel, tierFor, type EventTier } from '@/lib/tiers';
 
 const EASING = Easing.bezier(...Motion.bezier).factory();
 
-/** The group question arrives after the headline, and the roll question trails it. */
-const ENTER_DELAY = { group: 120, roll: 180 } as const;
+/** The group question arrives after the headline, the roll trails it, missions last. */
+const ENTER_DELAY = { group: 120, roll: 180, missions: 240 } as const;
 
 function entering(delay: number) {
   return FadeInDown.duration(Motion.duration).easing(EASING).delay(delay);
 }
+
+/**
+ * How the sections move when the content grows or shrinks (the missions count
+ * row, the "No subscription." line). Critically damped, no overshoot; under
+ * reduced motion Reanimated skips it and the sections simply take their place.
+ */
+const LAYOUT = LinearTransition.springify(Springs.settle.duration).dampingRatio(
+  Springs.settle.dampingRatio
+);
 
 /**
  * What the button says in each phase.
@@ -91,8 +119,18 @@ export default function GroupSizeScreen() {
     draft.rollSize === undefined ? DEFAULT_ROLL_SIZE : draft.rollSize
   );
 
-  // A mirror of the server's rule, for the copy and the button only.
+  // Null (and an unanswered draft) is "missions off", the default.
+  const [missionsPerGuest, setMissionsPerGuest] = useState<number | null>(
+    draft.missionsPerGuest ?? null
+  );
+
+  // A mirror of the server's rule, for the copy and the button only. Missions
+  // are free, so they are deliberately not an input here.
   const tier = tierFor(groupSize, rollSize);
+
+  const scroll = useRef<ScrollViewInstance>(null);
+  // Set when the switch turns on, so the grown content is scrolled to once.
+  const revealMissions = useRef(false);
 
   function selectGroup(next: number) {
     if (next === groupSize) return;
@@ -107,10 +145,28 @@ export default function GroupSizeScreen() {
     setRollSize(next);
   }
 
+  function selectMissions(next: number | null) {
+    if (next === missionsPerGuest) return;
+    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    if (missionsPerGuest === null && next !== null) revealMissions.current = true;
+    setMissionsPerGuest(next);
+  }
+
+  /*
+    On a short screen (or large text) the count row turns up below the fold;
+    bring it into view once, after the content has grown. A no-op when
+    everything already fits.
+  */
+  function handleContentSize() {
+    if (!revealMissions.current) return;
+    revealMissions.current = false;
+    scroll.current?.scrollToEnd({ animated: true });
+  }
+
   async function handleContinue() {
     if (creation.busy) return;
 
-    const chosen = { maxMembers: groupSize, rollSize };
+    const chosen = { maxMembers: groupSize, rollSize, missionsPerGuest };
     patch(chosen);
 
     /*
@@ -182,22 +238,24 @@ export default function GroupSizeScreen() {
         screenful below the last row.
       */}
       <ScrollView
+        ref={scroll}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         bounces={false}
+        onContentSizeChange={handleContentSize}
         // Nothing here scrolls sideways; without this web lets a stray overflowing
         // child pan the whole view.
         horizontal={false}>
-        <Animated.View entering={entering(ENTER_DELAY.group)}>
+        <Animated.View entering={entering(ENTER_DELAY.group)} layout={LAYOUT}>
           <Text style={styles.answer}>Up to {groupSize} people</Text>
 
           <GroupSizeRow value={groupSize} onChange={selectGroup} />
         </Animated.View>
 
-        <View style={styles.divider} />
+        <Animated.View layout={LAYOUT} style={styles.divider} />
 
-        <Animated.View entering={entering(ENTER_DELAY.roll)}>
+        <Animated.View entering={entering(ENTER_DELAY.roll)} layout={LAYOUT}>
           <Label small style={styles.sectionLabel}>
             Shots per person
           </Label>
@@ -214,6 +272,12 @@ export default function GroupSizeScreen() {
               No subscription.
             </Caption>
           ) : null}
+        </Animated.View>
+
+        <Animated.View layout={LAYOUT} style={[styles.divider, styles.missionsDivider]} />
+
+        <Animated.View entering={entering(ENTER_DELAY.missions)} layout={LAYOUT}>
+          <MissionsSetup value={missionsPerGuest} onChange={selectMissions} />
         </Animated.View>
       </ScrollView>
 
@@ -270,6 +334,10 @@ const styles = StyleSheet.create({
     backgroundColor: GroupRow.divider,
     marginTop: GroupRow.bottomGap,
     marginBottom: GroupRow.dividerGap,
+  },
+  missionsDivider: {
+    marginTop: MissionsTokens.dividerTop,
+    marginBottom: MissionsTokens.dividerBottom,
   },
   sectionLabel: {
     marginBottom: LengthChoice.labelGap,

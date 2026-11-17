@@ -12,13 +12,21 @@
  *
  * The number the screen shows is `shotsLeft`: the server's last count minus the
  * unclaimed frames. It is never incremented locally and never goes below zero.
+ *
+ * **Missions** come along when the event has them and is live: the server's
+ * deal (`getMyMissions`, cached per event for a phone with no signal), with
+ * the tags still in the upload queue laid over it (`withQueuedTags`) — so a
+ * mission reads as done the moment its shot is queued, and as open again if
+ * the server refuses the tag. Nothing is counted locally as truth.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { getSession } from '@/lib/auth';
 import { getEvent, subscribeToEventStatus, type Event } from '@/lib/events';
+import type { Mission } from '@/lib/missions';
+import { cachedMissions, fetchMissions, withQueuedTags } from '@/lib/my-shots';
 import { getRollState, type RollState } from '@/lib/photos';
 import { pendingCount, subscribeToQueue, unclaimedCount } from '@/lib/upload-queue';
 
@@ -59,8 +67,16 @@ export type CameraSession =
       pending: number;
       /** The cameras have closed: by status, or by the clock passing `ends_at`. */
       developed: boolean;
+      /**
+       * The guest's missions, with queued tags applied. Empty when missions are
+       * off, before the event is live, or when none were dealt.
+       */
+      missions: Mission[];
       reload: () => void;
     };
+
+/** Missions are only dealt, and only worth asking for, while the event is live. */
+const hasMissions = (event: Event) => event.missions_per_guest != null && event.status === 'live';
 
 export function useCameraSession(eventId: string | undefined): CameraSession {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
@@ -68,6 +84,12 @@ export function useCameraSession(eventId: string | undefined): CameraSession {
   const [counts, setCounts] = useState({ unclaimed: 0, pending: 0 });
   const [clockEnded, setClockEnded] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  /** The server's last answer about the missions (or the cached one). */
+  const [serverMissions, setServerMissions] = useState<Mission[]>([]);
+  /** Bumped on every queue change, so the owed tags are laid over again. */
+  const [queueVersion, setQueueVersion] = useState(0);
+  /** Bumped when a tag reached the server or was dropped: ask the server again. */
+  const [missionsVersion, setMissionsVersion] = useState(0);
 
   const reload = useCallback(() => {
     setFailed(false);
@@ -126,19 +148,50 @@ export function useCameraSession(eventId: string | undefined): CameraSession {
     };
   }, [eventId, attempt]);
 
+  // Missions: the cached answer at once, then the server's (which deals them on
+  // the first call). A failed request keeps what there was — offline is normal.
+  const userId = snapshot?.userId;
+  const missionsOn = snapshot ? hasMissions(snapshot.event) : false;
+  useEffect(() => {
+    if (!eventId || !userId) return;
+    if (!missionsOn) {
+      setServerMissions([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const cached = await cachedMissions(eventId, userId);
+      if (cancelled) return;
+      if (cached) setServerMissions(cached);
+      try {
+        const fresh = await fetchMissions(eventId, userId);
+        if (!cancelled) setServerMissions(fresh);
+      } catch {
+        // Keep the cached copy.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId, userId, missionsOn, missionsVersion, attempt]);
+
   // The queue: counts on every change, and the server's count on every claim.
   useEffect(() => {
     if (!eventId) return;
 
-    const read = () =>
+    const read = () => {
       setCounts({ unclaimed: unclaimedCount(eventId), pending: pendingCount(eventId) });
+      setQueueVersion((n) => n + 1);
+    };
     read();
 
     return subscribeToQueue((change) => {
       if (change.type === 'changed') {
         read();
       } else if (change.eventId === eventId) {
-        if (change.type === 'claimed') {
+        if (change.type === 'mission') {
+          setMissionsVersion((n) => n + 1);
+        } else if (change.type === 'claimed') {
           // In the same batch as the count, so the number never flickers up.
           read();
           setSnapshot((current) => {
@@ -183,16 +236,24 @@ export function useCameraSession(eventId: string | undefined): CameraSession {
     return () => clearTimeout(timer);
   }, [endsAt]);
 
+  const missions = useMemo(
+    () => (eventId && missionsOn ? withQueuedTags(eventId, serverMissions) : []),
+    // `queueVersion` stands for the queue's contents, which live outside React.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [eventId, missionsOn, serverMissions, queueVersion]
+  );
+
   if (!snapshot) return failed ? { status: 'error', reload } : { status: 'loading' };
 
-  const { event, roll, userId } = snapshot;
+  const { event, roll } = snapshot;
   return {
     status: 'ready',
     event,
-    userId,
+    userId: snapshot.userId,
     shotsLeft: roll.shotsLeft === null ? null : Math.max(0, roll.shotsLeft - counts.unclaimed),
     pending: counts.pending,
     developed: event.status === 'developed' || clockEnded,
+    missions,
     reload,
   };
 }

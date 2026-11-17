@@ -24,6 +24,9 @@
  *
  * A guest who leaves a developed album is offered `(auth)/keep` once — after
  * they have seen the photos, never in front of them.
+ *
+ * A photo taken for a mission shows it in the viewer ("Mission · …",
+ * `listPhotoMissions`). The grid and the reveal do not mention missions.
  */
 
 import { Image, type ImageSource } from 'expo-image';
@@ -50,7 +53,7 @@ import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
 import { Body } from '@/components/ui/typography';
 import { samplesFor } from '@/constants/samples';
-import { Album as T, Colors, Glass as GlassTokens } from '@/constants/theme';
+import { Album as T, Colors, Glass as GlassTokens, MissionsCamera } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import {
   ensureCanSave,
@@ -67,6 +70,7 @@ import {
 import { getSession, isAnonymous } from '@/lib/auth';
 import { messageFor } from '@/lib/auth-errors';
 import { endEvent, subscribeToEventStatus } from '@/lib/events';
+import { listPhotoMissions } from '@/lib/missions';
 import { loadMyShots } from '@/lib/my-shots';
 import { deletePhoto, reportPhoto } from '@/lib/photos';
 import { isPromptDismissed } from '@/lib/prompt-dismissal';
@@ -179,6 +183,30 @@ export default function AlbumScreen() {
   const album = state.kind === 'ready' ? state.album : null;
   const photos = useMemo(() => album?.photos ?? [], [album]);
   const developed = album?.developed ?? false;
+
+  /*
+    Which mission each photo was for, for the viewer's caption. Asked once the
+    film is developed (RLS returns everyone's then) and only when the event had
+    missions. Without an answer the photos simply carry no caption.
+  */
+  const [missionByPhoto, setMissionByPhoto] = useState<ReadonlyMap<string, string>>(
+    () => new Map()
+  );
+  const hadMissions = album?.event.missions_per_guest != null;
+  useEffect(() => {
+    if (!id || !developed || !hadMissions) return;
+    let cancelled = false;
+    listPhotoMissions(id)
+      .then((map) => {
+        if (!cancelled) setMissionByPhoto(map);
+      })
+      .catch(() => {
+        // No captions; the album is complete without them.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [id, developed, hadMissions]);
 
   // --- the hero -------------------------------------------------------------
 
@@ -444,11 +472,16 @@ export default function AlbumScreen() {
         width: photo.width,
         height: photo.height,
         caption: photo.author,
+        mission: missionByPhoto.get(photo.id),
       })),
-    [photos]
+    [photos, missionByPhoto]
   );
 
+  /** The viewer's photo — the status capsule steps above its mission caption. */
+  const [viewerIndex, setViewerIndex] = useState(0);
+
   const follow = useCallback((index: number) => {
+    setViewerIndex(index);
     list.current?.scrollToIndex({
       index: Math.floor(index / T.columns),
       viewPosition: 0.5,
@@ -670,7 +703,15 @@ export default function AlbumScreen() {
 
       {status ? (
         <View
-          style={[styles.status, { bottom: insets.bottom + T.status.bottom }]}
+          style={[
+            styles.status,
+            {
+              bottom:
+                insets.bottom +
+                T.status.bottom +
+                (open && viewerPhotos[viewerIndex]?.mission ? MissionsCamera.caption.statusLift : 0),
+            },
+          ]}
           pointerEvents="none"
           accessibilityLiveRegion="polite">
           <Glass radius={GlassTokens.capsuleHeight / 2} style={styles.statusCapsule}>

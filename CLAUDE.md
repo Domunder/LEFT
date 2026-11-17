@@ -66,6 +66,10 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   and it builds only on EAS: the App Clip.** A SwiftUI target that a scanned
   invite opens without installing the app. See "The App Clip" below. **Needs
   a new native build** (the clip, the App Group, `@bacons/apple-targets`).
+- **In progress (2026-11-17, merged into `feature/web-camera`): missions.** Server
+  verified against the local stack with SQL; screens built (typecheck and
+  lint clean), **never run on a device**; the mission notifications are not
+  built. See "Missions" below.
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -606,6 +610,38 @@ the clip), hand-off through the App Group, `com.leftmoment.app.Clip`,
 - **The user's steps** (App Group identifier, EAS credentials for the clip,
   App Clip experiences in App Store Connect, local experience for testing,
   the size check) are `docs/LAUNCH.md` §7a; device checks in §8.
+
+## Missions (2026-11-17)
+
+Small photo challenges ("A photo with someone you have never met"), free on
+every event. Migration `20261117000000_missions.sql`, client `lib/missions.ts`.
+Decided by the user — do not re-litigate:
+
+- **Off by default; 1–3 per guest** (`events.missions_per_guest`, null = off),
+  switched on 05.1 or on the host's Missions screen (`(host)/missions`, from
+  10).
+- **The host plans before the start, and the start locks it.** The list is
+  seeded from a library matched to the event type (`event_type_missions()`,
+  20 each, then `general_missions()`, 60), as long as the group could use, at
+  most 200 per event. The host rewrites, adds, deletes, and names people
+  (typed, for someone not there yet, or linked to a guest who joined) with
+  personal missions. Everything is refused once `status <> 'setup'`.
+- **Each mission goes to one guest.** Dealt by `deal_missions()` when the
+  host starts the event, round by round (everyone's first before anyone's
+  second), personal missions first; with fewer missions than guests some get
+  none. A late joiner is dealt leftovers by `my_missions()`. No rerolls.
+- **A guest claims a name on 11** (`claim_mission_person`), one name each,
+  first come first served; a host-linked guest picks nothing.
+- **A photo is tagged, never written**: `set_photo_mission()`, one photo ↔ one
+  mission, until the film is developed. The upload queue tags after the claim
+  as its own step (claim → tag → upload); a refused tag drops the tag, never
+  the photo. In the camera, a "Missions 1/3" capsule under the roll counter
+  arms the next shot ("Next photo: …" at the viewfinder's top edge); "Your
+  shots" can tag a photo afterwards; the viewer captions "Mission · …".
+- **The reveal holds**: before developing, a guest reads only their own cards
+  and their own photos' tags (RLS on `member_missions`, `event_missions`).
+- **Not built:** the mission push notifications (a halfway nudge, the count in
+  the last-hour reminder). **Nothing seen on a device.**
 
 ## Notifications (M4)
 

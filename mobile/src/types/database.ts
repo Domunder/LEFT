@@ -69,6 +69,48 @@ export type Database = {
           },
         ]
       }
+      event_missions: {
+        Row: {
+          body: string
+          created_at: string
+          event_id: string
+          id: string
+          person_id: string | null
+          seq: number
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          event_id: string
+          id?: string
+          person_id?: string | null
+          seq?: never
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          person_id?: string | null
+          seq?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_missions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_missions_event_id_person_id_fkey"
+            columns: ["event_id", "person_id"]
+            isOneToOne: false
+            referencedRelation: "mission_people"
+            referencedColumns: ["event_id", "id"]
+          },
+        ]
+      }
       events: {
         Row: {
           created_at: string
@@ -80,6 +122,7 @@ export type Database = {
           invite_code: string
           look: Database["public"]["Enums"]["film_look"]
           max_members: number
+          missions_per_guest: number | null
           name: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
@@ -94,6 +137,7 @@ export type Database = {
           invite_code?: string
           look?: Database["public"]["Enums"]["film_look"]
           max_members: number
+          missions_per_guest?: number | null
           name: string
           roll_size?: number | null
           status?: Database["public"]["Enums"]["event_status"]
@@ -108,11 +152,93 @@ export type Database = {
           invite_code?: string
           look?: Database["public"]["Enums"]["film_look"]
           max_members?: number
+          missions_per_guest?: number | null
           name?: string
           roll_size?: number | null
           status?: Database["public"]["Enums"]["event_status"]
         }
         Relationships: []
+      }
+      member_missions: {
+        Row: {
+          dealt_at: string
+          event_id: string
+          mission_id: string
+          photo_id: string | null
+          user_id: string
+        }
+        Insert: {
+          dealt_at?: string
+          event_id: string
+          mission_id: string
+          photo_id?: string | null
+          user_id: string
+        }
+        Update: {
+          dealt_at?: string
+          event_id?: string
+          mission_id?: string
+          photo_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_missions_event_id_user_id_fkey"
+            columns: ["event_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "event_members"
+            referencedColumns: ["event_id", "user_id"]
+          },
+          {
+            foreignKeyName: "member_missions_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "event_missions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_missions_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: false
+            referencedRelation: "photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mission_people: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          created_at: string
+          event_id: string
+          id: string
+          name: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          event_id: string
+          id?: string
+          name: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          created_at?: string
+          event_id?: string
+          id?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mission_people_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -347,6 +473,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_mission_person: {
+        Args: { p_person_id: string; p_user_id?: string }
+        Returns: undefined
+      }
+      can_edit_missions: { Args: { p_event_id: string }; Returns: boolean }
+      claim_mission_person: {
+        Args: { p_event_id: string; p_person_id: string }
+        Returns: undefined
+      }
       claim_notifications: {
         Args: { p_limit?: number }
         Returns: {
@@ -378,6 +513,7 @@ export type Database = {
           p_event_type: Database["public"]["Enums"]["event_type"]
           p_look: Database["public"]["Enums"]["film_look"]
           p_max_members: number
+          p_missions_per_guest?: number
           p_name: string
           p_roll_size: number
           p_transaction_id?: string
@@ -392,6 +528,7 @@ export type Database = {
           invite_code: string
           look: Database["public"]["Enums"]["film_look"]
           max_members: number
+          missions_per_guest: number | null
           name: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
@@ -402,6 +539,11 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      deal_missions: { Args: { p_event_id: string }; Returns: undefined }
+      deal_one_mission: {
+        Args: { p_event_id: string; p_user_id: string }
+        Returns: boolean
       }
       develop_expired_events: { Args: never; Returns: number }
       dispatch_notifications: { Args: never; Returns: boolean }
@@ -418,6 +560,7 @@ export type Database = {
           invite_code: string
           look: Database["public"]["Enums"]["film_look"]
           max_members: number
+          missions_per_guest: number | null
           name: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
@@ -436,6 +579,10 @@ export type Database = {
           path: string
         }[]
       }
+      event_type_missions: {
+        Args: { p_event_type: Database["public"]["Enums"]["event_type"] }
+        Returns: string[]
+      }
       events_due_for_purge: {
         Args: { p_limit?: number }
         Returns: {
@@ -443,10 +590,15 @@ export type Database = {
         }[]
       }
       free_max_members: { Args: never; Returns: number }
+      general_missions: { Args: never; Returns: string[] }
       generate_invite_code: { Args: never; Returns: string }
       invoke_edge_function: { Args: { p_name: string }; Returns: boolean }
       is_event_developed: { Args: { p_event_id: string }; Returns: boolean }
       is_event_due_for_purge: { Args: { p_event_id: string }; Returns: boolean }
+      is_event_host: {
+        Args: { p_event_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_event_member: {
         Args: { p_event_id: string; p_user_id: string }
         Returns: boolean
@@ -461,6 +613,24 @@ export type Database = {
       }
       max_event_days: { Args: never; Returns: number }
       max_event_members: { Args: never; Returns: number }
+      max_event_missions: { Args: never; Returns: number }
+      max_mission_people: { Args: never; Returns: number }
+      mission_people_for_invite: {
+        Args: { p_invite_code: string }
+        Returns: {
+          name: string
+          person_id: string
+        }[]
+      }
+      my_missions: {
+        Args: { p_event_id: string }
+        Returns: {
+          body: string
+          mission_id: string
+          personal: boolean
+          photo_id: string
+        }[]
+      }
       notification_recipients: {
         Args: { p_notification_id: string }
         Returns: {
@@ -498,6 +668,38 @@ export type Database = {
         Returns: undefined
       }
       retention_period: { Args: never; Returns: string }
+      seed_missions: {
+        Args: { p_event_id: string; p_per_guest: number }
+        Returns: undefined
+      }
+      set_missions: {
+        Args: { p_event_id: string; p_per_guest: number }
+        Returns: {
+          created_at: string
+          developed_at: string | null
+          ends_at: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          host_id: string
+          id: string
+          invite_code: string
+          look: Database["public"]["Enums"]["film_look"]
+          max_members: number
+          missions_per_guest: number | null
+          name: string
+          roll_size: number | null
+          status: Database["public"]["Enums"]["event_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_photo_mission: {
+        Args: { p_mission_id?: string; p_photo_id: string }
+        Returns: undefined
+      }
       start_event: {
         Args: { p_event_id: string }
         Returns: {
@@ -510,6 +712,7 @@ export type Database = {
           invite_code: string
           look: Database["public"]["Enums"]["film_look"]
           max_members: number
+          missions_per_guest: number | null
           name: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]

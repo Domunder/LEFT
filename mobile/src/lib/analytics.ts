@@ -34,7 +34,7 @@ type PostHogClient = InstanceType<PostHogModule['default']>;
 
 /** The four numbers the launch is judged by: events created, joins, photos, reveal rate. */
 export type AnalyticsEvent =
-  | { name: 'event_created'; props: { look: string; event_type: string; roll_size: number | null; max_members: number; paid: boolean } }
+  | { name: 'event_created'; props: { look: string; event_type: string; roll_size: number | null; max_members: number; missions: number; paid: boolean } }
   | { name: 'event_joined'; props: Record<string, never> }
   | { name: 'photo_taken'; props: { look: string } }
   | { name: 'reveal_seen'; props: { photos: number } };

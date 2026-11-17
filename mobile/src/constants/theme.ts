@@ -1703,3 +1703,272 @@ export const ScrollEdge = {
   /** `Colors.bg`, opaque -> clear. Not 'transparent': that fades through black. */
   colors: [Colors.bg, 'rgba(16,16,16,0)'] as const,
 } as const;
+
+/**
+ * 05.1 · The Missions section under the roll (`missions-setup.tsx`).
+ *
+ * Not in the prototype. Built from 05.1's own parts — the divider, the
+ * eyebrow label, the roll cards — and 20's switch, so it reads as one more
+ * answer on the same page rather than a new kind of control.
+ */
+export const MissionsSetup = {
+  /** Roll section (or its "No subscription." line) -> divider. */
+  dividerTop: 24,
+  /** Divider -> the "Missions" row. Matches `GroupRow.dividerGap`. */
+  dividerBottom: 24,
+  /** Title -> switch, the least they are kept apart when large text wraps the title. */
+  rowGap: 16,
+  /** Title row -> the explanatory line. */
+  explainerGap: 6,
+  /** Explanatory line -> "Missions per guest". */
+  countGap: 20,
+  /** Three cards across the full width, so they get more air than the roll's six. */
+  card: {
+    ...RollChoice,
+    gap: 8,
+    paddingX: 8,
+  },
+  /** The count row fading in and out when the switch flips; opacity only. */
+  fadeMs: 220,
+} as const;
+
+/**
+ * 11 · Guest name — "Are you one of these?", the names a host listed for
+ * personal missions (`NamePicker`). Not in the prototype: built from 02's
+ * choice pills so it reads as part of the same page.
+ */
+export const MissionsJoin = {
+  /** The helper line -> the question. */
+  sectionTop: 10,
+  /** Question -> "The host planned something for you." */
+  subGap: 4,
+  /** Sub-line -> the chips. */
+  chipsTop: 14,
+  /** Between chips, both ways — they wrap under large text. */
+  chipGap: 8,
+  /** Chips -> the error line. */
+  sectionBottom: 14,
+  /** The section fading in once the names have loaded; opacity only. */
+  fadeMs: 220,
+} as const;
+
+/**
+ * The host's Missions screen (`(host)/missions`) and its entry row on 10.
+ *
+ * Not in the prototype. Built from 20's grouped cards (a hairline card of
+ * rows, lighter dividers inside) and 02's choice pills, so it reads as the
+ * same app; values chosen, not transcribed.
+ */
+export const MissionsEditor = {
+  /** Trailing space so the last card clears the home indicator. */
+  paddingBottom: 48,
+  /** Back button -> headline. */
+  backGap: 28,
+  /** Headline -> the one-line explanation. */
+  headlineGap: 8,
+  /** Explanation -> the first section. */
+  introGap: 24,
+  /** Between sections. */
+  sectionGap: 32,
+  /** A section's label -> its caption or card. */
+  labelGap: 8,
+  /** A section's caption -> its card. */
+  captionGap: 12,
+  /** "24 missions · 18 people so far" -> its note. */
+  summaryNoteGap: 2,
+
+  /** The bordered card a list of rows sits in — 20's settings card. */
+  card: {
+    radius: 18,
+    border: 'rgba(255,255,255,0.08)',
+    bg: Colors.surfaceGhost,
+    /** Lighter than the card's own edge, as on 20. */
+    divider: 'rgba(255,255,255,0.06)',
+  },
+  /** Between person cards. */
+  cardGap: 12,
+
+  /** One mission, or the "Add a mission" row. */
+  row: {
+    paddingY: 13,
+    paddingX: 16,
+    gap: 12,
+    /** The trailing delete button: a 44pt target around a small glyph. */
+    actionSize: 44,
+    /** The action's glyph, and the composer's plus. */
+    iconSize: 15,
+    /** How far the action's touch target reaches into the row's padding. */
+    actionInset: -12,
+  },
+
+  /** A row being edited. */
+  editor: {
+    /** Input -> the counter / Cancel / Save line. */
+    footerGap: 8,
+    /** Between Cancel and Save. */
+    buttonGap: 18,
+    /** The counter only shows this close to the limit (140). */
+    counterFrom: 110,
+    hitSlop: 10,
+  },
+
+  /** 1 · 2 · 3 per guest. */
+  perGuest: {
+    gap: 8,
+  },
+
+  /** A named person's card: header, their missions, their composer. */
+  person: {
+    headerGap: 12,
+    /** Name -> "Joined" / "Will pick their name when joining". */
+    statusGap: 3,
+    dotSize: 6,
+    dotGap: 6,
+    /** Joined: the success green. Not yet: a quiet ring. */
+    waitingDot: 'rgba(240,237,232,0.28)',
+  },
+
+  /** The joined guests offered as chips, to add or link a name. */
+  roster: {
+    gap: 8,
+    /** Its caption -> the chips. */
+    labelGap: 10,
+    /** Chips -> whatever follows. */
+    bottomGap: 14,
+  },
+
+  /** "Locked — the missions were dealt when the event started." */
+  lockNote: {
+    paddingY: 12,
+    paddingX: 14,
+    gap: 10,
+    radius: 14,
+    iconSize: 14,
+    bg: 'rgba(255,255,255,0.04)',
+    border: 'rgba(255,255,255,0.08)',
+  },
+
+  /** Missions off: a calm empty state. */
+  empty: {
+    paddingTop: 36,
+    iconTile: 64,
+    iconSize: 24,
+    iconGap: 22,
+    copyGap: 10,
+    buttonGap: 28,
+  },
+
+  /** The "Switch missions off" link at the foot. */
+  footer: {
+    paddingTop: 36,
+    hitSlop: 12,
+  },
+
+  /** Rows arriving and leaving: a short cross-fade; the list closes up on `Springs.settle`. */
+  fadeMs: 180,
+
+  /** 10's entry row, above "Start the Event". */
+  entry: {
+    paddingY: 13,
+    paddingX: 16,
+    gap: 12,
+    radius: 18,
+    iconSize: 16,
+    chevronSize: 15,
+    /** Row -> the error line / the CTA. */
+    marginBottom: 12,
+  },
+} as const;
+
+/**
+ * Missions on the guest's side — 13's "Missions 1/3" capsule, the armed note
+ * in the viewfinder, the mission sheets, and the mission caption in the
+ * viewer and on "Your shots" tiles.
+ *
+ * Not in the prototype (missions came after it). Built from the camera's own
+ * values: the capsule is a smaller `Glass` capsule so the header grows as
+ * little as possible, and the armed note is the camera's status note.
+ */
+export const MissionsCamera = {
+  /** The header capsule under the roll counter. */
+  capsule: {
+    /** Smaller than `Glass.capsuleHeight` (36): it sits under the 34pt numeral. */
+    height: 28,
+    paddingX: 11,
+    gap: 5,
+    iconSize: 12,
+    /** Reach up to a 44pt target. */
+    hitSlop: 8,
+    /** Counter -> capsule. */
+    marginTop: 6,
+    /** All done. */
+    doneColor: Colors.green,
+    /** Large text must not push the capsule into the side slots. */
+    maxFontScale: 1.3,
+  },
+
+  /** "Next photo: …" — at the viewfinder's top edge, under the capsule that armed it. */
+  armed: {
+    inset: 14,
+    /** Keeps the note off the frame's rounded corners. */
+    insetX: 18,
+    paddingY: 7,
+    paddingLeft: 12,
+    paddingRight: 6,
+    gap: 6,
+    iconSize: 12,
+    closeSize: 14,
+    closeHitSlop: 12,
+    /** The × answers on touch-down. */
+    closePressedOpacity: 0.5,
+    /** The mission's text may need two lines. */
+    lines: 2,
+    /** Arrives from the capsule's direction and leaves the same way. */
+    travelY: -10,
+    /** Reduced motion: a cross-fade. */
+    fadeMs: 180,
+  },
+
+  /** The sheets: the list on 13, the picker in the viewer. */
+  sheet: {
+    /** Title -> copy -> list -> button. */
+    gap: 14,
+    rowGap: 8,
+    rowPaddingY: 14,
+    rowPaddingX: 16,
+    rowRadius: 16,
+    rowBg: Colors.surfaceSubtle,
+    rowBorder: Colors.hairline,
+    /** Text -> trailing mark. */
+    rowInnerGap: 12,
+    iconSize: 16,
+    /** A done mission steps back. */
+    doneTextColor: Colors.textDim,
+    /** The list scrolls past this share of the window — large text, three long missions. */
+    maxListRatio: 0.5,
+    /** The scrim leaving after a tap on it. */
+    fadeMs: 200,
+  },
+
+  /** The small mark on a "Your shots" tile whose photo is for a mission. */
+  tileMarker: {
+    size: 22,
+    inset: 6,
+    iconSize: 11,
+    bg: Colors.badgeScrim,
+  },
+
+  /** "Mission · …" over the viewer's actions. */
+  caption: {
+    paddingY: 8,
+    paddingX: 14,
+    gap: 6,
+    iconSize: 12,
+    lines: 2,
+    radius: 16,
+    /** Caption -> the row of actions. */
+    marginBottom: 10,
+    /** The album's status capsule moves up by this while a mission caption is shown. */
+    statusLift: 64,
+  },
+} as const;

@@ -6,17 +6,26 @@
  * entry to AsyncStorage, and only then returns. From that moment the picture
  * survives an app kill, a dead battery and a venue with no signal.
  *
- * Each entry then walks three steps, in any number of sessions:
+ * Each entry then walks four steps, in any number of sessions:
  *
  *     develop   bake the event's look, write original + thumbnail (local only,
  *               so it comes first: the guest sees their frame in the film's
  *               colours a moment after the shutter, signal or not)
  *     claim     claim_shot() with the id minted at the shutter — idempotent, so
  *               a retry never spends a second frame
+ *     tag       only when a mission is owed: set_photo_mission(). It needs the
+ *               photo's row, so it comes after the claim, and before the upload
+ *               because the upload ends the entry. Idempotent like the claim.
  *     upload    both files, then markPhotoUploaded(); the entry and files go
  *
  * Every step is recorded before the next begins and is safe to repeat, so a
  * crash anywhere resumes rather than restarts.
+ *
+ * **A mission tag never costs a photo.** A tag the server refuses for good
+ * (the film is developed, not the guest's mission, no such photo) is dropped
+ * and the frame goes on to its upload; so is one that keeps failing with an
+ * answer from the server. Only a tag that could not reach the server holds the
+ * upload back, and only until the next pass.
  *
  * **Shooting works offline.** The claim is then still owed, and the camera
  * shows the server's last count minus `unclaimedCount()` — it never lets that
@@ -38,6 +47,7 @@ import { track } from './analytics';
 import { getSession } from './auth';
 import type { FilmLook } from './events';
 import { developPhoto } from './look-shader';
+import { setPhotoMission } from './missions';
 import {
   claimShot,
   EventClosedError,
@@ -63,6 +73,13 @@ const RETRY_MAX_MS = 60_000;
  */
 const MAX_DEVELOP_ATTEMPTS = 3;
 
+/**
+ * A mission tag the server keeps refusing for a reason this file does not
+ * know is dropped after this many answers. Failures that never reached the
+ * server (no signal) do not count: they are retried for as long as it takes.
+ */
+const MAX_TAG_ATTEMPTS = 3;
+
 export type QueuedShot = {
   /** The photo id, minted at the shutter. Also the claim's idempotency key. */
   id: string;
@@ -77,6 +94,18 @@ export type QueuedShot = {
   /** The capture's size until developed, the original's after. */
   width: number;
   height: number;
+  /**
+   * The mission this photo is for; null for "none". Absent on entries written
+   * before missions existed, which read as "nothing to tag".
+   */
+  missionId?: string | null;
+  /**
+   * False while `missionId` still has to reach the server — the tag step's
+   * flag. Absent (old entries) or true: nothing owed.
+   */
+  missionTagged?: boolean;
+  /** Server answers to the tag that were neither a success nor a known refusal. */
+  tagAttempts?: number;
 };
 
 export type QueueEvent =
@@ -85,7 +114,12 @@ export type QueueEvent =
   /** The server counted a frame. `roll` is the only number the camera may show. */
   | { type: 'claimed'; eventId: string; roll: RollState }
   /** The server refused a queued frame; it has been dropped. */
-  | { type: 'refused'; eventId: string; reason: 'roll_empty' | 'event_closed' };
+  | { type: 'refused'; eventId: string; reason: 'roll_empty' | 'event_closed' }
+  /**
+   * A mission tag reached the server, or was dropped. What the server holds
+   * changed — re-read the missions.
+   */
+  | { type: 'mission'; eventId: string };
 
 type Listener = (event: QueueEvent) => void;
 
@@ -116,6 +150,19 @@ export function unclaimedCount(eventId: string): number {
 /** Everything of this event still on the phone, claimed or not. */
 export function pendingCount(eventId: string): number {
   return items.filter((item) => item.eventId === eventId).length;
+}
+
+/**
+ * Mission tags of this event the server does not have yet, oldest shot first —
+ * so a caller laying them over the server's answer lets the newest win.
+ */
+export function owedMissionTags(
+  eventId: string
+): { photoId: string; missionId: string | null }[] {
+  return items
+    .filter((item) => item.eventId === eventId && item.missionTagged === false)
+    .sort((a, b) => a.takenAt.localeCompare(b.takenAt))
+    .map((item) => ({ photoId: item.id, missionId: item.missionId ?? null }));
 }
 
 // --- files -----------------------------------------------------------------
@@ -228,6 +275,8 @@ export async function enqueueShot(shot: {
   width: number;
   height: number;
   takenAt?: Date;
+  /** The mission the guest armed for this shot. Tagged once the frame is claimed. */
+  missionId?: string | null;
 }): Promise<string> {
   const id = Crypto.randomUUID();
 
@@ -246,6 +295,9 @@ export async function enqueueShot(shot: {
       developAttempts: 0,
       width: shot.width,
       height: shot.height,
+      ...(shot.missionId
+        ? { missionId: shot.missionId, missionTagged: false, tagAttempts: 0 }
+        : {}),
     },
   ];
   emit({ type: 'changed' });
@@ -255,6 +307,53 @@ export async function enqueueShot(shot: {
 
   void drain();
   return id;
+}
+
+/**
+ * "This photo was for that mission" — from "Your shots". `missionId` null
+ * says it was for none.
+ *
+ *  - A frame not yet claimed has no row to tag: the tag is recorded on the
+ *    entry and sent by the queue after the claim. Resolves `'queued'`.
+ *  - A claimed frame still on the phone is sent straight away; the entry
+ *    remembers it too, so a request that cannot get through is retried by the
+ *    queue instead of lost (`'queued'` again).
+ *  - A frame that has left the queue goes straight to the server (`'sent'`).
+ *
+ * Throws the server's refusal (`event_closed`, `not_yours`) when it gave one,
+ * and, for a frame no longer in the queue, any failure.
+ */
+export async function setShotMission(
+  eventId: string,
+  photoId: string,
+  missionId: string | null
+): Promise<'queued' | 'sent'> {
+  await hydrate();
+
+  const item = current(photoId);
+  if (!item) {
+    await setPhotoMission(photoId, missionId);
+    emit({ type: 'mission', eventId });
+    return 'sent';
+  }
+
+  await update(photoId, { missionId, missionTagged: false, tagAttempts: 0 });
+  emit({ type: 'changed' });
+  if (!item.claimed) return 'queued';
+
+  let outcome: TagOutcome;
+  try {
+    outcome = await tag(photoId);
+  } catch (e) {
+    // Did not get through. The entry still owes it; the queue will send it.
+    if (current(photoId)?.missionTagged === false) {
+      void drain();
+      return 'queued';
+    }
+    throw e;
+  }
+  if (outcome.refused) throw outcome.error;
+  return current(photoId)?.missionTagged === false ? 'queued' : 'sent';
 }
 
 // --- the worker ------------------------------------------------------------
@@ -280,6 +379,74 @@ async function claim(item: QueuedShot) {
     }
     throw e;
   }
+}
+
+/** The server said no to a tag, and will say it again: the film is developed, or the mission or photo is not the guest's. */
+function refusedForGood(error: unknown): boolean {
+  const e = error as { code?: string; hint?: string } | null;
+  return e?.hint === 'event_closed' || e?.hint === 'not_yours' || e?.code === 'P0002';
+}
+
+/** An error the server answered with. Supabase reports an unreachable server with an empty code. */
+function answeredByServer(error: unknown): boolean {
+  const code = (error as { code?: unknown } | null)?.code;
+  return typeof code === 'string' && code.length > 0;
+}
+
+type TagOutcome = { refused: false } | { refused: true; error: unknown };
+
+/** How often one pass re-sends a tag the guest changed while it was on its way. */
+const MAX_TAG_ROUNDS = 4;
+
+/**
+ * The tag step: send the entry's mission until the server holds what the
+ * entry says. Throws when the server could not be reached (or has not settled
+ * after a few rounds of re-tagging) — the entry then keeps owing it, and the
+ * upload waits, since the upload ends the entry.
+ *
+ * A refusal for good, or one answer too many, drops the tag: the entry stops
+ * owing it and the photo goes on as an untagged one.
+ */
+async function tag(id: string): Promise<TagOutcome> {
+  for (let round = 0; round < MAX_TAG_ROUNDS; round += 1) {
+    const item = current(id);
+    if (!item || !item.claimed || item.missionTagged !== false) return { refused: false };
+
+    const missionId = item.missionId ?? null;
+    const unchanged = () => (current(id)?.missionId ?? null) === missionId;
+
+    try {
+      await setPhotoMission(item.id, missionId);
+    } catch (e) {
+      const attempts = (item.tagAttempts ?? 0) + (answeredByServer(e) ? 1 : 0);
+      const drop = refusedForGood(e) || attempts >= MAX_TAG_ATTEMPTS;
+      if (drop) {
+        // Re-tagged meanwhile: that is a new request, not this refusal.
+        if (!unchanged()) continue;
+        if (__DEV__) console.warn('[queue] mission tag dropped', { id, error: e });
+        await update(id, { missionTagged: true, tagAttempts: 0 });
+        emit({ type: 'mission', eventId: item.eventId });
+        emit({ type: 'changed' });
+        return { refused: true, error: e };
+      }
+      if (attempts !== (item.tagAttempts ?? 0)) await update(id, { tagAttempts: attempts });
+      throw e;
+    }
+
+    if (unchanged()) {
+      await update(id, { missionTagged: true, tagAttempts: 0 });
+      emit({ type: 'mission', eventId: item.eventId });
+      emit({ type: 'changed' });
+      return { refused: false };
+    }
+    // The guest picked another mission while this one was on its way: send that.
+  }
+  throw new Error('The mission kept changing; it is sent on the next pass.');
+}
+
+/** Before an entry leaves the queue: a tag it still owes goes first. */
+async function settleTagBeforeRemoving(id: string) {
+  if (current(id)?.missionTagged === false) await tag(id);
 }
 
 async function develop(item: QueuedShot) {
@@ -333,6 +500,7 @@ async function upload(item: QueuedShot) {
     } catch {
       throw e;
     }
+    await settleTagBeforeRemoving(item.id);
     await remove(item.id);
     return;
   }
@@ -340,6 +508,8 @@ async function upload(item: QueuedShot) {
   // The server writes the paths itself; it only needs to be told the size.
   await markPhotoUploaded(item.id, size);
 
+  // Re-tagged from "Your shots" while the files were on their way.
+  await settleTagBeforeRemoving(item.id);
   await remove(item.id);
 }
 
@@ -377,6 +547,10 @@ async function process(id: string) {
       throw e;
     }
   }
+
+  // A refusal is not an error of the frame: `tag` drops it, and the upload goes on.
+  item = current(id);
+  if (item?.claimed && item.missionTagged === false) await tag(id);
 
   item = current(id);
   if (item?.claimed && item.developed) await upload(item);
