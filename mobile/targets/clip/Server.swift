@@ -8,7 +8,8 @@ import Foundation
   Plain HTTPS, no Supabase SDK: the clip has to stay small, and it needs six
   calls. A clip guest is an anonymous Supabase user exactly like an app or a
   browser guest; the roll, the group cap and the reveal are enforced by the
-  database, so the clip cannot do anything the app could not.
+  database, so the clip cannot do anything the app could not. Missions
+  (2026-11-18) add four RPCs and the guest's own photos for Your shots.
 */
 
 struct Session: Codable, Equatable {
@@ -97,15 +98,67 @@ struct MemberInfo: Decodable {
   }
 }
 
+/// What a guest was dealt (`my_missions()`). `photoId`: the photo that fulfils it.
+struct Mission: Decodable, Identifiable, Equatable {
+  let id: String
+  let body: String
+  let personal: Bool
+  var photoId: String?
+
+  enum CodingKeys: String, CodingKey {
+    case id = "mission_id"
+    case body, personal
+    case photoId = "photo_id"
+  }
+}
+
+/// A name the host listed for personal missions that nobody has claimed yet.
+struct MissionName: Decodable, Identifiable, Equatable {
+  let id: String
+  let name: String
+
+  enum CodingKeys: String, CodingKey {
+    case id = "person_id"
+    case name
+  }
+}
+
+/// One of the guest's own uploaded photos (RLS: only their own before the reveal).
+struct OwnPhoto: Decodable {
+  let id: String
+  let storagePath: String?
+  let thumbPath: String?
+  let takenAt: String
+
+  enum CodingKeys: String, CodingKey {
+    case id
+    case storagePath = "storage_path"
+    case thumbPath = "thumb_path"
+    case takenAt = "taken_at"
+  }
+}
+
 enum ClipError: LocalizedError, Equatable {
   case notConfigured
   case rollEmpty
   case eventClosed
+  case missionNameTaken
   case server(status: Int, code: String?, hint: String?, message: String)
 
   var hint: String? {
     if case let .server(_, _, hint, _) = self { return hint }
     return nil
+  }
+
+  var code: String? {
+    if case let .server(_, code, _, _) = self { return code }
+    return nil
+  }
+
+  /// The server refuses this tag for good: developed, not the guest's, no such
+  /// photo. Mirrors `tagRefusedForGood()` in `web/src/shoot/api.ts`.
+  var tagRefusedForGood: Bool {
+    hint == "event_closed" || hint == "not_yours" || code == "P0002"
   }
 
   var errorDescription: String? { messageFor(self) }
@@ -118,6 +171,7 @@ func messageFor(_ error: Error) -> String {
     case .notConfigured: return "The camera isn’t set up yet."
     case .rollEmpty: return "Your roll is used up."
     case .eventClosed: return "The cameras aren’t open."
+    case .missionNameTaken: return "Someone else just took that name. Pick another, or none."
     case let .server(_, code, hint, message):
       if hint == "full" { return "This group is full. Ask the host to make room." }
       if code == "P0002" { return "This invite link doesn’t work any more. Ask the host for a new one." }
@@ -313,6 +367,71 @@ actor Server {
       "p_width": width,
       "p_height": height,
     ])
+  }
+
+  /// The guest's uploaded photos in this event, oldest first.
+  func myPhotos(eventId: String) async throws -> [OwnPhoto] {
+    guard let userId = session?.userId else { return [] }
+    let data = try await send(
+      "rest/v1/photos?event_id=eq.\(eventId)&user_id=eq.\(userId)&status=eq.uploaded" +
+        "&select=id,storage_path,thumb_path,taken_at&order=taken_at"
+    )
+    return try JSONDecoder().decode([OwnPhoto].self, from: data)
+  }
+
+  /// `path -> URL`, valid for an hour. The bucket's select policy decides
+  /// what may be signed (before the reveal: the guest's own files).
+  func signedURLs(_ paths: [String]) async throws -> [String: URL] {
+    guard !paths.isEmpty, let base = ClipConfig.supabaseURL else { return [:] }
+    let data = try await send("storage/v1/object/sign/\(ClipConfig.bucket)", method: "POST", json: [
+      "expiresIn": 3600,
+      "paths": paths,
+    ])
+    struct Row: Decodable { let path: String?; let signedURL: String? }
+    var urls: [String: URL] = [:]
+    for row in try JSONDecoder().decode([Row].self, from: data) {
+      // `signedURL` is relative to the storage API: "/object/sign/…?token=…".
+      if let path = row.path, let relative = row.signedURL,
+         let url = URL(string: base.absoluteString + "/storage/v1" + relative) {
+        urls[path] = url
+      }
+    }
+    return urls
+  }
+
+  // MARK: Missions — mirrors the guest half of `mobile/src/lib/missions.ts`
+
+  /// The guest's missions. The first call while the event is live deals them; empty when off.
+  func myMissions(eventId: String) async throws -> [Mission] {
+    let data = try await send("rest/v1/rpc/my_missions", method: "POST", json: ["p_event_id": eventId])
+    return try JSONDecoder().decode([Mission].self, from: data)
+  }
+
+  /// "This photo was for that mission"; nil: for none. Needs the photo's row (after the claim).
+  func setPhotoMission(photoId: String, missionId: String?) async throws {
+    var body: [String: Any] = ["p_photo_id": photoId]
+    if let missionId { body["p_mission_id"] = missionId }
+    _ = try await send("rest/v1/rpc/set_photo_mission", method: "POST", json: body)
+  }
+
+  /// The names the host listed for personal missions that nobody has claimed yet.
+  func missionNames(code: String) async throws -> [MissionName] {
+    let data = try await send("rest/v1/rpc/mission_people_for_invite", method: "POST", json: ["p_invite_code": code])
+    return try JSONDecoder().decode([MissionName].self, from: data)
+  }
+
+  /// "That's me." Refused with `taken`; `already_dealt` is ignored, as in the app.
+  func claimMissionName(eventId: String, personId: String) async throws {
+    do {
+      _ = try await send("rest/v1/rpc/claim_mission_person", method: "POST", json: [
+        "p_event_id": eventId,
+        "p_person_id": personId,
+      ])
+    } catch let error as ClipError {
+      if error.hint == "taken" { throw ClipError.missionNameTaken }
+      if error.hint == "already_dealt" { return }
+      throw error
+    }
   }
 
   // MARK: Transport

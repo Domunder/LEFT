@@ -73,6 +73,9 @@ struct NameScreen: View {
         .foregroundStyle(Theme.textDim)
         .padding(.top, 12)
 
+      NamePicker()
+        .padding(.top, 24)
+
       Text(model.nameError ?? " ")
         .font(Fonts.body(14))
         .foregroundStyle(Theme.textMuted)
@@ -88,6 +91,7 @@ struct NameScreen: View {
     }
     .padding(.horizontal, Theme.gutter)
     .onAppear { focused = true }
+    .task { await model.loadNames() }
   }
 }
 

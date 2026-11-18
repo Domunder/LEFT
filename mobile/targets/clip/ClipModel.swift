@@ -31,6 +31,22 @@ final class ClipModel: ObservableObject {
   @Published private(set) var unclaimed = 0
   @Published private(set) var developingNow = 0
 
+  // Missions — the guest half, as in the app's camera and Your shots.
+  /// The guest's cards, with tags still in the queue applied.
+  @Published private(set) var missions: [Mission] = []
+  /// The mission the next shot is for.
+  @Published var armedId: String?
+  /// 11's "Are you one of these?": names the host listed, and the guest's pick.
+  @Published private(set) var names: [MissionName] = []
+  @Published var pickedName: String?
+  /// Your shots: uploaded frames and those still in the queue.
+  @Published private(set) var shots: [ShotItem] = []
+
+  /// The server's last answer, kept for when it cannot be asked (no signal).
+  private var serverMissions: [Mission] = []
+  /// Storage path → signed URL, so a frame is signed once.
+  private var signed: [String: URL] = [:]
+
   private var code: String?
   private var poll: Task<Void, Never>?
   private var observers: [NSObjectProtocol] = []
@@ -47,6 +63,9 @@ final class ClipModel: ObservableObject {
     })
     observers.append(center.addObserver(forName: .shotFinished, object: nil, queue: .main) { [weak self] note in
       MainActor.assumeIsolated { self?.finished(note) }
+    })
+    observers.append(center.addObserver(forName: .shotTagged, object: nil, queue: .main) { [weak self] note in
+      MainActor.assumeIsolated { self?.tagged(note) }
     })
   }
 
@@ -148,12 +167,37 @@ final class ClipModel: ObservableObject {
         try? await Server.shared.setDisplayName(trimmed)
         let eventId = try await Server.shared.joinEvent(code: code, name: trimmed)
         memberships.set(eventId, forKey: "left.clip.event.\(code)")
+        if let picked = pickedName {
+          do {
+            try await Server.shared.claimMissionName(eventId: eventId, personId: picked)
+          } catch ClipError.missionNameTaken {
+            // Stay on 11 with the names as they are now. The join stands;
+            // Continue joins again, which changes nothing.
+            pickedName = nil
+            nameError = messageFor(ClipError.missionNameTaken)
+            await loadNames()
+            return
+          }
+        }
         busy = false
         await load(eventId: eventId, code: code)
       } catch {
         nameError = messageFor(error)
       }
     }
+  }
+
+  /// 11's names. Needs a signed-in guest, so the anonymous sign-in happens
+  /// here rather than on Continue — as on the web camera.
+  func loadNames() async {
+    guard case let .name(code) = phase else { return }
+    do {
+      _ = try await Server.shared.ensureGuest()
+      names = try await Server.shared.missionNames(code: code)
+    } catch {
+      names = []
+    }
+    if let picked = pickedName, !names.contains(where: { $0.id == picked }) { pickedName = nil }
   }
 
   // MARK: Routing
@@ -167,6 +211,10 @@ final class ClipModel: ObservableObject {
       phase = .camera(event)
     }
     startPolling()
+    Task {
+      await loadMissions()
+      await loadShots()
+    }
   }
 
   private func rollUsedUp(_ event: EventInfo) -> Bool {
@@ -229,7 +277,11 @@ final class ClipModel: ObservableObject {
   func shotQueued(_ ok: Bool) {
     developingNow = max(0, developingNow - 1)
     guard let event else { return }
-    Task { await recount(event) }
+    Task {
+      await recount(event)
+      await applyQueueTags()
+      await loadShots()
+    }
   }
 
   private func claimed(_ note: Notification) {
@@ -250,6 +302,95 @@ final class ClipModel: ObservableObject {
     Task {
       await recount(event)
       if reason == "event_closed" { await refresh() }
+      await loadShots()
     }
   }
+
+  private func tagged(_ note: Notification) {
+    guard let event, note.userInfo?["eventId"] as? String == event.id else { return }
+    Task { await loadMissions() }
+  }
+
+  // MARK: Missions
+
+  /// Ask the server, then lay the queue's unsent tags over its answer.
+  func loadMissions() async {
+    guard let event else { return }
+    if let fresh = try? await Server.shared.myMissions(eventId: event.id) { serverMissions = fresh }
+    await applyQueueTags()
+  }
+
+  /// A frame re-tagged while it waits in the queue counts as tagged already,
+  /// so the list and the capsule are right with no signal.
+  private func applyQueueTags() async {
+    guard let event, let userId = await Server.shared.userId else { return }
+    var list = serverMissions
+    for local in await UploadQueue.shared.local(eventId: event.id, userId: userId) where local.shot.missionDirty == true {
+      for i in list.indices where list[i].photoId == local.shot.id { list[i].photoId = nil }
+      if let target = local.shot.missionId, let i = list.firstIndex(where: { $0.id == target }) {
+        list[i].photoId = local.shot.id
+      }
+    }
+    missions = list
+    if let armedId, list.first(where: { $0.id == armedId })?.photoId != nil { self.armedId = nil }
+  }
+
+  func arm(_ mission: Mission?) {
+    armedId = mission?.id
+  }
+
+  /// "This photo was for that mission" (nil: for none). A frame still queued
+  /// is re-tagged there; one that has left goes straight to the server.
+  func tag(photoId: String, missionId: String?) async throws {
+    if await UploadQueue.shared.setMission(id: photoId, missionId: missionId) {
+      await applyQueueTags()
+      return
+    }
+    try await Server.shared.setPhotoMission(photoId: photoId, missionId: missionId)
+    await loadMissions()
+  }
+
+  func mission(for photoId: String) -> Mission? {
+    missions.first { $0.photoId == photoId }
+  }
+
+  // MARK: Your shots
+
+  /// The guest's own frames: what is still in the queue (from its files) and
+  /// what the server holds (signed URLs). Offline, the server's half is what
+  /// it was last time.
+  func loadShots() async {
+    guard let event, let userId = await Server.shared.userId else { return }
+    let local = await UploadQueue.shared.local(eventId: event.id, userId: userId)
+    var items = local.map {
+      ShotItem(id: $0.shot.id, takenAt: parseTimestamp($0.shot.takenAt) ?? .distantPast,
+               thumb: $0.thumb, full: $0.original, queued: true)
+    }
+    let queuedIds = Set(items.map(\.id))
+    do {
+      let remote = try await Server.shared.myPhotos(eventId: event.id).filter { !queuedIds.contains($0.id) }
+      let unsigned = remote.flatMap { [$0.thumbPath, $0.storagePath].compactMap { $0 } }.filter { signed[$0] == nil }
+      if !unsigned.isEmpty, let urls = try? await Server.shared.signedURLs(unsigned) {
+        signed.merge(urls) { $1 }
+      }
+      items += remote.map {
+        ShotItem(id: $0.id, takenAt: parseTimestamp($0.takenAt) ?? .distantPast,
+                 thumb: $0.thumbPath.flatMap { signed[$0] }, full: $0.storagePath.flatMap { signed[$0] },
+                 queued: false)
+      }
+    } catch {
+      items += shots.filter { !$0.queued && !queuedIds.contains($0.id) }
+    }
+    shots = items.sorted { $0.takenAt < $1.takenAt }
+  }
+}
+
+/// A frame in Your shots. `thumb` and `full` are files while it is queued,
+/// signed URLs once it is uploaded.
+struct ShotItem: Identifiable, Equatable {
+  let id: String
+  let takenAt: Date
+  let thumb: URL?
+  let full: URL?
+  let queued: Bool
 }

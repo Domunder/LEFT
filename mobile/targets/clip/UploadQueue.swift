@@ -5,8 +5,8 @@ import Network
   The clip's upload queue — its copy of `mobile/src/lib/upload-queue.ts` (and
   `web/src/shoot/queue.ts`), on files in the App Group folder.
 
-  The shutter develops the frame and writes it here; claim → upload → mark
-  happen in `drain()`, each step recorded, so a clip closed mid-upload or a
+  The shutter develops the frame and writes it here; claim → tag → upload →
+  mark happen in `drain()`, each step recorded, so a clip closed mid-upload or a
   venue with no signal loses nothing that was taken: the next launch drains
   what is left. The photo id is minted at the shutter, which makes the claim
   idempotent — a retry never spends a second frame.
@@ -25,6 +25,19 @@ struct QueuedShot: Codable, Identifiable {
   let height: Int
   var claimed: Bool
   var uploaded: Bool
+  /// The mission this frame is for (armed at the shutter, or picked in Your
+  /// shots while it waited). Optional fields decode as nil from older entries.
+  var missionId: String?
+  /// The tag changed and the server has not heard it yet.
+  var missionDirty: Bool?
+  var tagAttempts: Int?
+}
+
+/// A frame still in the queue, with its files.
+struct LocalShot {
+  let shot: QueuedShot
+  let original: URL
+  let thumb: URL
 }
 
 extension Notification.Name {
@@ -32,7 +45,12 @@ extension Notification.Name {
   static let shotClaimed = Notification.Name("left.clip.shotClaimed")
   /// `userInfo`: "id", "eventId", and "reason" when the server refused it.
   static let shotFinished = Notification.Name("left.clip.shotFinished")
+  /// A queued frame's mission tag reached the server, or was dropped. `userInfo`: "eventId".
+  static let shotTagged = Notification.Name("left.clip.shotTagged")
 }
+
+/// A refused tag is retried this often before it is dropped (never the photo).
+private let maxTagAttempts = 3
 
 actor UploadQueue {
   static let shared = UploadQueue()
@@ -60,6 +78,11 @@ actor UploadQueue {
     }
   }
 
+  private func read(_ id: String) -> QueuedShot? {
+    guard let data = try? Data(contentsOf: url(id, ".json")) else { return nil }
+    return try? JSONDecoder().decode(QueuedShot.self, from: data)
+  }
+
   private func all() -> [QueuedShot] {
     let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
     return names
@@ -83,6 +106,25 @@ actor UploadQueue {
   /// Frames not yet claimed — what the counter subtracts from the server's.
   func unclaimed(eventId: String, userId: String) -> Int {
     all().filter { $0.eventId == eventId && $0.userId == userId && !$0.claimed }.count
+  }
+
+  /// The guest's frames still in the queue, oldest first, with their files.
+  func local(eventId: String, userId: String) -> [LocalShot] {
+    all()
+      .filter { $0.eventId == eventId && $0.userId == userId }
+      .map { LocalShot(shot: $0, original: url($0.id, ".jpg"), thumb: url($0.id, "_thumb.jpg")) }
+  }
+
+  /// Re-tag a frame that is still queued. False when it has already left the
+  /// queue — then the tag goes straight to the server.
+  func setMission(id: String, missionId: String?) -> Bool {
+    guard var shot = read(id) else { return false }
+    shot.missionId = missionId
+    shot.missionDirty = true
+    shot.tagAttempts = 0
+    guard (try? write(shot)) != nil else { return false }
+    Task { await self.drain() }
+    return true
   }
 
   /// Drain now, whenever the network comes back, and with backoff on failure.
@@ -149,6 +191,11 @@ actor UploadQueue {
       }
     }
 
+    // The tag needs the photo's row, which the claim made. Its own step: a
+    // refused tag drops the tag, never the photo.
+    try await settleTag(shot.id)
+    shot = read(shot.id) ?? shot
+
     if !shot.uploaded {
       do {
         let original = try Data(contentsOf: url(shot.id, ".jpg"))
@@ -166,6 +213,7 @@ actor UploadQueue {
         // that meets the refusal may be one whose mark already went through:
         // ask the server, and drop the entry if it holds the photo.
         if (try? await server.markPhotoUploaded(photoId: shot.id, width: shot.width, height: shot.height)) != nil {
+          try await settleTag(shot.id)
           finish(shot)
           return
         }
@@ -176,7 +224,43 @@ actor UploadQueue {
     }
 
     try await server.markPhotoUploaded(photoId: shot.id, width: shot.width, height: shot.height)
+    // Re-tagged while it uploaded: settle that before the entry goes.
+    try await settleTag(shot.id)
     finish(shot)
+  }
+
+  /// Send the entry's tag if the server has not heard it. The guest may re-tag
+  /// while a request is out (the actor lets `setMission` in at every await),
+  /// so the stored entry is read again after each answer. Throws only when the
+  /// server could not be reached, which leaves the entry for the next drain.
+  private func settleTag(_ id: String) async throws {
+    for _ in 0..<4 {
+      guard let shot = read(id), shot.claimed, shot.missionDirty == true else { return }
+      let target = shot.missionId
+      do {
+        try await Server.shared.setPhotoMission(photoId: id, missionId: target)
+        guard var latest = read(id) else { return }
+        if latest.missionId == target {
+          latest.missionDirty = false
+          try? write(latest)
+          post(.shotTagged, ["eventId": latest.eventId])
+          return
+        }
+        // Re-tagged meanwhile: go round again with the new one.
+      } catch let error as ClipError {
+        guard var latest = read(id) else { return }
+        let attempts = (latest.tagAttempts ?? 0) + 1
+        if error.tagRefusedForGood || attempts >= maxTagAttempts {
+          latest.missionId = nil
+          latest.missionDirty = false
+        }
+        latest.tagAttempts = attempts
+        try? write(latest)
+        post(.shotTagged, ["eventId": latest.eventId])
+        if latest.missionDirty == true { throw error }
+        return
+      }
+    }
   }
 
   private func finish(_ shot: QueuedShot) {

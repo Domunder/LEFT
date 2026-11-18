@@ -3,7 +3,9 @@ import UIKit
 
 /// 13 in the clip. Every control sits outside the viewfinder, as in the app
 /// (decided 2026-11-16): the counter in the header under the event's name,
-/// flash · flip under the frame, the shutter in the bottom row.
+/// flash · flip under the frame, the shutter in the bottom row. Missions
+/// (2026-11-18): "Missions 1/3" under the counter, "Next photo: …" at the
+/// frame's top edge, and Your shots from the tile left of the shutter.
 struct CameraScreen: View {
   let event: EventInfo
   @EnvironmentObject private var model: ClipModel
@@ -15,6 +17,8 @@ struct CameraScreen: View {
   @State private var whiteScreen = false
   @State private var capturing = false
   @State private var error: String?
+  @State private var missionList = false
+  @State private var yourShots = false
 
   private var canShoot: Bool {
     camera.ready && !capturing && model.shotsLeft != 0
@@ -44,8 +48,21 @@ struct CameraScreen: View {
 
       Spacer(minLength: 12)
 
-      Shutter(enabled: canShoot, action: shoot)
-        .padding(.bottom, 20)
+      HStack {
+        LastShotTile(url: model.shots.last?.thumb) { yourShots = true }
+        Spacer()
+        Shutter(enabled: canShoot, action: shoot)
+        Spacer()
+        Color.clear.frame(width: 52, height: 52)
+      }
+      .padding(.horizontal, Theme.gutter)
+      .padding(.bottom, 20)
+    }
+    .sheet(isPresented: $missionList) {
+      MissionListSheet().environmentObject(model)
+    }
+    .sheet(isPresented: $yourShots) {
+      YourShotsSheet(event: event).environmentObject(model)
     }
     .overlay {
       // The front camera's flash: the screen itself, at full brightness.
@@ -75,6 +92,13 @@ struct CameraScreen: View {
             .font(Fonts.body(14))
             .foregroundStyle(Theme.textMuted)
         }
+        if !model.missions.isEmpty {
+          MissionCapsule(
+            done: model.missions.filter { $0.photoId != nil }.count,
+            total: model.missions.count
+          ) { missionList = true }
+          .padding(.top, 4)
+        }
       }
       Spacer()
       // The countdown is the way to the developing state, as in the app.
@@ -96,6 +120,11 @@ struct CameraScreen: View {
   private var viewfinder: some View {
     ZStack {
       ViewfinderRepresentable(camera: camera)
+      if let armed = model.missions.first(where: { $0.id == model.armedId }) {
+        ArmedNote(text: armed.body) {
+          withAnimation(.spring(response: 0.35, dampingFraction: 1)) { model.arm(nil) }
+        }
+      }
       if blink { Color.black }
       if camera.permission == .denied {
         VStack(spacing: 14) {
@@ -122,6 +151,10 @@ struct CameraScreen: View {
           .padding(.bottom, 14)
       }
     }
+    .animation(
+      UIAccessibility.isReduceMotionEnabled ? .easeInOut(duration: 0.2) : .spring(response: 0.35, dampingFraction: 1),
+      value: model.armedId
+    )
     .aspectRatio(3 / 4, contentMode: .fit)
     .background(Color.black)
     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -174,13 +207,17 @@ struct CameraScreen: View {
     let model = self.model
     let errorText = $error
     let takenAt = timestampString(Date())
+    // The armed mission goes with this frame; the next one is for none.
+    let missionId = model.armedId
+    model.arm(nil)
     Task.detached(priority: .userInitiated) {
       do {
         guard let userId = await Server.shared.userId else { throw ClipError.notConfigured }
         let photo = try await Developer.shared.develop(data, look: event.look)
         let shot = QueuedShot(
           id: UUID().uuidString.lowercased(), eventId: event.id, userId: userId, takenAt: takenAt,
-          width: photo.width, height: photo.height, claimed: false, uploaded: false
+          width: photo.width, height: photo.height, claimed: false, uploaded: false,
+          missionId: missionId, missionDirty: missionId == nil ? nil : true, tagAttempts: nil
         )
         try await UploadQueue.shared.enqueue(shot, photo: photo)
         await MainActor.run { model.shotQueued(true) }
@@ -191,6 +228,36 @@ struct CameraScreen: View {
         }
       }
     }
+  }
+}
+
+/// The last frame taken; opens Your shots.
+private struct LastShotTile: View {
+  let url: URL?
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      ZStack {
+        RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.field)
+        if let url, url.isFileURL, let image = UIImage(contentsOfFile: url.path) {
+          Image(uiImage: image).resizable().scaledToFill()
+        } else if let url {
+          AsyncImage(url: url) { phase in
+            phase.image?.resizable().scaledToFill()
+          }
+        } else {
+          Image(systemName: "photo.on.rectangle")
+            .font(.system(size: 17))
+            .foregroundStyle(Theme.textMuted)
+        }
+      }
+      .frame(width: 52, height: 52)
+      .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Theme.hairline, lineWidth: 1))
+    }
+    .buttonStyle(ShutterPress())
+    .accessibilityLabel("Your shots")
   }
 }
 
