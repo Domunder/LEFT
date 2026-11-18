@@ -130,8 +130,8 @@ export default function JoinScreen() {
             </Body>
             <Body small color={Colors.textDim} style={styles.centered}>
               {CAN_SCAN
-                ? 'Ask the creator to show their QR code\nand scan it with your camera.'
-                : 'Scanning needs the LEFT app on a phone.\nTap the invite link instead.'}
+                ? 'Scan the host’s QR code.'
+                : 'Scanning needs the app. Tap the invite link instead.'}
             </Body>
           </PressScale>
 

@@ -243,7 +243,9 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   multi-lens device; `lib/zoom.ts` turns its `zoomLensSwitchFactors` into stops
   and labels them as ratios to the wide lens (0.5× / 1× / the telephoto's true
   factor). One lens and the front camera get no stops — the control hides,
-  pinch still zooms.
+  pinch still zooms. After a pinch the stops give way to one lit pill with
+  the live zoom ("1.2×", as the system camera does; the user, 2026-11-18); a
+  tap on it returns to 1× and the stops. **Not seen on a device.**
 - **Flash** (`fire` / `lightTorch` in `camera.tsx`): the LED is lit as a torch
   through the camera controller `Camera.flash.leadMs` before the exposure and
   read back; the front camera turns the viewfinder white instead. The camera's
@@ -284,6 +286,11 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
 - **`GrainOverlay`'s tiled image does not repeat reliably over a large area**
   (seen as one tile top-left over the viewfinder). Nothing uses it any more;
   the component is kept on purpose.
+- **Superseded 2026-11-18 (the user): the viewfinder is full screen** (top edge
+  to the shutter bar, bottom corners rounded); header and flash · zoom · flip
+  are glass over it, with soft scrims. Prints are centre-cropped to the frame's
+  aspect (`cropAspect` through `enqueueShot` → `developPhoto`). **Not seen on a
+  device.** The older note follows for history:
 - **Every camera control sits outside the viewfinder** (decided 2026-11-16 by
   the user, after seeing the 2026-11-15 version with the chrome floating in
   the picture on a device — do not move it back in): the roll counter in the
@@ -400,8 +407,11 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
 - **The library's title is "Moments"** (2026-11-16, the user; was "Your
   Moments"), and its list blurs and dissolves into the page at the top and
   bottom edge instead of being cut off (`components/ui/scroll-edge.tsx`,
-  tokens `ScrollEdge`): stacked blurs under a gradient in `Colors.bg`, since
-  RN has no progressive blur. **Not seen on a device.**
+  tokens `ScrollEdge`). Since 2026-11-18 it is one smooth gradient in
+  `Colors.bg` and no blur: the stacked blurs showed as steps on a device, and a
+  real progressive blur needs a masked view (native, new build). The list
+  scrolls up under the "Moments" header and fades out behind it, still
+  faintly visible. **Not seen on a device.**
 - **The library is a list of compact cards** (decided
   2026-11-16 by the user, replacing the full-screen carousel of photo stacks
   of 2026-11-15 — thumbnails blown up to the screen looked soft and only one

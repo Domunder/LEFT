@@ -77,7 +77,9 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { useToast } from '@/components/ui/toast-host';
 import { Body, Caption, Display, Label } from '@/components/ui/typography';
-import { Colors, MissionsEditor as T, Press, Springs } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollEdged } from '@/components/ui/scroll-edge';
+import { Colors, MissionsEditor as T, Press, ScrollEdge as Edge, Springs } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { getSession } from '@/lib/auth';
 import { messageFor } from '@/lib/auth-errors';
@@ -162,6 +164,7 @@ function describeWriteError(e: unknown): string {
 }
 
 export default function MissionsScreen() {
+  const insets = useSafeAreaInsets();
   const toast = useToast();
   const router = useRouter();
   const { eventId, from } = useLocalSearchParams<{ eventId?: string; from?: string }>();
@@ -463,7 +466,7 @@ export default function MissionsScreen() {
   const confirmSwitchOff = () => {
     Alert.alert(
       'Switch missions off?',
-      'Nobody will get a mission. Your list is kept, in case you switch them back on.',
+      'Missions are off. Your list is kept.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Switch off', style: 'destructive', onPress: () => void changePerGuest(null) },
@@ -613,8 +616,9 @@ export default function MissionsScreen() {
     <View style={styles.root}>
       {/* Something pinned at the bottom: then the bottom inset is the screen's. */}
       <Screen transparent edges={bottom ? ['top', 'bottom'] : ['top']}>
+        <ScrollEdged bottomInset={bottom ? 0 : insets.bottom} >
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(T.paddingBottom, Edge.bottom) }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
@@ -655,7 +659,7 @@ export default function MissionsScreen() {
               <Body small color={Colors.textMuted} style={styles.flexText}>
                 {event.status === 'setup'
                   ? 'Locked — this event has ended.'
-                  : 'Locked — the missions were dealt when the event started.'}
+                  : 'Locked — the event has started.'}
               </Body>
             </View>
           ) : null}
@@ -671,8 +675,8 @@ export default function MissionsScreen() {
               </Display>
               <Body small color={Colors.textDim} style={styles.centerText}>
                 {locked
-                  ? 'This event has no missions. They can only be switched on before it starts.'
-                  : 'Give every guest a small photo challenge, like “A photo with someone you have never met”. You can rewrite the list before you start.'}
+                  ? 'No missions. You can switch them on before the event starts.'
+                  : 'Give every guest a small photo mission. You can edit the list before the event starts.'}
               </Body>
               {!locked ? (
                 <PillButton
@@ -733,8 +737,8 @@ export default function MissionsScreen() {
                   {needed > 0 && !locked
                     ? `Only ${plural(totalMissions, 'mission', 'missions')} for ${group} guests — some would get none. "Add" fills the list from ideas.`
                     : locked
-                    ? 'A name means it went to that guest; the rest were dealt at random.'
-                    : 'Tap the person to give a mission to someone. The rest are handed out at random when you start the event.'}
+                    ? 'Named missions went to that guest. The rest were random.'
+                    : 'Tap a person to assign a mission. The rest are random.'}
                 </Caption>
 
                 {locked && missions.length === 0 ? (
@@ -797,6 +801,7 @@ export default function MissionsScreen() {
             </LayoutAnimationConfig>
           )}
         </ScrollView>
+        </ScrollEdged>
         {bottom}
       </Screen>
 

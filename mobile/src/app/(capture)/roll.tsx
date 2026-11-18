@@ -26,6 +26,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
+import { ScrollEdged } from '@/components/ui/scroll-edge';
+
 import { CircleIconButton } from '@/components/ui/circle-back-button';
 import { GlassButton } from '@/components/ui/glass';
 import { MissionPickerSheet } from '@/components/ui/mission-sheet';
@@ -34,7 +36,7 @@ import { PhotoViewer, type Rect, type ViewerPhoto } from '@/components/ui/photo-
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
 import { Body, Display, Em } from '@/components/ui/typography';
-import { Colors, MissionsCamera as M, Shots as T, Spacing } from '@/constants/theme';
+import { Colors, MissionsCamera as M, ScrollEdge as Edge, Shots as T, Spacing } from '@/constants/theme';
 import { getSession } from '@/lib/auth';
 import { getEvent, isDeveloped } from '@/lib/events';
 import type { Mission } from '@/lib/missions';
@@ -54,12 +56,12 @@ import { setShotMission, subscribeToQueue } from '@/lib/upload-queue';
 function tagFailure(error: unknown): { message: string; closed: boolean } {
   const hint = (error as { hint?: string } | null)?.hint;
   if (hint === 'event_closed') {
-    return { message: 'The film is developed. Missions can’t change any more.', closed: true };
+    return { message: 'The film is developed. Missions are locked.', closed: true };
   }
   if (hint === 'not_yours') {
     return { message: 'That mission isn’t one of yours.', closed: false };
   }
-  return { message: 'Couldn’t save that. Check your connection and try again.', closed: false };
+  return { message: 'Couldn’t save. Try again.', closed: false };
 }
 
 export default function RollScreen() {
@@ -243,7 +245,7 @@ export default function RollScreen() {
 
         <View style={styles.title}>
           <Display size="md">
-            Your <Em>shots.</Em>
+            Your <Em>photos.</Em>
           </Display>
           <Body small>
             {count === 0
@@ -261,6 +263,7 @@ export default function RollScreen() {
             <Body small>Nothing yet. Your photos show up here as you take them.</Body>
           </View>
         ) : (
+          <ScrollEdged>
           <FlatList
             ref={list}
             data={shots}
@@ -291,6 +294,7 @@ export default function RollScreen() {
               );
             }}
           />
+          </ScrollEdged>
         )}
       </Screen>
 
@@ -360,7 +364,7 @@ const styles = StyleSheet.create({
   },
   grid: {
     gap: T.gridGap,
-    paddingBottom: Spacing.xl,
+    paddingBottom: Math.max(Spacing.xl, Edge.bottom),
   },
   row: {
     gap: T.gridGap,

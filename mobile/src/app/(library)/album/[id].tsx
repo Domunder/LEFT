@@ -310,7 +310,7 @@ export default function AlbumScreen() {
     if (!id) return;
     Alert.alert(
       'Develop the film now?',
-      'This closes every camera and shows the photos to everyone. It cannot be undone.',
+      'Closes every camera and shows the photos to everyone.',
       [
         { text: 'Not yet', style: 'cancel' },
         {
@@ -443,7 +443,7 @@ export default function AlbumScreen() {
     (photo: AlbumPhoto) => {
       Alert.alert(
         'Report this photo?',
-        'We look at reported photos within 24 hours and remove what breaks the rules. The host of this event can delete it right away.',
+        'We check reports within 24 hours. The host can also delete it.',
         [
           { text: 'Cancel', style: 'cancel' },
           {

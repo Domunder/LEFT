@@ -29,7 +29,7 @@ export function RollCounter({ shotsLeft }: { shotsLeft: number | null }) {
       accessible
       accessibilityRole="text"
       accessibilityLabel={
-        unlimited ? 'Unlimited shots' : `${shotsLeft} ${shotsLeft === 1 ? 'shot' : 'shots'} left`
+        unlimited ? 'Unlimited photos' : `${shotsLeft} ${shotsLeft === 1 ? 'photo' : 'photos'} left`
       }>
       <Text
         maxFontSizeMultiplier={MAX_SCALE}

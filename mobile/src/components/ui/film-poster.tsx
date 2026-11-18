@@ -116,7 +116,7 @@ export function NewMomentCard({ photos, tint, spread, onStart, onJoin, style }: 
         </Display>
 
         <Body small color={Colors.textMuted} style={styles.freshCopy}>
-          One roll each. Nothing shows until{'\n'}the film is developed.
+          Limited photos each. Nothing shows until{'\n'}the film is developed.
         </Body>
 
         <GlassButton

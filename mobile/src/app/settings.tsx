@@ -58,7 +58,9 @@ import { SettingsGroup, SettingsListRow } from '@/components/ui/settings-group';
 import { useToast } from '@/components/ui/toast-host';
 import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Body, Display } from '@/components/ui/typography';
-import { Colors, Settings as S } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollEdged } from '@/components/ui/scroll-edge';
+import { Colors, ScrollEdge as Edge, Settings as S } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { ANALYTICS_CONFIGURED, isAnalyticsEnabled, setAnalyticsEnabled } from '@/lib/analytics';
 import { getSession, isAnonymous, resolveDisplayName, signOut } from '@/lib/auth';
@@ -113,6 +115,7 @@ function profileFrom(session: Session | null): Profile | null {
 }
 
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const toast = useToast();
 
@@ -188,7 +191,7 @@ export default function SettingsScreen() {
         if (value && refusedEarlier && status === 'denied') {
           Alert.alert(
             'Notifications are off',
-            'LEFT is not allowed to send notifications on this phone. You can change that in Settings.',
+            'Notifications are off. Turn them on in Settings.',
             [
               { text: 'Not now', style: 'cancel' },
               { text: 'Open Settings', onPress: () => void Linking.openSettings() },
@@ -244,7 +247,7 @@ export default function SettingsScreen() {
           count > 0
             ? `${count} ${count === 1 ? 'purchase' : 'purchases'} restored.`
             : 'Nothing to restore.',
-        message: count > 0 ? 'They are ready to use on your next film.' : undefined,
+        message: count > 0 ? 'They are ready to use on your next event.' : undefined,
       });
     } catch {
       toast.show({
@@ -263,7 +266,7 @@ export default function SettingsScreen() {
     Alert.alert(
       'Log out?',
       guest
-        ? 'You are signed in as a guest, so there is no account to come back to. You will not be able to reach your moments and their photos again.'
+        ? 'You’re a guest, so there’s no account. You’ll lose access to your moments and photos.'
         : 'You can sign back in at any time.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -289,6 +292,7 @@ export default function SettingsScreen() {
       <AmbientGlow preset="settings" />
 
       <Screen transparent style={styles.screen}>
+        <ScrollEdged bottomInset={insets.bottom}>
         <ScrollView
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}>
@@ -405,6 +409,7 @@ export default function SettingsScreen() {
             </Body>
           ) : null}
         </ScrollView>
+        </ScrollEdged>
       </Screen>
     </View>
   );
@@ -421,7 +426,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    paddingBottom: S.paddingBottom,
+    paddingBottom: Math.max(S.paddingBottom, Edge.bottom),
   },
   header: {
     flexDirection: 'row',

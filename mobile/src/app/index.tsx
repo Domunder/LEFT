@@ -181,7 +181,7 @@ export default function LandingScreen() {
         </Display>
 
         <Body style={styles.subcopy}>
-          One roll each. No peeking.{'\n'}Developed together when it ends.
+          Limited photos each. No peeking.{'\n'}Developed together when it ends.
         </Body>
 
         <View style={styles.providers}>

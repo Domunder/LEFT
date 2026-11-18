@@ -169,17 +169,36 @@ export type DevelopedPhoto = {
  * Synchronous and heavy — a few hundred milliseconds for a 12MP frame — so the
  * upload queue calls it, never the shutter.
  */
-export function developPhoto(encoded: Uint8Array, look: FilmLook): DevelopedPhoto {
+export function developPhoto(
+  encoded: Uint8Array,
+  look: FilmLook,
+  cropAspect?: number
+): DevelopedPhoto {
   const data = Skia.Data.fromBytes(encoded);
   const source = Skia.Image.MakeImageFromEncoded(data);
   if (!source) throw new Error('The captured photo could not be read');
 
-  const out = fit(source.width(), source.height(), PhotoOutput.longEdge);
+  /*
+    Centre-crop to the viewfinder's shape, so the print holds what the guest
+    saw. Only a portrait capture is cropped: a sideways phone takes a landscape
+    picture, which the portrait-pinned viewfinder never showed whole anyway.
+  */
+  let cropW = source.width();
+  let cropH = source.height();
+  if (cropAspect && cropAspect > 0 && cropH > cropW) {
+    if (cropAspect < cropW / cropH) cropW = Math.round(cropH * cropAspect);
+    else cropH = Math.round(cropW / cropAspect);
+  }
+  const cropX = (source.width() - cropW) / 2;
+  const cropY = (source.height() - cropH) / 2;
+
+  const out = fit(cropW, cropH, PhotoOutput.longEdge);
   const surface = makeSurface(out.width, out.height);
 
   try {
     const matrix = Skia.Matrix();
-    matrix.scale(out.width / source.width(), out.height / source.height());
+    matrix.scale(out.width / cropW, out.height / cropH);
+    matrix.translate(-cropX, -cropY);
     const pixels = source.makeShaderOptions(
       TileMode.Clamp,
       TileMode.Clamp,

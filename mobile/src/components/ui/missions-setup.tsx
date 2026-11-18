@@ -42,8 +42,8 @@ export function MissionsSetup({ value, onChange, style }: MissionsSetupProps) {
 
       <Body small color={Colors.textFaint} style={styles.explainer}>
         {on
-          ? 'You plan them on the next screen: how many each guest gets, and which ones.'
-          : 'Small challenges for the night, like a photo with someone you’ve never met.'}
+          ? 'You set them up next.'
+          : 'Small photo missions for your guests.'}
       </Body>
     </View>
   );

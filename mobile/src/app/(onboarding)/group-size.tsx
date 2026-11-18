@@ -186,8 +186,8 @@ export default function GroupSizeScreen() {
       */
       creation.fail(
         narrowed.problem === 'ended'
-          ? 'That ending time has already passed. Pick a new one to continue.'
-          : 'Something is missing from your film. Go back and fill it in.',
+          ? 'That end time has passed. Pick a new one.'
+          : 'Something is missing. Go back and fill it in.',
         narrowed.problem === 'ended' ? 'ending' : undefined
       );
       return;
@@ -227,7 +227,7 @@ export default function GroupSizeScreen() {
       */}
       <Display size="sm" style={styles.headline}>
         How many people{'\n'}
-        <Em>for your moment?</Em>
+        <Em>for your event?</Em>
       </Display>
 
       <Body small style={styles.subcopy}>

@@ -209,7 +209,7 @@ export default function GuestNameScreen() {
           // Still a member. Show who is left and let them choose again.
           const taken = chosen.id;
           setChosen(null);
-          setError('Someone already picked that name. Choose another, or continue without.');
+          setError('That name is taken. Pick another.');
           setNames((current) => current.filter((n) => n.id !== taken));
           try {
             setNames(await listUnclaimedNames(code));

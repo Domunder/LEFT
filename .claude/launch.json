@@ -25,6 +25,20 @@
         "4329"
       ],
       "port": 4329
+    },
+    {
+      "name": "left-web-camera-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        ".claude/worktrees/web-camera/web",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "4321"
+      ],
+      "port": 4321
     }
   ]
 }

@@ -1,5 +1,5 @@
 /**
- * "Keep your films" — the prompt that turns a guest into an account.
+ * "Keep your moments" — the prompt that turns a guest into an account.
  *
  * This is the end-of-film sign-in CLAUDE.md's Open Gaps assign to screens 14/15.
  * A guest never signs up: they tap an invite link, type a name on 11 and film.
@@ -75,7 +75,7 @@ export function KeepYourFilm({ onLinked, onDismiss }: KeepYourFilmProps) {
   return (
     <GlassPanel radius={Radii.card} contentStyle={styles.content}>
       <View style={styles.headingRow}>
-        <Label small>Keep your films</Label>
+        <Label small>Keep your moments</Label>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Dismiss"

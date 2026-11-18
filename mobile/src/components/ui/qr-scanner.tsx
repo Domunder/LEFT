@@ -69,8 +69,8 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
           </Display>
           <Body small>
             {permission?.canAskAgain === false
-              ? 'Camera access is off for LEFT. Turn it on in Settings to scan an invite.'
-              : 'The camera is only used to read the invite code — nothing is recorded here.'}
+              ? 'Camera is off. Turn it on in Settings.'
+              : 'Only used to read the invite code.'}
           </Body>
           {permission?.canAskAgain !== false ? (
             <PillButton label="Allow camera" onPress={() => void requestPermission()} />

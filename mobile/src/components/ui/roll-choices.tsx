@@ -81,7 +81,7 @@ function RollCard({ roll, selected, onPress }: RollCardProps) {
       onPress={onPress}
       style={[styles.card, shell]}>
       <Animated.Text style={[styles.numeral, numeral]}>{rollNumeral(roll)}</Animated.Text>
-      <Animated.Text style={[styles.unit, unit]}>shots</Animated.Text>
+      <Animated.Text style={[styles.unit, unit]}>photos</Animated.Text>
     </AnimatedPressable>
   );
 }

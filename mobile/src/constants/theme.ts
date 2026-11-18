@@ -1007,6 +1007,19 @@ export const Camera = {
     chevronSize: 12,
     chevronGap: 2,
     countdownHitSlop: 14,
+    /** The countdown's top padding: level with the 44pt close button's middle. */
+    countdownTop: 12,
+    /** Under the safe area: where the "Next photo" note starts, below name, counter and capsule. */
+    armedOffset: 104,
+    armedSlotHeight: 80,
+  },
+
+  /** Soft darkening where text sits on the picture: the header, and the controls row. */
+  scrim: {
+    top: ['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)'] as const,
+    topHeight: 130,
+    bottom: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)'] as const,
+    bottomHeight: 110,
   },
 
   /** "17 left" — the roll. */
@@ -1019,11 +1032,9 @@ export const Camera = {
     lowColor: 'rgba(240,180,120,0.95)',
   },
 
-  /** The viewfinder — inset and rounded, 3:4 like the sensor and like a print. */
+  /** The viewfinder — full width and height down to the shutter bar, bottom corners rounded. */
   viewfinder: {
-    paddingX: 10,
-    radius: 26,
-    aspectRatio: 3 / 4,
+    radius: 32,
     /** Behind the preview, and what shows while permission is still unresolved. */
     bg: '#0a0a0c',
   },
@@ -1086,8 +1097,9 @@ export const Camera = {
   /** Flash and flip — glass buttons (`GlassButton`, 44pt) either side of the zoom, under the viewfinder. */
   controls: {
     paddingX: 24,
-    paddingTop: 16,
-    paddingBottom: 4,
+    /** The row's height along the frame's bottom edge; its content sits `paddingBottom` above it. */
+    height: 76,
+    paddingBottom: 16,
     /** Flash off, and flash on. */
     flashColor: ['rgba(240,237,232,0.6)', Colors.text] as const,
   },
@@ -1694,14 +1706,27 @@ export const Album = {
  */
 export const ScrollEdge = {
   /** Heights of the two edges. The list is padded by the same amounts. */
-  top: 24,
-  /** Above the screen's bottom inset, which the edge covers as well. */
-  bottom: 56,
-  /** Stacked blurs, each shorter than the last, so the blur grows towards the edge. */
-  blurSteps: 3,
-  blurIntensity: 10,
-  /** `Colors.bg`, opaque -> clear. Not 'transparent': that fades through black. */
-  colors: [Colors.bg, 'rgba(16,16,16,0)'] as const,
+  top: 40,
+  /** Above the screen's bottom inset, which the edge covers as well. Lowered from 96 (2026-11-18). */
+  bottom: 72,
+  /**
+   * `Colors.bg`, opaque -> clear on a smoothstep curve, in many stops so the
+   * fade has no visible bands. Not 'transparent': that fades through black.
+   * There is no blur any more: RN cannot mask a blur, and stacked blurs showed
+   * as steps (the user, 2026-11-18).
+   */
+  colors: [
+    'rgba(16,16,16,0.97)',
+    'rgba(16,16,16,0.94)',
+    'rgba(16,16,16,0.85)',
+    'rgba(16,16,16,0.72)',
+    'rgba(16,16,16,0.57)',
+    'rgba(16,16,16,0.40)',
+    'rgba(16,16,16,0.25)',
+    'rgba(16,16,16,0.12)',
+    'rgba(16,16,16,0.03)',
+    'rgba(16,16,16,0)',
+  ] as const,
 } as const;
 
 /**

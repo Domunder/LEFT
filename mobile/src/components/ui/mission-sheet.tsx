@@ -40,9 +40,8 @@ const plural = (n: number) => (n === 1 ? "1 for you" : `${n} for you`);
 /** The intro's copy, shown once per event (`left:missions-intro:{eventId}`). */
 export function missionsIntroCopy(count: number): string {
   return (
-    `Small challenges from the host — ${plural(count)}. Tap Missions, pick one, then take ` +
-    "the photo. Already took it? Mark it in Your shots. Nobody sees them until the film is " +
-    "developed."
+    `${plural(count)} from the host. Pick one, then take the photo. ` +
+    "Nobody sees them until the film is developed."
   );
 }
 
@@ -264,8 +263,8 @@ export function MissionListSheet({
           {intro
             ? missionsIntroCopy(missions.length)
             : done === missions.length
-              ? "All done. Nobody sees them until the film is developed."
-              : "Pick one, then take the photo. Already took it? Mark it in Your shots."}
+              ? "All done. Photos stay hidden until the film is developed."
+              : "Pick one, then take the photo."}
         </Body>
       </View>
 
