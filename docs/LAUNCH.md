@@ -228,12 +228,16 @@ jedem iOS-Build gebaut und in die App eingebettet. Vor dem ersten Build:
 - ☐ Die Website mit dem `appclips`-Eintrag in
   `.well-known/apple-app-site-association` muss live sein, bevor Apple die
   Domain prüft (App Store Connect zeigt den Status der Experience).
-- ☐ **Live Activity der Clip (seit 2026-11-18):** neue Bundle-ID
-  `com.leftmoment.app.clip.activity` mit der Capability **„App Clip
-  Extension"** (On Demand Install Capable). Legt EAS sie nicht selbst an
-  oder scheitert die Signierung: `cd mobile && eas credentials` → iOS →
-  „production" → auch für diese dritte Bundle-ID Zertifikat und Provisioning
-  Profile erzeugen lassen (wie bei der Clip).
+- ☐ **Live Activity der Clip (seit 2026-11-18):** EAS hat die Bundle-ID
+  `com.leftmoment.app.clip.activity` angelegt, kann ihre Capabilities aber
+  nicht setzen (Apples API kennt „App Clip Extension" nicht). Darum von Hand:
+  developer.apple.com → Identifiers → `com.leftmoment.app.clip.activity` →
+  **„On Demand Install Capable for App Clip Extensions"** und **App Groups**
+  (`group.com.leftmoment.app`) einschalten → Save. Der Build-Workflow setzt
+  `EXPO_NO_CAPABILITY_SYNC=1`: **jede neue Capability an irgendeiner
+  Bundle-ID muss seitdem hier von Hand eingeschaltet werden.** Scheitert die
+  Signierung trotzdem: `cd mobile && eas credentials` → iOS → „production"
+  → für diese dritte Bundle-ID ein Provisioning Profile erzeugen lassen.
 - ☐ Testen ohne Store, **mit TestFlight:** App Store Connect → TestFlight →
   der Build → „App Clip Invocations" → Titel + URL
   `https://leftmoment.com/j/DEVTEST` → Save; auf dem iPhone in der
