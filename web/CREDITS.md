@@ -41,6 +41,7 @@ source page:
 | trip-car.jpg | https://unsplash.com/photos/Y5F1JAbo6IU |
 | trip-friends.jpg | https://unsplash.com/photos/qXfGWdZnUfQ |
 | trip-surf.jpg | https://unsplash.com/photos/ng-evcF4mCo |
+| grandpa-dance.jpg | https://unsplash.com/photos/KxpoQ8aqgWY |
 
 Copied from the app (`mobile/assets/images/samples/`, see its `CREDITS.md`):
 
