@@ -543,7 +543,7 @@ cannot UPDATE a photo row or DELETE a roster row — `create_event()`,
 
 **Never compiled.** The user is on Windows; the clip builds only on EAS, and
 nothing in it has run. Decided with the user: shoot + developing (no album in
-the clip), hand-off through the App Group, `com.leftmoment.app.Clip`,
+the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
 `@bacons/apple-targets`.
 
 - **Scanning an invite opens a native clip, no install:** name (11) →

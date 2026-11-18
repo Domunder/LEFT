@@ -210,10 +210,10 @@ jedem iOS-Build gebaut und in die App eingebettet. Vor dem ersten Build:
 
 - ☐ developer.apple.com → Identifiers: **App Group**
   `group.com.leftmoment.app` anlegen und bei `com.leftmoment.app` aktivieren.
-  Für `com.leftmoment.app.Clip` legt EAS den Identifier an; dort ebenfalls
+  Für `com.leftmoment.app.clip` legt EAS den Identifier an; dort ebenfalls
   App Group und Associated Domains aktivieren, falls EAS es nicht tut.
 - ☐ Erster Build: `eas build -p ios --profile production`. Fragt EAS nach
-  Zugangsdaten für `com.leftmoment.app.Clip` oder scheitert die Signierung
+  Zugangsdaten für `com.leftmoment.app.clip` oder scheitert die Signierung
   der Clip, einmal `cd mobile && eas credentials` → iOS → das Profil
   „production" → für **beide** Bundle-IDs Zertifikat und Provisioning Profile
   erzeugen lassen. (`@bacons/apple-targets` sagt selbst, dass die Signierung
@@ -230,7 +230,7 @@ jedem iOS-Build gebaut und in die App eingebettet. Vor dem ersten Build:
   Domain prüft (App Store Connect zeigt den Status der Experience).
 - ☐ Testen ohne Store: auf dem iPhone Einstellungen → Entwickler → „App Clips
   Testing" → „Local Experiences" → URL-Präfix `https://leftmoment.com/j/`,
-  Bundle-ID `com.leftmoment.app.Clip`. Danach öffnet ein QR-Code die Clip
+  Bundle-ID `com.leftmoment.app.clip`. Danach öffnet ein QR-Code die Clip
   (die volle App vorher löschen, sonst öffnet sie den Link).
 
 ## 8 · Auf dem Gerät prüfen (noch nie gesehen)

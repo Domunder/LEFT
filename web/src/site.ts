@@ -18,7 +18,7 @@ export const SITE = {
    * The App Clip (mobile/targets/clip). Safari shows its card over /j/{CODE}
    * through the `apple-itunes-app` meta tag (Base.astro → `appClip`).
    */
-  appClipBundleId: 'com.leftmoment.app.Clip',
+  appClipBundleId: 'com.leftmoment.app.clip',
   /** The app's custom scheme (mobile/app.json → scheme). */
   scheme: 'left',
   contactEmail: 'support@leftmoment.com' as string | null,

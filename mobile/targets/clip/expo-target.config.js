@@ -12,8 +12,8 @@ module.exports = (config) => ({
   type: 'clip',
   name: 'LEFTClip',
   displayName: 'LEFT',
-  // com.leftmoment.app.Clip
-  bundleIdentifier: '.Clip',
+  // com.leftmoment.app.clip
+  bundleIdentifier: '.clip',
   // iOS 17 is where a QR-invoked clip may be 15 MB (16 allows 10 MB).
   deploymentTarget: '17.0',
   icon: '../../assets/images/icon.png',
