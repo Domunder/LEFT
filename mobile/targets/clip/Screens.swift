@@ -28,10 +28,19 @@ struct RootView: View {
         DevelopingScreen(event: event)
       case let .failed(message):
         MessageScreen(eyebrow: "LEFT", plain: "Something ", emphasis: "went wrong.", message: message,
-                      retry: model.canRetry ? { model.retry() } : nil)
+                      retry: retryAction)
       }
     }
     .animation(.easeInOut(duration: 0.25), value: model.phase)
+  }
+
+  /// "Try again" only when there is a code to retry. Spelled out rather than a
+  /// `cond ? { … } : nil` inline: that ternary sank the whole body's type
+  /// check in Xcode 27.1 ("failed to produce diagnostic", 2026-11-18).
+  private var retryAction: (@MainActor () -> Void)? {
+    guard model.canRetry else { return nil }
+    let model = self.model
+    return { model.retry() }
   }
 }
 
