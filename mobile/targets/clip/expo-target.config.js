@@ -20,7 +20,7 @@ module.exports = (config) => ({
   // The package assumes a React Native clip and would bundle the JS. This one
   // is SwiftUI only — keeping React Native out is what keeps it small.
   exportJs: false,
-  frameworks: ['AVFoundation', 'Metal', 'MetalKit', 'StoreKit', 'Network'],
+  frameworks: ['AVFoundation', 'Metal', 'MetalKit', 'StoreKit', 'Network', 'ActivityKit'],
   colors: {
     $accent: '#f0ede8',
     // Info.plist's UILaunchScreen: the page colour, so the launch is not white.

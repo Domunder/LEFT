@@ -23,6 +23,8 @@
 		<key>NSAppClipRequestLocationConfirmation</key>
 		<false/>
 	</dict>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>LEFT uses your camera so you can take photos for your event's shared album.</string>
 	<key>NSAppTransportSecurity</key>

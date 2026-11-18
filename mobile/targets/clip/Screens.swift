@@ -27,7 +27,8 @@ struct RootView: View {
       case let .developing(event):
         DevelopingScreen(event: event)
       case let .failed(message):
-        MessageScreen(eyebrow: "LEFT", plain: "Something ", emphasis: "went wrong.", message: message, retry: { model.retry() })
+        MessageScreen(eyebrow: "LEFT", plain: "Something ", emphasis: "went wrong.", message: message,
+                      retry: model.canRetry ? { model.retry() } : nil)
       }
     }
     .animation(.easeInOut(duration: 0.25), value: model.phase)
@@ -39,12 +40,45 @@ struct RootView: View {
 struct NameScreen: View {
   @EnvironmentObject private var model: ClipModel
   @State private var name = ""
+  /// The name the last chip wrote into the field.
+  @State private var lastPicked: String?
   @FocusState private var focused: Bool
 
   private var trimmed: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
   private var canContinue: Bool { !trimmed.isEmpty && !model.busy }
 
   var body: some View {
+    VStack(spacing: 0) {
+      // Scrolls only when it has to: names under large text, or the keyboard up.
+      ScrollView {
+        fields
+      }
+      .scrollBounceBehavior(.basedOnSize)
+      .scrollDismissesKeyboard(.never)
+
+      Button(model.busy ? "Joining…" : "Continue") { model.join(name: trimmed) }
+        .buttonStyle(PillButtonStyle())
+        .disabled(!canContinue)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+    }
+    .padding(.horizontal, Theme.gutter)
+    .onAppear { focused = true }
+    .task { await model.loadNames() }
+    .animation(.easeInOut(duration: 0.2), value: model.names)
+  }
+
+  /// Picking a name writes it into the field — only over an empty field or the
+  /// previous chip's name, never over what the guest typed themselves.
+  private func picked(_ person: MissionName?) {
+    model.nameError = nil
+    defer { lastPicked = person?.name }
+    guard let person else { return }
+    let current = trimmed
+    if current.isEmpty || current == lastPicked { name = person.name }
+  }
+
+  private var fields: some View {
     VStack(alignment: .leading, spacing: 0) {
       Eyebrow(text: "Welcome").padding(.top, 48)
       Headline(plain: "What should\nwe ", emphasis: "call you?", size: 44).padding(.top, 14)
@@ -73,25 +107,17 @@ struct NameScreen: View {
         .foregroundStyle(Theme.textDim)
         .padding(.top, 12)
 
-      NamePicker()
-        .padding(.top, 24)
+      NamePicker(onPick: picked)
+        .padding(.top, 28)
 
+      // Reserved whether or not there is an error, so nothing jumps.
       Text(model.nameError ?? " ")
         .font(Fonts.body(14))
         .foregroundStyle(Theme.textMuted)
         .padding(.top, 16)
         .frame(minHeight: 40, alignment: .top)
-
-      Spacer()
-
-      Button(model.busy ? "Joining…" : "Continue") { model.join(name: trimmed) }
-        .buttonStyle(PillButtonStyle())
-        .disabled(!canContinue)
-        .padding(.bottom, 12)
     }
-    .padding(.horizontal, Theme.gutter)
-    .onAppear { focused = true }
-    .task { await model.loadNames() }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 
@@ -104,8 +130,8 @@ struct WaitingScreen: View {
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
       Eyebrow(text: event.name).padding(.top, 48)
-      Headline(plain: "You’re in.\nWaiting for the ", emphasis: "host.", size: 44).padding(.top, 14)
-      Text("The cameras open when the host starts the event. Keep this open — it moves on by itself.")
+      Headline(plain: "Almost ", emphasis: "there.", size: 44).padding(.top, 14)
+      Text("Waiting for the host to start the event. The cameras open for everyone at once.")
         .font(Fonts.body(15))
         .foregroundStyle(Theme.textMuted)
         .padding(.top, 20)
@@ -141,26 +167,34 @@ struct DevelopingScreen: View {
       VStack(alignment: .leading, spacing: 0) {
         Eyebrow(text: event.name).padding(.top, 48)
         if developed {
-          Headline(plain: "Your film is\n", emphasis: "developed.", size: 44).padding(.top, 14)
-          Text("Get LEFT to see everyone’s photos. You’ll find this film there, with your shots in it.")
+          Headline(plain: "The film is\n", emphasis: "developed.", size: 44).padding(.top, 14)
+          Text("Get LEFT to see everyone’s photos. This event is waiting there, with your photos in it.")
             .font(Fonts.body(15))
             .foregroundStyle(Theme.textMuted)
             .padding(.top, 20)
         } else {
-          Headline(plain: "Your film is\n", emphasis: "developing.", size: 44).padding(.top, 14)
-          Text(model.shotsLeft == 0 ? "Your roll is used up. Everyone’s photos appear when the film is developed." :
-                "Nobody sees a photo until the film is developed — then everyone sees all of them at once.")
+          Headline(plain: model.shotsLeft == 0 ? "That was your\n" : "Nothing to see\n",
+                   emphasis: model.shotsLeft == 0 ? "last photo." : "yet.", size: 44)
+            .padding(.top, 14)
+          let parts = countdownParts(to: event.endsAt, now: context.date)
+          HStack(alignment: .firstTextBaseline, spacing: 10) {
+            ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+              HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(part.value).font(Fonts.numeral(60)).foregroundStyle(Theme.text)
+                Text(part.unit.uppercased()).font(Fonts.medium(13)).foregroundStyle(Theme.textFaint)
+              }
+            }
+          }
+          .monospacedDigit()
+          .padding(.top, 28)
+          .accessibilityElement(children: .ignore)
+          .accessibilityLabel("\(parts[0].value) \(parts[0].unit), \(parts[1].value) \(parts[1].unit) until the film is developed")
+          Text(model.shotsLeft == 0
+            ? "Your roll is used up. Everyone’s photos appear together when the film is developed."
+            : "They appear together when the film is developed.")
             .font(Fonts.body(15))
             .foregroundStyle(Theme.textMuted)
             .padding(.top, 20)
-          Text(countdown(to: event.endsAt, now: context.date))
-            .font(Fonts.numeral(56))
-            .foregroundStyle(Theme.text)
-            .monospacedDigit()
-            .padding(.top, 36)
-          Text("until it’s developed")
-            .font(Fonts.body(13))
-            .foregroundStyle(Theme.textDim)
         }
         Spacer()
         Button("Get LEFT") { showStore = true }
@@ -178,15 +212,6 @@ struct DevelopingScreen: View {
       SKOverlay.AppClipConfiguration(position: .bottom)
     }
   }
-}
-
-/// "3:12:05", or "2 days" past a day.
-func countdown(to end: Date, now: Date) -> String {
-  let seconds = max(0, Int(end.timeIntervalSince(now)))
-  let days = seconds / 86_400
-  if days >= 2 { return "\(days) days" }
-  let h = seconds / 3600, m = (seconds % 3600) / 60, s = seconds % 60
-  return String(format: "%d:%02d:%02d", h, m, s)
 }
 
 // MARK: Messages

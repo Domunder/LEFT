@@ -25,18 +25,21 @@ struct MissionCapsule: View {
 
   var body: some View {
     Button(action: action) {
-      HStack(spacing: 6) {
+      HStack(spacing: 5) {
         Image(systemName: all ? "checkmark" : "scope")
           .font(.system(size: 12, weight: .medium))
         Text("Missions \(done)/\(total)")
           .font(Fonts.medium(13))
           .monospacedDigit()
+          .dynamicTypeSize(...DynamicTypeSize.xxLarge)
       }
-      .foregroundStyle(all ? Theme.gold : Theme.text)
-      .padding(.horizontal, 12)
-      .frame(height: 30)
-      .background(.ultraThinMaterial, in: Capsule())
-      .overlay(Capsule().stroke(Theme.hairline, lineWidth: 1))
+      .foregroundStyle(all ? Theme.green : Theme.text)
+      .padding(.horizontal, 11)
+      .frame(height: 28)
+      .glass(Capsule(), interactive: true)
+      .padding(8)
+      .contentShape(Rectangle())
+      .padding(-8)
     }
     .buttonStyle(PressScaleStyle())
     .accessibilityLabel("Missions, \(done) of \(total) done")
@@ -49,8 +52,13 @@ struct ArmedNote: View {
   let text: String
   let clear: () -> Void
 
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
   var body: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: 6) {
+      Image(systemName: "scope")
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(Theme.text)
       (Text("Next photo: ").foregroundStyle(Theme.textMuted) + Text(text).foregroundStyle(Theme.text))
         .font(Fonts.body(13))
         .lineLimit(2)
@@ -61,16 +69,18 @@ struct ArmedNote: View {
           .frame(width: 28, height: 28)
           .contentShape(Rectangle())
       }
+      .buttonStyle(PressScaleStyle(scale: 0.85))
       .accessibilityLabel("Not for a mission")
     }
-    .padding(.leading, 14)
-    .padding(.trailing, 4)
-    .padding(.vertical, 4)
-    .background(.black.opacity(0.55), in: Capsule())
-    .padding(.top, 12)
-    .padding(.horizontal, 12)
+    .padding(.leading, 12)
+    .padding(.trailing, 6)
+    .padding(.vertical, 3)
+    // Fade a wrapper, never the glass itself.
+    .glass(Capsule())
+    .padding(.horizontal, 18)
     .frame(maxHeight: .infinity, alignment: .top)
-    .transition(.move(edge: .top).combined(with: .opacity))
+    // Arrives from the capsule that armed it, and leaves the same way.
+    .transition(reduceMotion ? .opacity : .offset(y: -10).combined(with: .opacity))
   }
 }
 
@@ -87,15 +97,15 @@ struct MissionListSheet: View {
       plain: "Your ",
       emphasis: "missions.",
       lede: done == model.missions.count
-        ? "All done. Nobody sees them until the film is developed."
-        : "Pick one, then take the photo. Already took it? Mark it in Your shots."
+        ? "All done. Photos stay hidden until the film is developed."
+        : "Pick one, then take the photo."
     ) {
       ForEach(model.missions) { mission in
         let isDone = mission.photoId != nil
         let isArmed = mission.id == model.armedId
         MissionRow(mission: mission, dimmed: isDone) {
           if isDone {
-            Label("Done", systemImage: "checkmark").foregroundStyle(Theme.gold)
+            Label("Done", systemImage: "checkmark").foregroundStyle(Theme.green)
           } else if isArmed {
             Label("Next photo", systemImage: "scope").foregroundStyle(Theme.text)
           } else {
@@ -165,7 +175,7 @@ struct MissionPicker: View {
         try await model.tag(photoId: photoId, missionId: missionId)
         done()
       } catch let failure as ClipError where failure.hint == "event_closed" {
-        error = "The film is developed. Missions can’t change any more."
+        error = "The film is developed. Missions are locked."
       } catch let failure as ClipError where failure.hint == "not_yours" {
         error = "That mission isn’t one of yours."
       } catch {
@@ -274,40 +284,57 @@ private struct PlainRow<Trailing: View>: View {
 
 // MARK: 11 — "Are you one of these?"
 
-/// The names the host listed for personal missions. One pick, tap again to let it go.
+/// The names the host listed for personal missions (`name-picker.tsx`): 02's
+/// choice pills, solid off-white when chosen, a hairline outline when not.
+/// "None of these" is a real choice and the default, so the group is a set of
+/// radio buttons. Picking a name fills the name field (`NameScreen`).
 struct NamePicker: View {
   @EnvironmentObject private var model: ClipModel
+  var onPick: (MissionName?) -> Void = { _ in }
 
   var body: some View {
     if !model.names.isEmpty {
-      VStack(alignment: .leading, spacing: 10) {
+      VStack(alignment: .leading, spacing: 0) {
         Text("Are you one of these?")
-          .font(Fonts.body(15))
+          .font(Fonts.body(16))
           .foregroundStyle(Theme.text)
+        Text("The host planned something for you.")
+          .font(Fonts.body(13))
+          .foregroundStyle(Theme.textFaint)
+          .padding(.top, 4)
         FlowLayout(spacing: 8) {
           ForEach(model.names) { name in
-            let picked = model.pickedName == name.id
-            Button {
-              model.pickedName = picked ? nil : name.id
-            } label: {
-              Text(name.name)
-                .font(Fonts.medium(14))
-                .foregroundStyle(picked ? Theme.onLight : Theme.text)
-                .padding(.horizontal, 14)
-                .frame(height: 36)
-                .background(picked ? Theme.text : Theme.field, in: Capsule())
-                .overlay(Capsule().stroke(Theme.hairline, lineWidth: 1))
+            chip(name.name, selected: model.pickedName == name.id) {
+              model.pickedName = name.id
+              onPick(name)
             }
-            .buttonStyle(PressScaleStyle())
-            .accessibilityAddTraits(picked ? .isSelected : [])
+          }
+          chip("None of these", selected: model.pickedName == nil) {
+            model.pickedName = nil
+            onPick(nil)
           }
         }
-        Text("The host has something just for them.")
-          .font(Fonts.body(13))
-          .foregroundStyle(Theme.textDim)
+        .padding(.top, 14)
       }
-      .disabled(model.busy)
+      .transition(.opacity)
     }
+  }
+
+  private func chip(_ label: String, selected: Bool, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Text(label)
+        .font(Fonts.medium(15))
+        .foregroundStyle(selected ? Theme.onLight : Theme.text)
+        .multilineTextAlignment(.leading)
+        .padding(.vertical, 11)
+        .padding(.horizontal, 16)
+        .background(selected ? Theme.text : .clear, in: Capsule())
+        .overlay(Capsule().stroke(selected ? Theme.text : Theme.hairlineStrong, lineWidth: 1))
+    }
+    .buttonStyle(PressScaleStyle(scale: 0.96))
+    .disabled(model.busy)
+    .accessibilityLabel(label)
+    .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
   }
 }
 

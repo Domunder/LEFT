@@ -171,7 +171,7 @@ func messageFor(_ error: Error) -> String {
     case .notConfigured: return "The camera isn’t set up yet."
     case .rollEmpty: return "Your roll is used up."
     case .eventClosed: return "The cameras aren’t open."
-    case .missionNameTaken: return "Someone else just took that name. Pick another, or none."
+    case .missionNameTaken: return "That name is taken. Pick another."
     case let .server(_, code, hint, message):
       if hint == "full" { return "This group is full. Ask the host to make room." }
       if code == "P0002" { return "This invite link doesn’t work any more. Ask the host for a new one." }

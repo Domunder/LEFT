@@ -30,16 +30,27 @@ actor Developer {
 
   private let context = CIContext(options: [.cacheIntermediates: false])
 
-  func develop(_ encoded: Data, look: FilmLook) throws -> DevelopedPhoto {
+  /// `cropAspect` is the viewfinder's width / height when the shutter fired:
+  /// the print is centre-cropped to it, so it holds what the guest saw. Only a
+  /// portrait capture is cropped — a sideways phone takes a landscape picture,
+  /// which the portrait viewfinder never showed whole anyway.
+  func develop(_ encoded: Data, look: FilmLook, cropAspect: CGFloat? = nil) throws -> DevelopedPhoto {
     guard let renderer = LookRenderer.shared else { throw DevelopError.render }
     guard var image = CIImage(data: encoded, options: [.applyOrientationProperty: true]) else {
       throw DevelopError.unreadable
     }
 
+    var extent = image.extent
+    if let aspect = cropAspect, aspect > 0, extent.height > extent.width {
+      var w = extent.width, h = extent.height
+      if aspect < w / h { w = (h * aspect).rounded() } else { h = (w / aspect).rounded() }
+      extent = CGRect(x: extent.midX - w / 2, y: extent.midY - h / 2, width: w, height: h).integral
+      image = image.cropped(to: extent)
+    }
+
     // Fit the long edge to `PhotoOutput.longEdge`; never upscale.
     // Clamped first so the filter has pixels past the edge and the borders
     // do not fade to transparent; cropped back to the scaled size after.
-    let extent = image.extent
     image = image.transformed(by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY))
     let scale = min(1, CGFloat(PhotoOutput.longEdge) / max(extent.width, extent.height))
     let rect = CGRect(x: 0, y: 0, width: (extent.width * scale).rounded(), height: (extent.height * scale).rounded())

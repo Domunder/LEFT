@@ -228,10 +228,18 @@ jedem iOS-Build gebaut und in die App eingebettet. Vor dem ersten Build:
 - ☐ Die Website mit dem `appclips`-Eintrag in
   `.well-known/apple-app-site-association` muss live sein, bevor Apple die
   Domain prüft (App Store Connect zeigt den Status der Experience).
-- ☐ Testen ohne Store: auf dem iPhone Einstellungen → Entwickler → „App Clips
-  Testing" → „Local Experiences" → URL-Präfix `https://leftmoment.com/j/`,
-  Bundle-ID `com.leftmoment.app.clip`. Danach öffnet ein QR-Code die Clip
-  (die volle App vorher löschen, sonst öffnet sie den Link).
+- ☐ **Live Activity der Clip (seit 2026-11-18):** neue Bundle-ID
+  `com.leftmoment.app.clip.activity` mit der Capability **„App Clip
+  Extension"** (On Demand Install Capable). Legt EAS sie nicht selbst an
+  oder scheitert die Signierung: `cd mobile && eas credentials` → iOS →
+  „production" → auch für diese dritte Bundle-ID Zertifikat und Provisioning
+  Profile erzeugen lassen (wie bei der Clip).
+- ☐ Testen ohne Store, **mit TestFlight:** App Store Connect → TestFlight →
+  der Build → „App Clip Invocations" → Titel + URL
+  `https://leftmoment.com/j/DEVTEST` → Save; auf dem iPhone in der
+  TestFlight-App → LEFT → App Clips → Open. („Local Experiences" in den
+  Entwickler-Einstellungen gehen nur mit einer per Xcode installierten
+  Clip, nicht mit TestFlight.)
 
 ## 8 · Auf dem Gerät prüfen (noch nie gesehen)
 
@@ -250,6 +258,12 @@ jedem iOS-Build gebaut und in die App eingebettet. Vor dem ersten Build:
   Warten/Kamera; Live-Look im Sucher entspricht dem Look des Films; Foto mit
   Blitz (hinten) und weißem Bildschirm (vorne); Querformat; Zähler sinkt;
   Funkloch → Fotos landen später; nach dem Entwickeln „Get LEFT"
+- ☐ **Clip, Stand 2026-11-18:** Sucher bildschirmfüllend, Glas darüber
+  lesbar; Zoom-Stufen (0.5× / 1× / Tele) und nach dem Pinch die „1.2×"-Pille;
+  das Foto zeigt genau den Ausschnitt des Suchers; „Markus" wählen füllt den
+  Namen und bringt seine persönliche Mission; **Live Activity** auf dem
+  Sperrbildschirm und in der Dynamic Island („4 left", Missionen, Countdown),
+  ein Tipp öffnet die Kamera der Clip
 - ☐ **Übergabe:** nach Fotos in der Clip die App installieren und öffnen →
   derselbe Gast, der Film steht in Moments, der Zähler stimmt
 

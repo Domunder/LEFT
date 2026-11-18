@@ -35,6 +35,10 @@ struct LEFTClipApp: App {
             await model.refresh()
           }
         }
+        // "4 left" on the Lock Screen and in the Dynamic Island.
+        .onChange(of: model.liveRoll, initial: true) { _, snapshot in
+          LiveRoll.sync(snapshot)
+        }
     }
   }
 }

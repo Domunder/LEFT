@@ -607,8 +607,38 @@ the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
   phone takes a landscape picture), selfies mirrored on the connection as
   previewed. `Developer` bakes the look: original 3000 px at 0.88, thumbnail
   640 px at 0.72 — the app's `PhotoOutput`. Back flash is the system flash;
-  the front flash is a white screen for `leadMs` (320 ms). Zoom is pinch only
-  (no lens stops).
+  the front flash is a white screen for `leadMs` (320 ms).
+- **The app's 2026-11-18 design, ported (same day, the user; written on
+  Windows, never compiled before the next EAS build, never seen):** the
+  viewfinder is full screen to the shutter bar, bottom corners rounded, with
+  the header (name, "17 left" warming over the last three, "Missions 1/3",
+  the "01 d 23 h" countdown → developing) and flash · zoom · flip as glass
+  over it on scrims (`CameraTokens` in `Theme.swift`). **Zoom has the lens
+  stops and the live "1.2×" pill** (`lib/zoom.ts` ported into `Camera.swift`;
+  the start lens is now the wide one on a wide + tele phone too). Prints are
+  centre-cropped to the frame (`Developer.develop(cropAspect:)`). Glass is
+  `.glass(shape)`: Liquid Glass on iOS 26, a material before, solid under
+  Reduce Transparency. Your photos is a full screen like the app's roll;
+  11's names are 02's pills with "None of these", and a pick fills the name
+  field; copy follows the app's vocabulary. No close button and no invite
+  tile in the clip.
+- **Live Activity (2026-11-18, the user: "stay in the notifications so I can
+  tap and see I have 4 more photos").** `targets/clip-activity`: a widget
+  extension with Live Activities only, embedded **in the clip** (Apple's
+  rule), bundle ID `com.leftmoment.app.clip.activity`, entitlement
+  `com.apple.developer.on-demand-install-capable`. `@bacons/apple-targets`
+  embeds widgets in the main app; `with-app-clip.js` moves the embed and the
+  dependency into the clip on every prebuild. Lock Screen and Dynamic Island
+  show the count, the open missions and a self-ticking countdown; a tap
+  opens the invite URL, i.e. the clip's camera. Started on entering the
+  camera, updated locally on every change (`ClipModel.liveRoll` →
+  `LiveRoll.sync`), ended an hour after the clip sees the film developed.
+  **No push updates** (needs APNs): with the clip closed only the countdown
+  moves; `staleDate` is the event's end. `RollActivityAttributes` is
+  duplicated in both targets (`targets/_shared` would also compile into the
+  RN app) — keep the two files identical. System serif in the extension, not
+  DM Serif (fonts would double in the clip). **Unverified in any way but
+  config resolution: Windows cannot prebuild iOS.**
 - **Upload queue on files in the App Group folder** (`UploadQueue.swift`,
   `clip-shots/`): the app's order (claim → upload both → mark), its refusal
   handling, retry on reconnect (`NWPathMonitor`), on foreground and with
@@ -634,11 +664,20 @@ the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
   the join); "Missions 1/3" under the counter opens the list, a tap arms the
   next frame ("Next photo: …" at the frame's top edge); the queue tags
   after the claim (claim → tag → upload → mark, a refused tag drops the tag,
-  never the photo). **Your shots** — the tile left of the shutter — is the
+  never the photo). **Your photos** — the tile left of the shutter — is the
   guest's own frames (queued files, then signed URLs) with "Mission" on a
   frame to tag it afterwards. Smaller than the app's on purpose: no swiping
   in the viewer, no pinch, no return to the tile. **No intro sheet** (the
   user's call). Server calls checked against the local stack over HTTP.
+- **Invite codes have no I, O, 0 or 1** (`[A-HJ-NP-Z2-9]{6,12}`, here and in
+  `lib/invite.ts`): a link with one is "not a LEFT invite". The seed's
+  `DEV123` is such a code. The hosted test event is `DEVTEST` (2026-11-18,
+  missions on, named people Markus and Anna). "Try again" only shows when
+  there is a code to retry — it used to fall through to "Scan an invite".
+- **Testing from TestFlight:** App Store Connect → TestFlight → the build →
+  App Clip Invocations (`https://leftmoment.com/j/DEVTEST`), then open it
+  from the TestFlight app. Local Experiences need the clip installed as a
+  clip (Xcode), which a TestFlight install is not.
 - **The user's steps** (App Group identifier, EAS credentials for the clip,
   App Clip experiences in App Store Connect, local experience for testing,
   the size check) are `docs/LAUNCH.md` §7a; device checks in §8.

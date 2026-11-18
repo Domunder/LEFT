@@ -73,6 +73,20 @@ enum CameraPermission {
   case unknown, granted, denied
 }
 
+/// One of the phone's own lenses, as a ratio to the wide one ("0.5×", "1×",
+/// "3×") — `lib/zoom.ts`. Never a digital crop.
+struct ZoomStop: Equatable, Identifiable {
+  let label: String
+  let factor: CGFloat
+  var id: String { label }
+}
+
+/// "0.5×", "1×", "2.5×" — one decimal, none when whole.
+func zoomLabel(_ ratio: CGFloat) -> String {
+  let rounded = (ratio * 10).rounded() / 10
+  return rounded == rounded.rounded() ? "\(Int(rounded))×" : String(format: "%.1f×", rounded)
+}
+
 final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutputSampleBufferDelegate {
   @Published private(set) var permission: CameraPermission = .unknown
   /// The session runs *and* is configured for the selected camera — the
@@ -80,6 +94,12 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
   @Published private(set) var ready = false
   @Published private(set) var position: AVCaptureDevice.Position = .back
   @Published private(set) var hasFlash = false
+  /// The lenses to offer; empty with one lens and on the front camera.
+  @Published private(set) var stops: [ZoomStop] = []
+  /// The selected stop's label, or "" after a pinch.
+  @Published private(set) var selectedStop = ""
+  /// The pinched zoom ("1.2×"), shown alone while no stop is selected.
+  @Published private(set) var liveZoom = ""
 
   let viewfinder = ViewfinderView(frame: .zero)
 
@@ -95,6 +115,10 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
   /// The selected camera, as the session queue knows it.
   private var activePosition: AVCaptureDevice.Position = .back
   private var zoomStart: CGFloat = 1
+  /// Main-thread copies of the device's range: the pinch reads them per frame.
+  private var zoomRange: ClosedRange<CGFloat> = 1...1
+  private var wideFactor: CGFloat = 1
+  private var currentZoom: CGFloat = 1
 
   // MARK: Lifecycle
 
@@ -181,9 +205,21 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
       photoOutput.maxPhotoDimensions = largest
     }
 
-    // Start on the wide lens ("1×"), not the ultra wide a virtual device opens on.
-    if let wide = device.virtualDeviceSwitchOverVideoZoomFactors.first, (try? device.lockForConfiguration()) != nil {
-      device.videoZoomFactor = CGFloat(truncating: wide)
+    // The lens stops (`stopsForDevice()` in lib/zoom.ts). With an ultra wide
+    // the range starts below the wide lens, so 1× is the first switch-over;
+    // without one (wide + tele) the range starts on it. Start on 1×.
+    let minZoom = device.minAvailableVideoZoomFactor
+    let maxZoom = min(device.maxAvailableVideoZoomFactor, 10)
+    let switches = device.virtualDeviceSwitchOverVideoZoomFactors
+      .map { CGFloat(truncating: $0) }
+      .filter { $0 > minZoom && $0 <= maxZoom }
+    let hasUltraWide = device.constituentDevices.contains { $0.deviceType == .builtInUltraWideCamera }
+    let wide = hasUltraWide ? (switches.first ?? minZoom) : minZoom
+    let stops = position == .back && !switches.isEmpty
+      ? ([minZoom] + switches).map { ZoomStop(label: zoomLabel($0 / wide), factor: $0) }
+      : []
+    if (try? device.lockForConfiguration()) != nil {
+      device.videoZoomFactor = wide
       device.unlockForConfiguration()
     }
 
@@ -206,6 +242,12 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
     DispatchQueue.main.async {
       self.position = position
       self.hasFlash = flash
+      self.zoomRange = minZoom...max(minZoom, maxZoom)
+      self.wideFactor = wide
+      self.currentZoom = wide
+      self.stops = stops
+      self.selectedStop = stops.first(where: { abs($0.factor - wide) < 0.01 })?.label ?? ""
+      self.liveZoom = ""
     }
   }
 
@@ -222,18 +264,40 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
   // MARK: Zoom
 
   func beginZoom() {
-    zoomStart = input?.device.videoZoomFactor ?? 1
+    zoomStart = currentZoom
   }
 
-  /// Pinch: `scale` is relative to where the pinch began.
+  /// Pinch: `scale` is relative to where the pinch began. The stops step
+  /// aside for one lit pill with the live zoom, as the system camera does.
   func zoom(_ scale: CGFloat) {
+    let factor = min(zoomRange.upperBound, max(zoomRange.lowerBound, zoomStart * scale))
+    apply(factor)
+    let text = zoomLabel(factor / wideFactor)
+    if selectedStop != "" { selectedStop = "" }
+    if liveZoom != text { liveZoom = text }
+  }
+
+  /// A tap on a lens stop.
+  func select(_ stop: ZoomStop) {
+    apply(stop.factor)
+    liveZoom = ""
+    selectedStop = stop.label
+  }
+
+  /// A tap on the live pill: back to 1× and the stops.
+  func resetZoom() {
+    apply(wideFactor)
+    liveZoom = ""
+    selectedStop = stops.first(where: { abs($0.factor - wideFactor) < 0.01 })?.label ?? ""
+  }
+
+  private func apply(_ factor: CGFloat) {
+    currentZoom = factor
     guard let device = input?.device else { return }
-    let start = zoomStart
     sessionQueue.async {
-      let ceiling = min(device.maxAvailableVideoZoomFactor, 10)
-      let factor = max(device.minAvailableVideoZoomFactor, min(start * scale, ceiling))
+      let clamped = max(device.minAvailableVideoZoomFactor, min(factor, device.maxAvailableVideoZoomFactor))
       guard (try? device.lockForConfiguration()) != nil else { return }
-      device.videoZoomFactor = factor
+      device.videoZoomFactor = clamped
       device.unlockForConfiguration()
     }
   }

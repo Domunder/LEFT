@@ -76,6 +76,27 @@ final class ClipModel: ObservableObject {
     return max(0, serverLeft - unclaimed - developingNow)
   }
 
+  /// What the Live Activity shows, while the guest is in the camera or
+  /// waiting for the film (`LiveRoll.sync`). nil elsewhere — which changes
+  /// nothing on the Lock Screen.
+  var liveRoll: LiveRollSnapshot? {
+    guard let code else { return nil }
+    let event: EventInfo
+    switch phase {
+    case let .camera(e), let .developing(e): event = e
+    default: return nil
+    }
+    return LiveRollSnapshot(
+      eventId: event.id, eventName: event.name, endsAt: event.endsAt, code: code,
+      state: .init(
+        shotsLeft: shotsLeft,
+        missionsDone: missions.filter { $0.photoId != nil }.count,
+        missionsTotal: missions.count,
+        developed: event.isDeveloped()
+      )
+    )
+  }
+
   var event: EventInfo? {
     switch phase {
     case let .waiting(e), let .camera(e), let .developing(e): return e
@@ -111,8 +132,12 @@ final class ClipModel: ObservableObject {
     Task { await enter(code: code) }
   }
 
+  /// Whether "Try again" has anything to try: a link that was not an invite
+  /// left no code, and retrying it used to land on "Scan an invite".
+  var canRetry: Bool { code != nil }
+
   func retry() {
-    guard let code else { phase = .noInvite; return }
+    guard let code else { return }
     Task { await enter(code: code) }
   }
 
