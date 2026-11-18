@@ -26,11 +26,11 @@ const IS_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.Store
 /**
  * True wherever there is no store to buy from.
  *
- * The SDK detects both cases itself and quietly falls back to "browser mode"
+ * In Expo Go the SDK quietly falls back to "browser mode"
  * rather than throwing, so without this check a purchase would appear to be
  * attempted and then fail somewhere less obvious.
  */
-export const PURCHASES_UNAVAILABLE = IS_EXPO_GO || Platform.OS === 'web';
+export const PURCHASES_UNAVAILABLE = IS_EXPO_GO;
 
 /**
  * Backing out of the store sheet is not a failure — mirrors SignInCancelledError.

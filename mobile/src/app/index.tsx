@@ -44,7 +44,6 @@ import {
 } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import {
-  IS_WEB,
   NATIVE_AUTH_UNAVAILABLE,
   SHOWS_APPLE,
   isSignInCancelled,
@@ -221,9 +220,7 @@ export default function LandingScreen() {
           </Caption>
         ) : NATIVE_AUTH_UNAVAILABLE ? (
           <Caption style={styles.note}>
-            {IS_WEB
-              ? 'Google and Apple sign-in are native-only — use a development build to sign in.'
-              : 'Google and Apple sign-in need a development build — see docs/social-sign-in.md.'}
+            {'Google and Apple sign-in need a development build — see docs/social-sign-in.md.'}
           </Caption>
         ) : null}
 

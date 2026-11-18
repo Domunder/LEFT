@@ -16,7 +16,7 @@
 
 import * as Haptics from 'expo-haptics';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -43,7 +43,7 @@ const T = Ending.day;
 const STEP = T.width + T.gap;
 
 function tick() {
-  if (Platform.OS !== 'web') void Haptics.selectionAsync();
+  void Haptics.selectionAsync();
 }
 
 type DayStripProps = {

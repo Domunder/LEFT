@@ -29,7 +29,7 @@
 import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Share, StyleSheet, View, type ViewInstance } from 'react-native';
+import { Share, StyleSheet, View, type ViewInstance } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { captureRef } from 'react-native-view-shot';
 
@@ -48,12 +48,6 @@ const EASING = Easing.bezier(...Motion.bezier).factory();
 
 /** The QR block trails the headline in, as the dial does on 05.1. */
 const ENTER_DELAY = { code: 120 } as const;
-
-/**
- * Saving needs a real photo library and a native view to capture — neither exists
- * in a browser, and Expo Go has no view-shot module.
- */
-const CAN_SAVE = Platform.OS !== 'web';
 
 type LoadState =
   | { kind: 'loading' }
@@ -127,7 +121,7 @@ export default function InviteScreen() {
   }, [event]);
 
   const handleSave = useCallback(async () => {
-    if (!event || !CAN_SAVE) return;
+    if (!event) return;
     setSave({ kind: 'saving' });
 
     try {
@@ -226,7 +220,7 @@ export default function InviteScreen() {
             label="Save QR"
             icon="download"
             onPress={handleSave}
-            disabled={!event || !CAN_SAVE}
+            disabled={!event}
             busy={save.kind === 'saving'}
           />
         </View>

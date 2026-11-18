@@ -27,7 +27,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BackgroundSlideshow } from '@/components/ui/background-slideshow';
@@ -37,13 +37,6 @@ import { QrScanner } from '@/components/ui/qr-scanner';
 import { SheetDrag } from '@/components/ui/sheet-drag';
 import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
 import { Colors, JoinSheet, Press, Radii, SheetMotion, VideoOverlay } from '@/constants/theme';
-
-/**
- * Scanning needs a real camera. There is none in a browser — same guard 09 uses
- * for "Save QR", and the same treatment: the affordance stays visible, but it
- * says why rather than being a dead tap.
- */
-const CAN_SCAN = Platform.OS !== 'web';
 
 export default function JoinScreen() {
   const router = useRouter();
@@ -117,8 +110,6 @@ export default function JoinScreen() {
           <PressScale
             accessibilityRole="button"
             accessibilityLabel="Scan a QR code"
-            accessibilityState={{ disabled: !CAN_SCAN }}
-            disabled={!CAN_SCAN}
             onPress={() => setScanning(true)}
             scale={Press.cardScale}
             style={styles.card}>
@@ -129,9 +120,7 @@ export default function JoinScreen() {
               Scan QR Code
             </Body>
             <Body small color={Colors.textDim} style={styles.centered}>
-              {CAN_SCAN
-                ? 'Scan the host’s QR code.'
-                : 'Scanning needs the app. Tap the invite link instead.'}
+              Scan the host’s QR code.
             </Body>
           </PressScale>
 

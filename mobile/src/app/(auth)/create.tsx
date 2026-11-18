@@ -49,7 +49,6 @@ import {
 } from '@/constants/theme';
 import {
   getSession,
-  IS_WEB,
   isSignInCancelled,
   linkIdentity,
   NATIVE_AUTH_UNAVAILABLE,
@@ -154,9 +153,7 @@ export default function CreateAccountScreen() {
             </Caption>
           ) : NATIVE_AUTH_UNAVAILABLE ? (
             <Caption style={styles.note}>
-              {IS_WEB
-                ? 'Google and Apple sign-in are native-only — use a development build.'
-                : 'Google and Apple sign-in need a development build — see docs/social-sign-in.md.'}
+              {'Google and Apple sign-in need a development build — see docs/social-sign-in.md.'}
             </Caption>
           ) : null}
 

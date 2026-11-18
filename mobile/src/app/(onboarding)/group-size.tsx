@@ -37,7 +37,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, type ScrollViewInstance } from 'react-native';
+import { ScrollView, StyleSheet, Text, type ScrollViewInstance } from 'react-native';
 import Animated, { Easing, FadeInDown, LinearTransition } from 'react-native-reanimated';
 
 import { GroupSizeRow } from '@/components/ui/group-size-row';
@@ -135,19 +135,19 @@ export default function GroupSizeScreen() {
   function selectGroup(next: number) {
     if (next === groupSize) return;
     // Web has no haptics engine; calling through is a no-op but noisy in logs.
-    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    void Haptics.selectionAsync();
     setGroupSize(next);
   }
 
   function selectRoll(next: RollSize) {
     if (next === rollSize) return;
-    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    void Haptics.selectionAsync();
     setRollSize(next);
   }
 
   function selectMissions(next: number | null) {
     if (next === missionsPerGuest) return;
-    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    void Haptics.selectionAsync();
     if (missionsPerGuest === null && next !== null) revealMissions.current = true;
     setMissionsPerGuest(next);
   }
