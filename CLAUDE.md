@@ -62,8 +62,8 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
 - **Built (2026-11-16), branch `feature/web-camera`, run against the local
   stack in a desktop browser with a synthetic camera — never on a phone: the
   web camera.** See "The web camera" below.
-- **Built (2026-11-16), same branch, never compiled — the user is on Windows
-  and it builds only on EAS: the App Clip.** A SwiftUI target that a scanned
+- **Built (2026-11-16), same branch, first compiled on EAS 2026-11-18 (in
+  TestFlight), never run on a device: the App Clip.** A SwiftUI target that a scanned
   invite opens without installing the app. See "The App Clip" below. **Needs
   a new native build** (the clip, the App Group, `@bacons/apple-targets`).
 - **In progress (2026-11-17, merged into `feature/web-camera`): missions.** Server
@@ -541,8 +541,10 @@ cannot UPDATE a photo row or DELETE a roster row — `create_event()`,
 
 ## The App Clip (2026-11-16)
 
-**Never compiled.** The user is on Windows; the clip builds only on EAS, and
-nothing in it has run. Decided with the user: shoot + developing (no album in
+**Compiled on EAS since 2026-11-18, never run.** The user is on Windows; the
+clip builds only on EAS (the GitHub workflow), and nothing in it has run on a
+phone. Its EAS credentials (the clip's own provisioning profile) were set up
+interactively once with `eas credentials`; a CI build cannot create them. Decided with the user: shoot + developing (no album in
 the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
 `@bacons/apple-targets`.
 
@@ -616,6 +618,16 @@ the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
   join is a new member with a fresh roll — the known gap.
 - **Polling, no realtime:** waiting and camera re-read the event every 15 s
   and on foreground.
+- **Missions (2026-11-18, `Missions.swift`, `YourShots.swift`).** The
+  guest half, as in the app: "Are you one of these?" on 11 (claimed after
+  the join); "Missions 1/3" under the counter opens the list, a tap arms the
+  next frame ("Next photo: …" at the frame's top edge); the queue tags
+  after the claim (claim → tag → upload → mark, a refused tag drops the tag,
+  never the photo). **Your shots** — the tile left of the shutter — is the
+  guest's own frames (queued files, then signed URLs) with "Mission" on a
+  frame to tag it afterwards. Smaller than the app's on purpose: no swiping
+  in the viewer, no pinch, no return to the tile. **No intro sheet** (the
+  user's call). Server calls checked against the local stack over HTTP.
 - **The user's steps** (App Group identifier, EAS credentials for the clip,
   App Clip experiences in App Store Connect, local experience for testing,
   the size check) are `docs/LAUNCH.md` §7a; device checks in §8.
@@ -650,10 +662,8 @@ Decided by the user — do not re-litigate:
 - **The reveal holds**: before developing, a guest reads only their own cards
   and their own photos' tags (RLS on `member_missions`, `event_missions`).
 - **Not built:** the mission push notifications (a halfway nudge, the count in
-  the last-hour reminder); **missions in the App Clip** (decided 2026-11-17:
-  after the clip's first successful build — until then a clip guest is dealt
-  missions they cannot see). The web camera has them. **Nothing seen on a
-  device.**
+  the last-hour reminder). The web camera and the App Clip (2026-11-18) have
+  them. **Nothing seen on a device.**
 
 ## Notifications (M4)
 
