@@ -23,7 +23,9 @@
   },
   "devDependencies": {
     "@mockifydev/react": "^0.1.0",
+    "@types/qrcode": "^1.5.5",
     "puppeteer-core": "^25.17.0",
+    "qrcode": "^1.5.4",
     "wrangler": "^4.162.0"
   }
 }

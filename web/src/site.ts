@@ -19,6 +19,7 @@ export const SITE = {
 
 export const NAV = [
   { href: '/#how', label: 'How it works' },
+  { href: '/missions/', label: 'Missions' },
   { href: '/use-cases/', label: 'Use cases' },
   { href: '/wedding/', label: 'Weddings' },
   { href: '/#pricing', label: 'Pricing' },
@@ -28,17 +29,18 @@ export const NAV = [
  * Mirrors `create_event()` on the server (see CLAUDE.md → Pricing). The store
  * is the authority on the final price; these are the US dollar prices.
  *
- * **The unlimited roll is not advertised here** (the user's call, 2026-11-16):
- * `left_small` — the unlimited roll for up to 50 guests — and every mention of
- * "unlimited" are left out, because "free up to 50" next to "$9.99 up to 50"
- * read as the same offer twice. The option is shown in the app, where the
- * host picks the roll. The legal texts still describe it.
+ * `left_small` ($9.99, the unlimited roll for up to 50 guests) is still not
+ * listed: next to "free up to 50" it read as the same offer twice (the
+ * user's call, 2026-11-16). The three larger tiers do advertise their
+ * unlimited roll since 2026-11-18 (the user): a paid event may pick any roll.
+ * "Unlimited" has a fair-use ceiling of 150 per guest (`unlimited_roll_cap()`),
+ * named in the fine print under the cards.
  */
 export const TIERS = [
-  { id: 'free', price: 0, guests: 50, roll: 'Rolls of 5 to 36 photos', note: 'For most parties' },
-  { id: 'left_medium', price: 14.99, guests: 100, roll: 'Rolls of 5 to 36 photos', note: 'Most weddings' },
-  { id: 'left_large', price: 19.99, guests: 150, roll: 'Rolls of 5 to 36 photos', note: 'Big celebrations' },
-  { id: 'left_unlimited', price: 24.99, guests: 200, roll: 'Rolls of 5 to 36 photos', note: 'The whole village' },
+  { id: 'free', price: 0, guests: 50, features: ['Rolls of 5 to 36 photos', 'All four film looks', 'Missions'], note: 'For most parties' },
+  { id: 'left_medium', price: 14.99, guests: 100, features: ['Unlimited photos', 'All four film looks', 'Missions'], note: 'Most weddings' },
+  { id: 'left_large', price: 19.99, guests: 150, features: ['Unlimited photos', 'All four film looks', 'Missions'], note: 'Big celebrations' },
+  { id: 'left_unlimited', price: 24.99, guests: 200, features: ['Unlimited photos', 'All four film looks', 'Missions'], note: 'The whole village' },
 ] as const;
 
 export const LOOKS = [
@@ -74,6 +76,10 @@ export const HOME_FAQ: Faq[] = [
   {
     q: 'What are the film looks?',
     a: 'The host picks one look for the whole event: Golden (warm), Chrome (cool), Faded (washed out) or Mono (black and white). The look is in the viewfinder while you shoot and in every photo, so the album feels like one roll of film.',
+  },
+  {
+    q: 'What are missions?',
+    a: 'Small photo dares, like “A photo with someone you have never met”. The host switches them on for free, and every guest gets one to three of them to shoot during the event. The host can write their own, even personal ones for a named guest. Nobody sees which photo answered which mission until the film is developed.',
   },
   {
     q: 'Can I save and share the photos afterwards?',

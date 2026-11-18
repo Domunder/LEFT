@@ -1,0 +1,492 @@
+---
+import { Picture } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Phone from '../components/Phone.astro';
+import StoreButtons from '../components/StoreButtons.astro';
+import Faq from '../components/Faq.astro';
+import GetApp from '../components/GetApp.astro';
+import { SITE, type Faq as FaqItem } from '../site';
+
+import partyConfetti from '../assets/photos/party-confetti.jpg';
+import friendsLaugh from '../assets/photos/friends-laugh.jpg';
+import partyDance from '../assets/photos/party-dance.jpg';
+import dinnerTable from '../assets/photos/dinner-table.jpg';
+import weddingToast from '../assets/photos/wedding-toast.jpg';
+import tripFriends from '../assets/photos/trip-friends.jpg';
+
+const title = 'Missions — photo dares for every guest | LEFT';
+const description =
+  'Missions give every guest up to three secret photo dares — “a photo with someone you have never met”. Free on every LEFT event, revealed with the album.';
+
+/** From the app's own library (supabase/migrations/…_missions.sql). */
+const dares = [
+  'A photo with someone you have never met',
+  'Catch someone mid-laugh',
+  'A toast, just as glasses meet',
+  'Someone dancing like nobody is watching',
+  'The quietest moment you can find',
+  'A hug',
+  'Someone laughing so hard they cry',
+  'The best detail nobody else noticed',
+  'Someone telling a story with their hands',
+  'Your favourite moment so far',
+];
+
+const steps = [
+  {
+    title: 'Switch them on',
+    text: 'One tap. LEFT fills the list for your kind of event.',
+  },
+  {
+    title: 'Make them yours',
+    text: 'Rewrite them, add your own, or write one for a single guest.',
+  },
+  {
+    title: 'Everyone gets a secret',
+    text: 'Every guest gets one to three. Nobody knows who has which.',
+  },
+  {
+    title: 'The answers come back',
+    text: 'When the film is developed, every photo shows its dare.',
+  },
+];
+
+const faq: FaqItem[] = [
+  {
+    q: 'What do missions cost?',
+    a: 'Nothing. Missions are free on every event, whatever the size of the group.',
+  },
+  {
+    q: 'How many missions does each guest get?',
+    a: 'The host chooses one, two or three per guest. Each mission goes to one guest only, and the personal ones are handed out first.',
+  },
+  {
+    q: 'Can I write my own missions?',
+    a: 'Yes. Before the event starts, the host can rewrite, add and delete missions, and give a mission to a named guest — even someone who has not joined yet.',
+  },
+  {
+    q: 'Does a mission use up a photo?',
+    a: 'A mission photo is a normal photo from your roll. You can mark it before you shoot, or tag a photo you already took afterwards.',
+  },
+  {
+    q: 'Who can see the missions?',
+    a: 'Before the film is developed, each guest sees only their own missions and their own photos. In the album, every mission photo shows the mission it answered.',
+  },
+];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'LEFT', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: 'Missions', item: SITE.url + '/missions/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <section class="hero">
+    <div class="glow" aria-hidden="true" data-parallax="0.1"></div>
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow enter" style="--i:0">New · Missions</p>
+        <h1 class="enter" style="--i:1">Give every guest <em>a reason to look up.</em></h1>
+        <p class="lede enter" style="--i:2">
+          Secret photo dares for every guest. Strangers become a story.
+        </p>
+        <div class="enter" style="--i:3"><StoreButtons /></div>
+        <p class="hint enter" style="--i:4">Free on every event. Off until the host switches them on.</p>
+      </div>
+      <div class="hero-visual">
+        <div class="hero-back" data-parallax="-0.06">
+          <Phone
+            screen="missions"
+            photo={partyConfetti}
+            mission={{ done: 1, total: 3 }}
+            label="The guest’s missions in LEFT: three dares, one done, one marked for the next photo"
+          />
+        </div>
+        <div class="hero-front" data-parallax="0.04">
+          <Phone
+            screen="camera"
+            photo={friendsLaugh}
+            tile={tripFriends}
+            eager
+            shotsLeft={11}
+            mission={{ done: 1, total: 3, armed: 'A photo with someone you have never met' }}
+            label="The LEFT camera with a mission armed: Next photo: A photo with someone you have never met"
+          />
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dares" aria-label="Examples of missions">
+    <ul class="deck">
+      {
+        [...dares, ...dares].map((dare, index) => (
+          <li style={`--t:${((index * 37) % 9) - 4}deg`} aria-hidden={index >= dares.length ? 'true' : undefined}>
+            <span class="tag">Mission</span>
+            <b>{dare}</b>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="how">
+    <div class="wrap">
+      <div class="section-head center reveal">
+        <p class="eyebrow">How missions work</p>
+        <h2>Planned in a minute. <em>Remembered for years.</em></h2>
+      </div>
+      <ol class="steps">
+        {
+          steps.map((step, index) => (
+            <li class="reveal" data-reveal="scale">
+              <span class="num" aria-hidden="true">{index + 1}</span>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <section class="answer">
+    <div class="glow" aria-hidden="true" data-parallax="0.16"></div>
+    <div class="wrap answer-grid">
+      <div class="answer-phone reveal" data-reveal="scale">
+        <Phone
+          screen="viewer"
+          photo={partyDance}
+          viewer={{ by: 'Aylin', index: 31, count: 412, mission: 'Someone dancing like nobody is watching' }}
+          label="A developed photo in the LEFT album, captioned Mission · Someone dancing like nobody is watching"
+        />
+      </div>
+      <div class="answer-copy reveal" data-reveal="right">
+        <p class="eyebrow">The reveal</p>
+        <h2>The morning after, <em>every dare has an answer.</em></h2>
+        <p class="lede">Your aunt, dancing like nobody was watching. Somebody was.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="personal">
+    <div class="wrap personal-grid">
+      <div class="personal-copy reveal" data-reveal="left">
+        <p class="eyebrow">Just for you</p>
+        <h2>One mission <em>with somebody’s name on it.</em></h2>
+        <p class="lede">Write one for your best man, or for the friend who hates photos.</p>
+      </div>
+      <figure class="mosaic reveal" data-reveal="scale">
+        <Picture src={dinnerTable} alt="Friends around a party table with drinks and snacks" formats={['avif', 'webp']} widths={[400, 800]} sizes="(min-width: 900px) 280px, 45vw" width={800} height={1000} fit="cover" class="look-golden" />
+        <Picture src={weddingToast} alt="Wedding guests raising their glasses" formats={['avif', 'webp']} widths={[400, 800]} sizes="(min-width: 900px) 280px, 45vw" width={800} height={1000} fit="cover" class="look-golden" />
+        <figcaption>
+          <span>Just for you</span>
+          Get Grandpa to show you his dance move
+        </figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <Faq items={faq} />
+  <GetApp lede="Switch missions on and let the night write its own story." />
+</Base>
+
+<style>
+  .hero {
+    padding-top: clamp(120px, 16vw, 176px);
+    padding-bottom: clamp(40px, 7vw, 80px);
+    overflow: hidden;
+  }
+
+  .hero .glow {
+    right: -18%;
+    top: -6%;
+  }
+
+  .hero-grid {
+    display: grid;
+    gap: 56px;
+    align-items: center;
+  }
+
+  .hero-copy {
+    display: grid;
+    gap: 22px;
+    justify-items: start;
+  }
+
+  .hint {
+    color: var(--ink-55);
+    font-size: 14px;
+  }
+
+  .hero-visual {
+    --w: min(280px, 64vw);
+    position: relative;
+    display: grid;
+    justify-items: center;
+    padding-block: 12px 28px;
+  }
+
+  .hero-visual :global(.phone) {
+    max-width: none;
+  }
+
+  .hero-front {
+    position: relative;
+    width: var(--w);
+    transform: rotate(-3deg);
+  }
+
+  .hero-back {
+    display: none;
+    position: absolute;
+    width: calc(var(--w) * 0.9);
+    top: 8%;
+    left: calc(50% + var(--w) * 0.02);
+    transform: rotate(6deg);
+  }
+
+  @media (min-width: 900px) {
+    .hero-front {
+      margin-right: calc(var(--w) * 0.36);
+    }
+    .hero-back {
+      display: block;
+    }
+  }
+
+  @media (min-width: 900px) {
+    .hero-grid {
+      grid-template-columns: 1.05fr 1fr;
+    }
+  }
+
+  /* The deck of dares, drifting sideways with the scroll. */
+  .dares {
+    overflow: hidden;
+    padding-block: 24px 56px;
+  }
+
+  .deck {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 18px;
+    width: max-content;
+    animation: drift 70s linear infinite;
+  }
+
+  .deck li {
+    flex: none;
+    width: 230px;
+    min-height: 150px;
+    display: grid;
+    align-content: space-between;
+    gap: 22px;
+    padding: 20px 20px 22px;
+    border-radius: 18px;
+    background: #f0ede8;
+    color: #141210;
+    transform: rotate(var(--t));
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.6) inset,
+      0 18px 40px -14px rgba(0, 0, 0, 0.8);
+  }
+
+  .deck li:nth-child(3n + 2) {
+    background: #e9d9c4;
+  }
+
+  .deck .tag {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(20, 18, 16, 0.45);
+  }
+
+  .deck b {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 22px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  .dares:hover .deck {
+    animation-play-state: paused;
+  }
+
+  @keyframes drift {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .deck {
+      animation: none;
+    }
+  }
+
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  .steps li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 28px 26px;
+    display: grid;
+    gap: 10px;
+    align-content: start;
+  }
+
+  .steps .num {
+    font-family: var(--numeral);
+    font-size: 34px;
+    line-height: 1;
+    color: var(--amber);
+  }
+
+  .steps p {
+    color: var(--ink-70);
+  }
+
+  .answer,
+  .personal {
+    overflow: hidden;
+  }
+
+  .answer .glow {
+    left: -20%;
+    top: 10%;
+  }
+
+  .answer-grid,
+  .personal-grid {
+    display: grid;
+    gap: 56px;
+    align-items: center;
+  }
+
+  .answer-phone {
+    display: grid;
+    justify-items: center;
+  }
+
+  .answer-phone :global(.phone) {
+    max-width: min(280px, 64vw);
+    transform: rotate(-3deg);
+  }
+
+  .answer-copy,
+  .personal-copy {
+    display: grid;
+    gap: 20px;
+  }
+
+  .points {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+    color: var(--ink-70);
+  }
+
+  .points li {
+    padding-left: 26px;
+    position: relative;
+  }
+
+  .points li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.62em;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+  }
+
+  .mosaic {
+    position: relative;
+    margin: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding-bottom: 40px;
+  }
+
+  .mosaic :global(img) {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: 20px;
+  }
+
+  .mosaic :global(picture:nth-child(2) img) {
+    transform: translateY(40px);
+  }
+
+  .mosaic figcaption {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%) rotate(-2deg);
+    width: min(320px, 86%);
+    display: grid;
+    gap: 8px;
+    padding: 18px 20px;
+    border-radius: 18px;
+    background: #f0ede8;
+    color: #141210;
+    font-family: var(--serif);
+    font-size: 21px;
+    line-height: 1.25;
+    box-shadow: 0 24px 50px -16px rgba(0, 0, 0, 0.85);
+  }
+
+  .mosaic figcaption span {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #a8682f;
+  }
+
+  @media (min-width: 900px) {
+    .answer-grid,
+    .personal-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

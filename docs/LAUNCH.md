@@ -304,12 +304,16 @@ Deutsch (für den Schweizer Store, optional):
 
 ### Screenshots (6.9" iPhone, 1320×2868; Play: 1080×1920+)
 
-1. Kamera mit „17 left" im Sucher — „Every guest gets a roll."
-2. Look-Auswahl (03) — „Pick the film for your event."
-3. Einladung mit QR (09) — „Join by link. No sign-up."
-4. „Nothing to see yet" mit Countdown — „Hidden until it's over."
-5. Reveal / Album-Grid — „Developed together."
-6. Your Moments (Stapel) — „Every event, one album."
+Fertig gerendert in `store-assets/` (8 Stück, Stand 2026-11-18):
+
+1. Kamera, Vollbild-Sucher, „Missions 1/3" — „One roll each. Make every shot count."
+2. Missionen des Gasts — „A secret dare in every pocket."
+3. Entwickeltes Album — „The whole night, developed together."
+4. Foto im Viewer mit „Mission · …" — „Every dare gets its answer."
+5. Einladung mit QR (09) — „One scan. Everyone's in."
+6. Look-Auswahl (03) — „Pick the film for your night."
+7. „Nothing to see yet" mit Countdown — „Hidden until it's over."
+8. Moments — „Every event, one album."
 
 Fotos darin: eigene Bilder mit Einwilligung der Abgebildeten, keine Stockfotos.
 

@@ -18,6 +18,9 @@ import birthdayCandle from '../assets/photos/birthday-candle.jpg';
 import dinnerCandle from '../assets/photos/dinner-candle.jpg';
 import tripTrunk from '../assets/photos/trip-trunk.jpg';
 import tripVan from '../assets/photos/trip-van.jpg';
+import partyFloor from '../assets/photos/party-floor.jpg';
+import partyDance from '../assets/photos/party-dance.jpg';
+import partyToast from '../assets/photos/party-toast.jpg';
 
 const title = 'LEFT — The disposable camera app for weddings, parties and trips';
 const description =
@@ -44,25 +47,25 @@ const reel = [
 
 const steps = [
   {
-    screen: 'join',
+    screen: 'invite',
     photo: weddingCrowd,
-    label: 'LEFT name screen: a guest types their name to join, no account needed',
-    title: 'Join with a link',
-    text: 'Share a link or put the QR code on the tables. Guests type a name and they’re in. No sign-up, no password.',
+    label: 'LEFT invite screen: a large QR code with Share Link and Save QR buttons',
+    title: 'Let them in',
+    text: 'One scan of the QR code and they’re in. No sign-up.',
   },
   {
     screen: 'camera',
-    photo: weddingDance,
+    photo: partyDance,
     label: 'LEFT camera screen showing a wedding dance floor and a counter that reads 17 left',
     title: 'Shoot your roll',
-    text: 'Everyone gets the same short roll — 5 to 36 photos. When you only have a few left, you start to choose.',
+    text: 'Everyone gets the same short roll. Make every shot count.',
   },
   {
     screen: 'developing',
     photo: weddingDance,
     label: 'LEFT developing screen: nothing to see yet, with a countdown until the film is developed',
     title: 'Developed together',
-    text: 'Nobody sees the album until the event ends. Then the film is developed and every photo appears for everyone at once.',
+    text: 'Nothing to see until it ends. Then every photo appears at once.',
   },
 ] as const;
 
@@ -118,8 +121,8 @@ const jsonLd = [
           <span class="line"><span style="--i:2"><em>Developed together.</em></span></span>
         </h1>
         <p class="lede enter" style="--i:4">
-          LEFT turns every guest’s phone into a disposable camera. A few shots each, one film look, and nothing
-          to see until the party is over — then the whole group’s photos appear at once.
+          Every guest’s phone becomes a disposable camera. Nothing to see until the party’s over — then
+          everyone’s photos appear at once.
         </p>
         <div class="enter" style="--i:5"><StoreButtons /></div>
         <p class="hint enter" style="--i:6">Free for up to 50 guests. No account for guests.</p>
@@ -128,6 +131,7 @@ const jsonLd = [
         <div class="hero-back" data-parallax="-0.08">
           <Phone
             screen="album"
+            photo={partyFloor}
             class="arrive-back"
             label="The developed album on a second phone: a grid of the photos every guest took"
           />
@@ -137,7 +141,8 @@ const jsonLd = [
             screen="camera"
             eager
             class="arrive-front"
-            label="The LEFT camera on a phone: a wedding dance floor in the viewfinder and a counter that reads 17 left"
+            mission={{ done: 1, total: 3 }}
+            label="The LEFT camera on a phone: a wedding dance floor fills the screen, a counter reads 17 left and a capsule reads Missions 1/3"
           />
         </div>
       </div>
@@ -180,7 +185,7 @@ const jsonLd = [
         {
           steps.map((step, index) => (
             <li class="reveal" data-reveal="scale">
-              <Phone screen={step.screen} photo={step.photo} label={step.label} />
+              <Phone screen={step.screen} photo={step.photo} tile={partyToast} label={step.label} />
               <p class="num" aria-hidden="true">
                 {index + 1}
               </p>
@@ -199,8 +204,7 @@ const jsonLd = [
         <p class="eyebrow">The film</p>
         <h2>One look <em>for the whole night.</em></h2>
         <p class="lede">
-          The host loads one film for the event. You see it in the viewfinder while you shoot, and it’s in every
-          photo — so two hundred phones make one album that belongs together.
+          One film for everyone — in the viewfinder and in every photo.
         </p>
         <ul class="look-list">
           {
@@ -234,6 +238,41 @@ const jsonLd = [
     </div>
   </section>
 
+  <section id="missions" class="missions">
+    <div class="glow" aria-hidden="true" data-parallax="-0.12"></div>
+    <div class="wrap missions-grid">
+      <div class="missions-copy reveal" data-reveal="left">
+        <p class="eyebrow">New · Missions</p>
+        <h2>A little dare <em>in every pocket.</em></h2>
+        <p class="lede">
+          Every guest gets secret photo dares. Suddenly two strangers share a frame.
+        </p>
+        <ul class="points">
+          <li>Free on every event</li>
+          <li>Write your own — even one just for Grandma</li>
+        </ul>
+        <p><a class="text-link" href="/missions/">How missions work →</a></p>
+      </div>
+      <div class="missions-phones reveal" data-reveal="scale">
+        <Phone
+          screen="missions"
+          photo={partyWine}
+          class="tilt-left"
+          mission={{ done: 1, total: 3 }}
+          label="LEFT missions sheet over the camera: three missions, one done, one marked for the next photo"
+        />
+        <Phone
+          screen="camera"
+          photo={partyFlash}
+          class="tilt-right"
+          shotsLeft={9}
+          mission={{ done: 1, total: 3, armed: 'Catch someone mid-laugh' }}
+          label="LEFT camera with a mission armed: Next photo: Catch someone mid-laugh"
+        />
+      </div>
+    </div>
+  </section>
+
   <section class="album">
     <div class="glow" aria-hidden="true" data-parallax="0.18"></div>
     <div class="wrap album-grid">
@@ -245,6 +284,7 @@ const jsonLd = [
         />
         <Phone
           screen="album"
+          photo={weddingCrowd}
           class="tilt-right"
           label="LEFT album screen: a grid of 412 photos taken by 38 guests"
         />
@@ -253,8 +293,7 @@ const jsonLd = [
         <p class="eyebrow">The reveal</p>
         <h2>The morning after, <em>the whole night comes back.</em></h2>
         <p class="lede">
-          The dance floor you missed. The table you never sat at. What your grandmother thought was worth one of
-          her twelve shots. Every guest’s roll lands in one shared album — to keep, save and send around.
+          The dance floor you missed. The table you never sat at. Everyone’s roll, in one album.
         </p>
         <ul class="points">
           <li>Everyone who joined gets the full album</li>
@@ -551,6 +590,50 @@ const jsonLd = [
     }
     .look-list {
       grid-template-columns: repeat(4, 1fr);
+    }
+  }
+
+  /* Missions */
+  .missions {
+    overflow: hidden;
+  }
+
+  .missions .glow {
+    right: -22%;
+    top: 4%;
+  }
+
+  .missions-grid {
+    display: grid;
+    gap: 56px;
+    align-items: center;
+  }
+
+  .missions-copy {
+    display: grid;
+    gap: 20px;
+  }
+
+  .missions-phones {
+    display: flex;
+    justify-content: center;
+  }
+
+  .missions-phones :global(.phone) {
+    max-width: min(240px, 44vw);
+  }
+
+  .missions-phones :global(.tilt-left) {
+    transform: rotate(-4deg) translate(6%, 6%);
+  }
+
+  .missions-phones :global(.tilt-right) {
+    transform: rotate(5deg) translateX(-6%);
+  }
+
+  @media (min-width: 900px) {
+    .missions-grid {
+      grid-template-columns: 1fr 1fr;
     }
   }
 

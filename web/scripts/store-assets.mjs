@@ -36,7 +36,7 @@ const chrome = [
 ].find((candidate) => candidate && existsSync(candidate));
 if (!chrome) throw new Error('No Chrome found. Set CHROME_PATH to a Chrome or Edge executable.');
 
-const NAMES = ['camera', 'film', 'join', 'developing', 'album', 'moments'];
+const NAMES = ['camera', 'missions', 'album', 'mission-photo', 'invite', 'film', 'developing', 'moments'];
 /** Viewport in points and device pixels per point: width * scale is the file's size. */
 const SETS = [
   { dir: 'ios/iphone-6.9', page: 'ios', width: 440, height: 956, scale: 3 }, // 1320x2868

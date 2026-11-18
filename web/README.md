@@ -18,6 +18,7 @@ npm run assets       # regenerate public/og*.jpg and the icons
 | URL | File | Notes |
 |---|---|---|
 | `/` | `src/pages/index.astro` | Home: hero, how it works, looks, album, use cases, pricing, FAQ |
+| `/missions/` | `src/pages/missions.astro` | Missions: the guest's camera and mission list, the dares, the reveal, personal missions, own FAQ |
 | `/use-cases/` | `src/pages/use-cases.astro` | Weddings first, then parties, trips, birthdays, more |
 | `/wedding/` | `src/pages/wedding.astro` | The wedding landing page, own FAQ |
 | `/j/{CODE}` | `src/pages/j/index.astro` | Invite landing; one page for every code via `public/_redirects` |

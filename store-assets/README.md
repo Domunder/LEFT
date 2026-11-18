@@ -6,17 +6,18 @@ phone mocks (`web/src/store/Shot.astro`, `web/scripts/store-assets.mjs`).
 
 | File | Size | Goes to |
 |---|---|---|
-| `ios/iphone-6.9/1…6-*.png` | 1320×2868 | App Store Connect → the version → iPhone 6.9" Display. Required. |
-| `ios/iphone-6.5/1…6-*.png` | 1242×2688 | iPhone 6.5" Display. Optional — Apple scales the 6.9" set down without it. |
+| `ios/iphone-6.9/1…8-*.png` | 1320×2868 | App Store Connect → the version → iPhone 6.9" Display. Required. |
+| `ios/iphone-6.5/1…8-*.png` | 1242×2688 | iPhone 6.5" Display. Optional — Apple scales the 6.9" set down without it. |
 | `ios/header-3840x1646.png` | 3840×1646 | The version → Header and Search Results → Header. Optional. |
 | `ios/search-results-3840x2560.png` | 3840×2560 | Header and Search Results → Search Results. Optional — without it the screenshots are shown. |
 | `ios/app-icon-1024.png` | 1024×1024, no alpha | Only where a form asks for it (the listing's icon comes from the build). |
-| `android/phone/1…6-*.png` | 1080×1920 | Play Console → Main store listing → Phone screenshots (2–8). |
+| `android/phone/1…8-*.png` | 1080×1920 | Play Console → Main store listing → Phone screenshots (2–8). |
 | `android/feature-graphic-1024x500.png` | 1024×500 | Main store listing → Feature graphic. Required. |
 | `android/icon-512.png` | 512×512 | Main store listing → App icon. Required. |
 
-Upload the screenshots in their numbered order: camera, film, join,
-developing, album, moments. Each shows a part of one screen, not the whole
+Upload the screenshots in their numbered order: camera, missions, album,
+mission-photo (a print in the viewer with its mission), invite, film,
+developing, moments (2026-11-18; the name screen is no longer shown). Each shows a part of one screen, not the whole
 phone. The texts for the listings are in `docs/LAUNCH.md` §10.
 
 Not here, because the app does not need it: iPad screenshots (the app is
@@ -35,6 +36,5 @@ a promo video.
 - The Android set and the feature graphic use an Android handset drawn in CSS
   (the mock library only has iPhones) with Android's status bar; the screens
   themselves are the same layouts as on iOS.
-- No photo appears twice across a set of six. With sixteen photos that leaves
-  the album with two prints and the birthday card with two frames; more
-  photos in `web/src/assets/photos/` would fill them.
+- No photo appears twice across a set of eight, and every moment on the
+  Moments screen has a full strip.

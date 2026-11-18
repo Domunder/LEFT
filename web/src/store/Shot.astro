@@ -35,16 +35,24 @@ import sample3 from '../assets/photos/sample-3.jpg';
 import sample4 from '../assets/photos/sample-4.jpg';
 import sample5 from '../assets/photos/sample-5.jpg';
 import sample6 from '../assets/photos/sample-6.jpg';
+import partyToast from '../assets/photos/party-toast.jpg';
+import partyConfetti from '../assets/photos/party-confetti.jpg';
+import friendsLaugh from '../assets/photos/friends-laugh.jpg';
+import tripSunset from '../assets/photos/trip-sunset.jpg';
+import tripSurf from '../assets/photos/trip-surf.jpg';
+import tripFriends from '../assets/photos/trip-friends.jpg';
+import weddingChampagne from '../assets/photos/wedding-champagne.jpg';
+import weddingNight from '../assets/photos/wedding-night.jpg';
+import partyDance from '../assets/photos/party-dance.jpg';
 
 /**
- * No photo appears twice across the six screenshots: sixteen photos, each
- * used once (the film picker shows its one photo in the four looks — that is
- * the point of that screen). That is why the album shows two prints and the
- * birthday two frames; a third card's worth of photos does not exist.
+ * No photo appears twice across the eight screenshots (the film picker shows
+ * its one photo in the four looks — that is the point of that screen), and
+ * every moment's strip is full (the user, 2026-11-18).
  */
 const PRINTS = [
-  { src: partyFlash, by: 'Tom' },
-  { src: partyWine, by: 'Aylin' },
+  { src: weddingChampagne, by: 'Tom' },
+  { src: weddingNight, by: 'Aylin' },
 ];
 const MOMENTS = [
   {
@@ -54,7 +62,7 @@ const MOMENTS = [
     status: 'Developed',
     live: false,
     more: 93,
-    strip: [tripTrunk, tripVan, sample6, sample5],
+    strip: [tripTrunk, tripVan, tripSunset, tripSurf],
   },
   {
     title: 'Lena’s 30th',
@@ -63,7 +71,7 @@ const MOMENTS = [
     status: '1d 4h left',
     live: true,
     more: 0,
-    strip: [birthdayCandle, dinnerCandle, null, null],
+    strip: [birthdayCandle, partyConfetti, partyWine, dinnerCandle],
   },
   {
     title: 'Summer ’26',
@@ -72,31 +80,40 @@ const MOMENTS = [
     status: 'Developed',
     live: false,
     more: 125,
-    strip: [sample3, sample4, sample2, weddingMono],
+    strip: [sample3, sample4, sample5, tripFriends],
   },
 ];
 
-/** The six screenshots, in listing order (docs/LAUNCH.md §10). */
 /**
- * A screenshot shows a part of one screen, not the whole phone: the phone is
- * wider than the picture and runs off one edge. `line` says where the
- * headline stands — the phone is cut at the opposite edge, so 'top' shows a
- * screen's upper part and 'bottom' its lower part.
+ * The eight screenshots, in listing order (docs/LAUNCH.md §10). A screenshot
+ * shows a part of one screen, not the whole phone: the phone is wider than
+ * the picture and runs off one edge. `line` says where the headline stands —
+ * the phone is cut at the opposite edge, so 'top' shows a screen's upper part
+ * and 'bottom' its lower part.
  */
 const SHOTS = [
-  { screen: 'camera', line: 'top', lines: ['Every guest gets', 'a roll of film.'], glow: '12% 4%', photo: weddingDance },
-  { screen: 'looks', line: 'bottom', lines: ['Pick the film', 'for your event.'], glow: '88% 96%', photo: weddingFriends },
-  { screen: 'join', line: 'top', lines: ['Join by link.', 'No sign-up.'], glow: '50% -4%' },
-  // 9:16 cuts deeper: from below, this screen's own headline would be halved.
-  { screen: 'developing', line: 'bottom', android: 'top', lines: ['Hidden until', 'it’s over.'], glow: '10% 98%' },
-  // …and here it would cut the hero through the faces.
+  { screen: 'camera', line: 'top', lines: ['One roll each.', 'Make every shot count.'], glow: '12% 4%', photo: weddingDance, tile: sample1, mission: { done: 1, total: 3 } },
+  { screen: 'missions', line: 'bottom', lines: ['A secret dare', 'in every pocket.'], glow: '88% 96%', photo: partyToast, mission: { done: 1, total: 3 } },
+  // 9:16 cuts deeper: from below, the hero would be cut through the faces.
   { screen: 'album', line: 'bottom', android: 'top', lines: ['The whole night,', 'developed together.'], glow: '90% 96%', photo: weddingCrowd },
+  {
+    screen: 'viewer',
+    line: 'bottom',
+    lines: ['Every dare', 'gets its answer.'],
+    glow: '10% 98%',
+    photo: friendsLaugh,
+    viewer: { by: 'Marc', index: 87, count: 412, mission: 'A photo with someone you have never met' },
+  },
+  { screen: 'invite', line: 'top', lines: ['One scan.', 'Everyone’s in.'], glow: '50% -4%' },
+  { screen: 'looks', line: 'bottom', lines: ['Pick the film', 'for your night.'], glow: '88% 96%', photo: weddingFriends },
+  // …and from below, this screen's own headline would be halved.
+  { screen: 'developing', line: 'bottom', android: 'top', lines: ['Hidden until', 'it’s over.'], glow: '10% 98%' },
   { screen: 'moments', line: 'top', lines: ['Every event,', 'one album.'], glow: '50% 2%' },
 ] as const;
 
 export function getStaticPaths() {
   const shots = ['ios', 'android'].flatMap((platform) =>
-    [0, 1, 2, 3, 4, 5].map((index) => ({ params: { id: `${platform}-${index + 1}` } })),
+    Array.from({ length: 8 }, (_, index) => ({ params: { id: `${platform}-${index + 1}` } })),
   );
   return [...shots, ...['feature', 'header', 'search'].map((id) => ({ params: { id } }))];
 }
@@ -135,7 +152,9 @@ const DETAIL = 1.2;
             <Phone
               screen={shot.screen}
               photo={'photo' in shot ? shot.photo : undefined}
-              tile={sample1}
+              mission={'mission' in shot ? shot.mission : undefined}
+              viewer={'viewer' in shot ? shot.viewer : undefined}
+              tile={'tile' in shot ? shot.tile : sample1}
               prints={PRINTS}
               moments={MOMENTS}
               device={device}
@@ -150,7 +169,7 @@ const DETAIL = 1.2;
     {
       (platform === 'header' || platform === 'search') && (
         <main class:list={['banner', platform]}>
-          <Phone screen="camera" photo={weddingDance} tile={sample1} device="iphone" label="" eager detail={DETAIL} class="left" />
+          <Phone screen="camera" photo={partyDance} tile={sample6} device="iphone" label="" eager detail={DETAIL} class="left" />
           <div class="copy">
             <p class="brand">
               <Image src={logo} alt="" width={96} height={96} loading="eager" />
@@ -163,7 +182,7 @@ const DETAIL = 1.2;
             </h1>
             <p class="sub">The disposable camera for events</p>
           </div>
-          <Phone screen="album" photo={weddingCrowd} prints={PRINTS} device="iphone" label="" eager detail={DETAIL} class="right" />
+          <Phone screen="album" photo={weddingMono} prints={PRINTS} device="iphone" label="" eager detail={DETAIL} class="right" />
         </main>
       )
     }
@@ -183,8 +202,8 @@ const DETAIL = 1.2;
             <p class="sub">The disposable camera for events</p>
           </div>
           <div class="phones">
-            <Phone screen="album" photo={weddingCrowd} prints={PRINTS} device="android" label="" eager detail={DETAIL} class="back" />
-            <Phone screen="camera" photo={weddingDance} tile={sample1} device="android" label="" eager detail={DETAIL} class="front" />
+            <Phone screen="album" photo={partyFlash} prints={PRINTS} device="android" label="" eager detail={DETAIL} class="back" />
+            <Phone screen="camera" photo={weddingDance} tile={sample2} device="android" label="" eager detail={DETAIL} class="front" />
           </div>
         </main>
       )

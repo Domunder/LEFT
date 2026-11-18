@@ -22,6 +22,26 @@ derives the AVIF/WebP sizes. The social cards in `public/og*.jpg` are made from
 | trip-van.jpg | Martin Kallur | https://unsplash.com/photos/l4m_o4aFOn8 |
 | trip-trunk.jpg | Richard Jaimes | https://unsplash.com/photos/k4dT8x2--gI |
 
+Added 2026-11-18 the same way (Unsplash "Free" photos, not Unsplash+), so
+the phone mocks do not repeat one picture. The author is named on each
+source page:
+
+| File | Source |
+|---|---|
+| party-toast.jpg | https://unsplash.com/photos/_qADvinJi20 |
+| party-dance.jpg | https://unsplash.com/photos/-eqm30LNAlE |
+| friends-laugh.jpg | https://unsplash.com/photos/e3OUQGT9bWU |
+| party-confetti.jpg | https://unsplash.com/photos/4SKNDU85KOw |
+| dinner-table.jpg | https://unsplash.com/photos/Q7Ne0r8HE88 |
+| trip-sunset.jpg | https://unsplash.com/photos/zdSoe8za6Hs |
+| wedding-toast.jpg | https://unsplash.com/photos/ULHxWq8reao |
+| wedding-champagne.jpg | https://unsplash.com/photos/4OjvrEGyf6A |
+| wedding-night.jpg | https://unsplash.com/photos/S2YssLw97l4 |
+| party-floor.jpg | https://unsplash.com/photos/--LyFIjXoFY |
+| trip-car.jpg | https://unsplash.com/photos/Y5F1JAbo6IU |
+| trip-friends.jpg | https://unsplash.com/photos/qXfGWdZnUfQ |
+| trip-surf.jpg | https://unsplash.com/photos/ng-evcF4mCo |
+
 Copied from the app (`mobile/assets/images/samples/`, see its `CREDITS.md`):
 
 | File | Author | Source |
@@ -33,7 +53,7 @@ Copied from the app (`mobile/assets/images/samples/`, see its `CREDITS.md`):
 | sample-5.jpg | Danka & Peter | https://unsplash.com/photos/tvicgTdh7Fg |
 | sample-6.jpg | Ilham Rahmansyah | https://unsplash.com/photos/DwTZwZYi9Ww |
 
-Only `sample-2.jpg` is used so far (a strip in the Your Moments mock).
+They fill the Moments strips and a few mocks.
 
 The people in these photos are strangers and identifiable. The Unsplash License
 covers copyright, not a model release — fine for editorial-style use on a
@@ -42,6 +62,9 @@ events to show.
 
 Fonts: Newsreader, Inter and DM Serif Display, self-hosted through Fontsource
 (SIL Open Font License).
+
+The QR code on the invite mock is drawn with `qrcode` (MIT) and opens
+https://leftmoment.com.
 
 The iPhone 17 Pro frame around the screens comes from Mockify
 (`@mockifydev/react`, MIT), which packages the device frames of Apple's design

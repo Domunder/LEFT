@@ -208,22 +208,6 @@ const year = new Date().getFullYear();
         items.forEach((el) => io.observe(el));
 
         // A phone's screen only moves while it is on screen.
-        const typing = new WeakMap();
-        const type = (phone) => {
-          const field = phone.querySelector('[data-type]');
-          if (!field || typing.has(phone)) return;
-          const text = field.dataset.type;
-          if (still) return void (field.textContent = text);
-          let shown = 0;
-          field.textContent = '';
-          typing.set(
-            phone,
-            setInterval(() => {
-              field.textContent = text.slice(0, ++shown);
-              if (shown >= text.length) clearInterval(typing.get(phone));
-            }, 190),
-          );
-        };
         const shooting = new WeakMap();
         const shoot = (phone, on) => {
           const count = phone.querySelector('[data-count]');
@@ -260,7 +244,6 @@ const year = new Date().getFullYear();
           (entries) => {
             for (const entry of entries) {
               entry.target.classList.toggle('live', entry.isIntersecting);
-              if (entry.isIntersecting) type(entry.target);
               shoot(entry.target, entry.isIntersecting);
               tick(entry.target, entry.isIntersecting);
             }

@@ -15,29 +15,41 @@
  * display is scaled to the phone, so it stays one picture at any size.
  *
  * The figure gets `.live` while it is on screen and the script in Base.astro
- * drives the small loops (`data-count`, `data-tick`, `data-type`); every
+ * drives the small loops (`data-count`, `data-tick`); every
  * animation here hangs off `.live`, so an off-screen phone is still.
  */
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import weddingDance from '../assets/photos/wedding-dance.jpg';
 import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
-import weddingFriends from '../assets/photos/wedding-friends.jpg';
 import weddingMono from '../assets/photos/wedding-mono.jpg';
-import partyFlash from '../assets/photos/party-flash.jpg';
 import partyWine from '../assets/photos/party-wine.jpg';
 import birthdayCandle from '../assets/photos/birthday-candle.jpg';
 import dinnerCandle from '../assets/photos/dinner-candle.jpg';
-import tripTrunk from '../assets/photos/trip-trunk.jpg';
 import sample2 from '../assets/photos/sample-2.jpg';
+import sample3 from '../assets/photos/sample-3.jpg';
+import partyToast from '../assets/photos/party-toast.jpg';
+import partyDance from '../assets/photos/party-dance.jpg';
+import friendsLaugh from '../assets/photos/friends-laugh.jpg';
+import partyConfetti from '../assets/photos/party-confetti.jpg';
+import dinnerTable from '../assets/photos/dinner-table.jpg';
+import tripSunset from '../assets/photos/trip-sunset.jpg';
+import weddingToast from '../assets/photos/wedding-toast.jpg';
+import weddingChampagne from '../assets/photos/wedding-champagne.jpg';
+import weddingNight from '../assets/photos/wedding-night.jpg';
+import partyFloor from '../assets/photos/party-floor.jpg';
+import tripCar from '../assets/photos/trip-car.jpg';
+import tripFriends from '../assets/photos/trip-friends.jpg';
+import tripSurf from '../assets/photos/trip-surf.jpg';
 import tripVan from '../assets/photos/trip-van.jpg';
 import { iPhone17Pro as device } from '@mockifydev/react';
 // A relative path: the package's `exports` only names its entry point.
 import frame from '../../node_modules/@mockifydev/react/assets/devices/iPhone 17 Pro - Silver.png';
-import { LOOKS } from '../site';
+import QRCode from 'qrcode';
+import { LOOKS, SITE } from '../site';
 
 type Props = {
-  screen: 'camera' | 'looks' | 'moments' | 'album' | 'join' | 'developing';
+  screen: 'camera' | 'looks' | 'moments' | 'album' | 'invite' | 'developing' | 'missions' | 'viewer';
   label: string;
   /** The picture in the viewfinder / on the front print. */
   photo?: ImageMetadata;
@@ -62,8 +74,19 @@ type Props = {
   prints?: Print[];
   /** The cards on Moments. */
   moments?: Moment[];
+  /**
+   * Missions on the camera: the "Missions 1/3" capsule under the counter, and
+   * with `armed` the "Next photo: …" note at the viewfinder's top edge.
+   */
+  mission?: { done: number; total: number; armed?: string };
+  /** The guest's missions in the sheet (`screen="missions"`). */
+  missionList?: MissionItem[];
+  /** The album viewer: who took it, which print of how many, and the mission it was for. */
+  viewer?: { by: string; index: number; count: number; mission?: string };
   class?: string;
 };
+
+type MissionItem = { body: string; state: 'done' | 'armed' | 'open'; personal?: boolean };
 
 type Print = { src: ImageMetadata; by: string };
 type Moment = {
@@ -87,9 +110,29 @@ const {
   eager = false,
   detail = 1,
   device: handset = 'iphone',
-  tile = weddingFriends,
+  tile = friendsLaugh,
+  mission,
+  viewer = { by: 'Lena', index: 24, count: 412, mission: 'A toast, just as glasses meet' },
   class: className,
 } = Astro.props;
+
+const missionList: MissionItem[] = Astro.props.missionList ?? [
+  { body: 'A toast, just as glasses meet', state: 'armed' },
+  { body: 'Catch someone mid-laugh', state: 'done' },
+  { body: 'A photo with the couple’s oldest friend', state: 'open', personal: true },
+];
+
+/**
+ * 09's QR code, real and scannable: it opens the website (an invite code
+ * would lead to a film that does not exist). Drawn as one SVG path.
+ */
+const qr = QRCode.create(SITE.url, { errorCorrectionLevel: 'M' }).modules;
+let qrPath = '';
+for (let row = 0; row < qr.size; row++) {
+  for (let col = 0; col < qr.size; col++) {
+    if (qr.get(row, col)) qrPath += `M${col} ${row}h1v1h-1z`;
+  }
+}
 
 const loading = eager ? 'eager' : 'lazy';
 /** A picture's pixel size and JPEG quality at this `detail`. */
@@ -123,10 +166,10 @@ const geometry = [
 
 /** The album's prints under the hero, two to a row, each with who took it. */
 const prints: Print[] = Astro.props.prints ?? [
-  { src: weddingFriends, by: 'Lena' },
-  { src: partyFlash, by: 'Tom' },
+  { src: weddingToast, by: 'Lena' },
+  { src: sample3, by: 'Tom' },
   { src: dinnerCandle, by: 'Aylin' },
-  { src: weddingCrowd, by: 'Marc' },
+  { src: weddingChampagne, by: 'Marc' },
 ];
 
 /** Your Moments: the last tile of a strip stands for the rest of the album. */
@@ -138,7 +181,7 @@ const moments: Moment[] = Astro.props.moments ?? [
     status: 'Developed',
     live: false,
     more: 409,
-    strip: [photo, weddingFriends, weddingCrowd, weddingMono],
+    strip: [weddingCrowd, weddingMono, weddingNight, partyFloor],
   },
   {
     title: 'Lena’s 30th',
@@ -147,8 +190,8 @@ const moments: Moment[] = Astro.props.moments ?? [
     status: '1d 4h left',
     live: true,
     more: 0,
-    // Not developed yet: only your own frames, and an empty one.
-    strip: [birthdayCandle, partyWine, partyFlash, null],
+    // Not developed yet: only your own frames.
+    strip: [birthdayCandle, partyConfetti, partyToast, partyWine],
   },
   {
     title: 'Lisbon',
@@ -157,7 +200,7 @@ const moments: Moment[] = Astro.props.moments ?? [
     status: 'Developed',
     live: false,
     more: 93,
-    strip: [tripTrunk, tripVan, sample2, dinnerCandle],
+    strip: [tripSunset, tripCar, tripFriends, tripSurf],
   },
   {
     title: 'Housewarming',
@@ -166,7 +209,7 @@ const moments: Moment[] = Astro.props.moments ?? [
     status: 'Developed',
     live: false,
     more: 125,
-    strip: [partyWine, dinnerCandle, partyFlash, weddingDance],
+    strip: [dinnerTable, partyDance, sample2, tripVan],
   },
 ];
 
@@ -189,6 +232,11 @@ const ICON = {
     'M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2zM12 17a4 4 0 100-8 4 4 0 000 8z',
   arrow: 'M5 12h14M12 5l7 7-7 7',
   qr: 'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM18 18h3v3h-3zM18 14h3M14 18v3',
+  target: 'M12 22a10 10 0 100-20 10 10 0 000 20zM12 18a6 6 0 100-12 6 6 0 000 12zM12 14a2 2 0 100-4 2 2 0 000 4z',
+  check: 'M20 6L9 17l-5-5',
+  link: 'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71',
+  share: 'M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13',
+  flag: 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7',
 };
 ---
 
@@ -196,49 +244,64 @@ const ICON = {
   <div class="screen" aria-hidden="true">
     <div class="canvas">
       {
-        screen === 'camera' && (
+        (screen === 'camera' || screen === 'missions') && (
           <div class="s camera">
-            <div class="cam-head">
-              <span class="round lg glass">
-                <svg viewBox="0 0 24 24"><path d={ICON.x} /></svg>
-              </span>
-              <span class="cam-title">
-                <span class="eyebrow-s">{title}</span>
-                <span class="roll">
-                  <b data-count={shotsLeft}>{shotsLeft}</b>
-                  <small>Left</small>
+            {/* The viewfinder is the screen, down to the shutter bar; the chrome floats on it. */}
+            <div class="finder">
+              <Image
+                src={photo}
+                alt=""
+                width={px(720)}
+                height={px(1260)}
+                fit="cover"
+                quality={q(64)}
+                loading={loading}
+                fetchpriority={eager ? 'high' : 'auto'}
+                class="look-golden"
+              />
+              <span class="flash" />
+              <span class="scrim-top" />
+              <span class="scrim-bottom" />
+              <div class="cam-head">
+                <span class="round lg glass">
+                  <svg viewBox="0 0 24 24"><path d={ICON.x} /></svg>
                 </span>
-              </span>
-              <span class="until">
-                <b>01</b><small>D</small><b class="dim">04</b><small>H</small>
-              </span>
-            </div>
-            <div class="finder-fit">
-              <div class="finder">
-                <Image
-                  src={photo}
-                  alt=""
-                  width={px(720)}
-                  height={px(960)}
-                  fit="cover"
-                  quality={q(64)}
-                  loading={loading}
-                  fetchpriority={eager ? 'high' : 'auto'}
-                  class="look-golden"
-                />
-                <span class="flash" />
+                <span class="cam-title">
+                  <span class="eyebrow-s">{title}</span>
+                  <span class="roll">
+                    <b data-count={screen === 'camera' ? shotsLeft : undefined}>{shotsLeft}</b>
+                    <small>Left</small>
+                  </span>
+                  {mission && (
+                    <span class="m-cap glass">
+                      <svg viewBox="0 0 24 24"><path d={ICON.target} /></svg>
+                      Missions {mission.done}/{mission.total}
+                    </span>
+                  )}
+                </span>
+                <span class="until">
+                  <b>01</b><small>D</small><b class="dim">04</b><small>H</small>
+                  <svg viewBox="0 0 24 24"><path d={ICON.next} /></svg>
+                </span>
               </div>
-            </div>
-            <div class="cam-controls">
-              <span class="round lg glass">
-                <svg viewBox="0 0 24 24"><path d={ICON.zap} /></svg>
-              </span>
-              <span class="zoom glass">
-                <i>0.5×</i><i class="on">1×</i><i>4×</i>
-              </span>
-              <span class="round lg glass">
-                <svg viewBox="0 0 24 24"><path d={ICON.flip} /></svg>
-              </span>
+              {mission?.armed && (
+                <span class="armed">
+                  <svg viewBox="0 0 24 24"><path d={ICON.target} /></svg>
+                  <span>Next photo: {mission.armed}</span>
+                  <svg viewBox="0 0 24 24" class="dim"><path d={ICON.x} /></svg>
+                </span>
+              )}
+              <div class="cam-controls">
+                <span class="round lg glass">
+                  <svg viewBox="0 0 24 24"><path d={ICON.zap} /></svg>
+                </span>
+                <span class="zoom glass">
+                  <i>0.5×</i><i class="on">1×</i><i>4×</i>
+                </span>
+                <span class="round lg glass">
+                  <svg viewBox="0 0 24 24"><path d={ICON.flip} /></svg>
+                </span>
+              </div>
             </div>
             <div class="shutter-bar">
               <span class="tile glass">
@@ -249,6 +312,41 @@ const ICON = {
                 <svg viewBox="0 0 24 24"><path d={ICON.qr} /></svg>
               </span>
             </div>
+            {screen === 'missions' && (
+              <>
+                <span class="sheet-dim" />
+                <div class="m-sheet">
+                  <span class="grabber" />
+                  <p class="headline xs">
+                    Your <em>missions.</em>
+                  </p>
+                  <p class="m-sub">Pick one, then take the photo.</p>
+                  <div class="m-rows">
+                    {missionList.map((item, index) => (
+                      <span class:list={['m-row', `is-${item.state}`]} style={`--n:${index}`}>
+                        <span class="m-text">
+                          {item.personal && <small>Just for you</small>}
+                          <b>{item.body}</b>
+                        </span>
+                        {item.state === 'done' ? (
+                          <span class="m-trail ok">
+                            <svg viewBox="0 0 24 24"><path d={ICON.check} /></svg>Done
+                          </span>
+                        ) : item.state === 'armed' ? (
+                          <span class="m-trail">
+                            <svg viewBox="0 0 24 24"><path d={ICON.target} /></svg>Next photo
+                          </span>
+                        ) : (
+                          <span class="m-trail dim">
+                            <svg viewBox="0 0 24 24"><path d={ICON.camera} /></svg>
+                          </span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )
       }
@@ -395,17 +493,78 @@ const ICON = {
       }
 
       {
-        screen === 'join' && (
-          <div class="s join">
-            <span class="eyebrow-s wide">Welcome</span>
-            <p class="headline xl">
-              What should<br />we <em>call you?</em>
+        screen === 'invite' && (
+          <div class="s invite">
+            <div class="head">
+              <span class="round" />
+              <span class="round flat">
+                <svg viewBox="0 0 24 24"><path d={ICON.x} /></svg>
+              </span>
+            </div>
+            <span class="eyebrow-s wide">{title}</span>
+            <p class="headline">
+              Invite your group.<br /><em>Let them in.</em>
             </p>
-            <span class="field">
-              <span data-type="Lena">Lena</span>
+            <p class="meta">
+              Show them the QR or send the link —<br />once they’re in, the cameras can open.
+            </p>
+            <div class="qr-zone">
+              <span class="qr-card">
+                <svg viewBox={`0 0 ${qr.size} ${qr.size}`} shape-rendering="crispEdges">
+                  <path d={qrPath} />
+                </svg>
+              </span>
+              <span class="share-row">
+                <span class="share">
+                  <svg viewBox="0 0 24 24"><path d={ICON.link} /></svg>Share Link
+                </span>
+                <span class="share">
+                  <svg viewBox="0 0 24 24"><path d={ICON.download} /></svg>Save QR
+                </span>
+              </span>
+            </div>
+            <span class="cta">
+              See who’s joined
+              <svg viewBox="0 0 24 24"><path d={ICON.arrow} /></svg>
             </span>
-            <p class="helper">This is how the group will see you during the event.</p>
-            <span class="cta">Continue</span>
+          </div>
+        )
+      }
+
+      {
+        screen === 'viewer' && (
+          <div class="s viewer">
+            <Image src={photo} alt="" width={px(720)} height={px(1560)} fit="cover" quality={q(64)} loading={loading} class="look-golden" />
+            <span class="v-shade" />
+            <div class="v-top">
+              <span class="round lg glass">
+                <svg viewBox="0 0 24 24"><path d={ICON.x} /></svg>
+              </span>
+              <span class="v-count glass">
+                <b>{viewer.index} / {viewer.count}</b>
+                <small>{viewer.by}</small>
+              </span>
+              <span class="round lg" />
+            </div>
+            <div class="v-bottom">
+              {viewer.mission && (
+                <span class="v-mission glass">
+                  <svg viewBox="0 0 24 24"><path d={ICON.target} /></svg>
+                  <span><i>Mission · </i>{viewer.mission}</span>
+                </span>
+              )}
+              <span class="v-actions">
+                <span class="round lg glass">
+                  <svg viewBox="0 0 24 24"><path d={ICON.download} /></svg>
+                </span>
+                <span class="round lg glass">
+                  <svg viewBox="0 0 24 24"><path d={ICON.share} /></svg>
+                </span>
+                <span class="round lg glass">
+                  <svg viewBox="0 0 24 24"><path d={ICON.flag} /></svg>
+                </span>
+              </span>
+            </div>
           </div>
         )
       }
@@ -888,13 +1047,51 @@ const ICON = {
     align-items: center;
   }
 
-  /* ── 13 Camera ────────────────────────────────────────────────── */
+  /* ── 13 Camera: the viewfinder is the screen ─────────────────── */
+  .camera {
+    padding-top: 0;
+  }
+
+  .finder {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    border-radius: 0 0 calc(var(--u) * 32) calc(var(--u) * 32);
+    overflow: hidden;
+    background: #0a0a0c;
+  }
+
+  .finder > :global(img) {
+    position: absolute;
+    inset: 0;
+  }
+
+  .scrim-top,
+  .scrim-bottom {
+    position: absolute;
+    inset-inline: 0;
+    pointer-events: none;
+  }
+
+  .scrim-top {
+    top: 0;
+    height: calc(var(--u) * 192);
+    background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
+  }
+
+  .scrim-bottom {
+    bottom: 0;
+    height: calc(var(--u) * 110);
+    background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.4));
+  }
+
   .cam-head {
+    position: absolute;
+    inset: 0 0 auto;
     display: grid;
     grid-template-columns: calc(var(--u) * 76) 1fr calc(var(--u) * 76);
-    align-items: center;
-    padding: calc(var(--u) * 8) calc(var(--u) * 20) calc(var(--u) * 12);
-    flex: none;
+    align-items: start;
+    padding: calc(var(--u) * 70) calc(var(--u) * 20) 0;
   }
 
   .cam-title {
@@ -903,11 +1100,90 @@ const ICON = {
     gap: calc(var(--u) * 2);
   }
 
+  .cam-title .eyebrow-s {
+    color: rgba(240, 237, 232, 0.6);
+  }
+
   .until {
     display: flex;
     justify-content: flex-end;
     align-items: baseline;
     gap: calc(var(--u) * 2);
+    padding-top: calc(var(--u) * 12);
+  }
+
+  .until svg {
+    align-self: center;
+    width: calc(var(--u) * 12);
+    height: calc(var(--u) * 12);
+    color: rgba(240, 237, 232, 0.55);
+  }
+
+  /* "Missions 1/3" under the counter. */
+  .m-cap {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 5);
+    height: calc(var(--u) * 28);
+    padding-inline: calc(var(--u) * 11);
+    margin-top: calc(var(--u) * 6);
+    border-radius: 999px;
+    font-size: calc(var(--u) * 12);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .m-cap svg {
+    width: calc(var(--u) * 12);
+    height: calc(var(--u) * 12);
+  }
+
+  /* "Next photo: …" at the viewfinder's top edge, under the capsule. */
+  .armed {
+    position: absolute;
+    top: calc(var(--u) * 196);
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: calc(100% - var(--u) * 36);
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 6);
+    padding: calc(var(--u) * 7) calc(var(--u) * 8) calc(var(--u) * 7) calc(var(--u) * 12);
+    border-radius: calc(var(--u) * 16);
+    background: rgba(0, 0, 0, 0.52);
+    box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.09);
+    color: rgba(240, 237, 232, 0.8);
+    font-size: calc(var(--u) * 13);
+    line-height: calc(var(--u) * 17);
+  }
+
+  .armed svg {
+    width: calc(var(--u) * 12);
+    height: calc(var(--u) * 12);
+  }
+
+  .armed svg.dim {
+    width: calc(var(--u) * 14);
+    height: calc(var(--u) * 14);
+    opacity: 0.6;
+  }
+
+  .phone.live .armed {
+    animation: arm 9s var(--ease) infinite;
+  }
+
+  @keyframes arm {
+    0%,
+    6% {
+      opacity: 0;
+      transform: translate(-50%, calc(var(--u) * -10));
+    }
+    14%,
+    100% {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
   }
 
   .until b {
@@ -925,23 +1201,6 @@ const ICON = {
     font-size: calc(var(--u) * 9);
     font-weight: 600;
     color: rgba(240, 237, 232, 0.3);
-  }
-
-  .finder-fit {
-    flex: 1;
-    min-height: 0;
-    display: grid;
-    place-items: center;
-    padding-inline: calc(var(--u) * 10);
-  }
-
-  .finder {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 3 / 4;
-    border-radius: calc(var(--u) * 26);
-    overflow: hidden;
-    background: #0a0a0c;
   }
 
   .roll {
@@ -1013,20 +1272,22 @@ const ICON = {
     pointer-events: none;
   }
 
-  /* Flash · zoom · flip, under the frame: nothing is drawn over the picture. */
+  /* Flash · zoom · flip, along the viewfinder's bottom edge. */
   .cam-controls {
+    position: absolute;
+    inset: auto 0 0;
+    height: calc(var(--u) * 76);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: calc(var(--u) * 16) calc(var(--u) * 24) calc(var(--u) * 4);
-    flex: none;
+    padding: 0 calc(var(--u) * 24) calc(var(--u) * 16);
   }
 
   .shutter-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: calc(var(--u) * 10) calc(var(--u) * 24) calc(var(--u) * 16);
+    padding: calc(var(--u) * 14) calc(var(--u) * 24) calc(var(--u) * 6);
     flex: none;
   }
 
@@ -1504,56 +1765,283 @@ const ICON = {
     transition: opacity 1.4s var(--ease) calc(var(--n) * 220ms + 500ms);
   }
 
-  /* ── 11 Your name ─────────────────────────────────────────────── */
-  .join {
-    padding: calc(var(--u) * 131) calc(var(--u) * 28) calc(var(--u) * 62);
+  /* ── 09 Invite ────────────────────────────────────────────────── */
+  .invite {
+    padding-inline: calc(var(--u) * 28);
+    padding-bottom: calc(var(--u) * 46);
+    background:
+      radial-gradient(calc(var(--u) * 460) calc(var(--u) * 460) at 50% 58%, rgba(240, 190, 140, 0.13), transparent 70%),
+      #101010;
   }
 
-  .join .headline {
+  .invite .eyebrow-s {
     margin-top: calc(var(--u) * 14);
   }
 
-  .field {
-    margin-top: calc(var(--u) * 52);
-    padding: calc(var(--u) * 18) calc(var(--u) * 20);
-    border-radius: calc(var(--u) * 18);
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.16);
-    font-size: calc(var(--u) * 18);
-    line-height: calc(var(--u) * 24);
-    min-height: calc(var(--u) * 60);
+  .invite .headline {
+    margin-top: calc(var(--u) * 12);
+  }
+
+  .invite .meta {
+    margin-top: calc(var(--u) * 10);
+    color: rgba(240, 237, 232, 0.38);
+  }
+
+  .qr-zone {
+    flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
+    justify-content: center;
+    gap: calc(var(--u) * 32);
   }
 
-  .field::after {
-    content: '';
-    width: calc(var(--u) * 2);
-    height: calc(var(--u) * 22);
-    margin-left: calc(var(--u) * 2);
-    border-radius: 2px;
-    background: rgba(240, 180, 120, 0.95);
+  .qr-card {
+    padding: calc(var(--u) * 20);
+    border-radius: calc(var(--u) * 24);
+    background: #f0ede8;
+    box-shadow: 0 calc(var(--u) * 20) calc(var(--u) * 50) rgba(0, 0, 0, 0.5);
   }
 
-  .phone.live .field::after {
-    animation: caret 1.1s steps(1) infinite;
+  .qr-card svg {
+    display: block;
+    width: calc(var(--u) * 180);
+    height: calc(var(--u) * 180);
+    fill: #0b0b0c;
+    stroke: none;
   }
 
-  @keyframes caret {
+  .phone.live .qr-card {
+    animation: beckon 3.2s ease-in-out infinite;
+  }
+
+  @keyframes beckon {
     50% {
-      opacity: 0;
+      transform: scale(1.025);
     }
   }
 
-  .helper {
-    margin-top: calc(var(--u) * 16);
-    font-size: calc(var(--u) * 11);
-    line-height: calc(var(--u) * 18);
-    color: rgba(240, 237, 232, 0.32);
+  .share-row {
+    align-self: stretch;
+    display: flex;
+    gap: calc(var(--u) * 10);
   }
 
-  .join .cta {
-    margin-top: auto;
+  .share {
+    flex: 1;
+    height: calc(var(--u) * 54);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--u) * 8);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.12);
+    font-size: calc(var(--u) * 14);
+    font-weight: 500;
+  }
+
+  .share svg {
+    width: calc(var(--u) * 15);
+    height: calc(var(--u) * 15);
+  }
+
+  /* ── The album viewer ─────────────────────────────────────────── */
+  .viewer {
+    padding: 0;
+    background: #000;
+  }
+
+  .viewer > :global(img) {
+    position: absolute;
+    inset: 0;
+  }
+
+  .v-shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0) 66%, rgba(0, 0, 0, 0.5));
+  }
+
+  .v-top {
+    position: absolute;
+    inset: calc(var(--u) * 66) calc(var(--u) * 16) auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .v-count {
+    display: grid;
+    justify-items: center;
+    padding: calc(var(--u) * 6) calc(var(--u) * 16);
+    border-radius: 999px;
+    line-height: 1.2;
+  }
+
+  .v-count b {
+    font-size: calc(var(--u) * 13);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .v-count small {
+    font-size: calc(var(--u) * 11);
+    color: rgba(240, 237, 232, 0.6);
+  }
+
+  .v-bottom {
+    position: absolute;
+    inset: auto calc(var(--u) * 16) calc(var(--u) * 46);
+    display: grid;
+    justify-items: center;
+    gap: calc(var(--u) * 14);
+  }
+
+  .v-mission {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 8);
+    padding: calc(var(--u) * 10) calc(var(--u) * 16);
+    border-radius: calc(var(--u) * 18);
+    font-size: calc(var(--u) * 14);
+    line-height: calc(var(--u) * 19);
+  }
+
+  .v-mission svg {
+    width: calc(var(--u) * 14);
+    height: calc(var(--u) * 14);
+    color: rgba(240, 237, 232, 0.55);
+  }
+
+  .v-mission i {
+    font-style: normal;
+    color: rgba(240, 237, 232, 0.55);
+  }
+
+  .v-actions {
+    display: flex;
+    gap: calc(var(--u) * 16);
+  }
+
+  .phone.live .v-mission {
+    animation: rise 1s var(--ease) 0.6s backwards;
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(calc(var(--u) * 12));
+    }
+  }
+
+  /* ── The guest's missions, a sheet over the camera ───────────── */
+  .sheet-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .m-sheet {
+    position: absolute;
+    inset: auto 0 0;
+    display: grid;
+    gap: calc(var(--u) * 6);
+    padding: calc(var(--u) * 12) calc(var(--u) * 20) calc(var(--u) * 44);
+    border-radius: calc(var(--u) * 32) calc(var(--u) * 32) 0 0;
+    background: #19181a;
+    box-shadow: inset 0 calc(var(--u) * 1) 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .grabber {
+    justify-self: center;
+    width: calc(var(--u) * 36);
+    height: calc(var(--u) * 5);
+    margin-bottom: calc(var(--u) * 14);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .headline.xs {
+    font-size: calc(var(--u) * 28);
+    line-height: calc(var(--u) * 33);
+  }
+
+  .m-sub {
+    color: rgba(240, 237, 232, 0.55);
+    font-size: calc(var(--u) * 14);
+    margin-bottom: calc(var(--u) * 10);
+  }
+
+  .m-rows {
+    display: grid;
+    gap: calc(var(--u) * 8);
+  }
+
+  .m-row {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 12);
+    padding: calc(var(--u) * 14) calc(var(--u) * 16);
+    border-radius: calc(var(--u) * 16);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.08);
+  }
+
+  .m-row.is-armed {
+    background: rgba(240, 190, 140, 0.1);
+    box-shadow: inset 0 0 0 calc(var(--u) * 1.5) rgba(240, 190, 140, 0.45);
+  }
+
+  .m-text {
+    flex: 1;
+    display: grid;
+    gap: calc(var(--u) * 3);
+  }
+
+  .m-text small {
+    font-size: calc(var(--u) * 10);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(240, 180, 120, 0.9);
+  }
+
+  .m-text b {
+    font-weight: 400;
+    font-size: calc(var(--u) * 15);
+    line-height: calc(var(--u) * 21);
+  }
+
+  .m-row.is-done b {
+    color: rgba(240, 237, 232, 0.42);
+  }
+
+  .m-trail {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 5);
+    font-size: calc(var(--u) * 12);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .m-trail svg {
+    width: calc(var(--u) * 14);
+    height: calc(var(--u) * 14);
+  }
+
+  .m-trail.ok {
+    color: rgba(140, 220, 120, 0.9);
+  }
+
+  .m-trail.dim {
+    color: rgba(240, 237, 232, 0.42);
+  }
+
+  .phone.live .m-row {
+    animation: rise 0.9s var(--ease) backwards;
+    animation-delay: calc(var(--n) * 140ms + 200ms);
   }
 
   /* ── album/[id], not developed yet ────────────────────────────── */

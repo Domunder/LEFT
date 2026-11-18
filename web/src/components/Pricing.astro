@@ -16,26 +16,28 @@ const { highlight } = Astro.props;
       {
         TIERS.map((tier) => (
           <li class:list={[{ on: tier.id === highlight }]}>
-            <p class="price">
-              {tier.price === 0 ? (
-                <b>Free</b>
-              ) : (
-                <>
-                  <small>$</small>
-                  <b>{tier.price}</b>
-                </>
-              )}
-            </p>
-            <p class="guests">Up to {tier.guests} guests</p>
-            <p class="roll">{tier.roll}</p>
             <p class="note">{tier.note}</p>
+            <p class="guests">
+              <small>Up to</small>
+              <b>{tier.guests}</b>
+              <small>guests</small>
+            </p>
+            <p class="price">{tier.price === 0 ? 'Free' : `$${tier.price}`}</p>
+            <ul class="features">
+              {tier.features.map((feature) => (
+                <li class:list={{ strong: feature === 'Unlimited photos' }}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
+                  {feature}
+                </li>
+              ))}
+            </ul>
           </li>
         ))
       }
     </ul>
     <p class="fine reveal">
-      One-time, per event. No subscription. Prices are charged in the app and may vary slightly by store and
-      country.
+      One-time, per event. No subscription. Unlimited means up to 150 photos per guest. Prices are charged in
+      the app and may vary slightly by store and country.
     </p>
   </div>
 </section>
@@ -50,56 +52,90 @@ const { highlight } = Astro.props;
     gap: 12px;
   }
 
-  li {
+  .tiers > li {
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: 24px;
-    padding: 26px 24px 24px;
+    padding: 24px 24px 26px;
     display: grid;
     gap: 6px;
     align-content: start;
   }
 
-  li.on {
+  .tiers > li.on {
     border-color: var(--ink-30);
     background: linear-gradient(180deg, rgba(240, 190, 140, 0.1), transparent 70%), var(--card);
   }
 
-  .price {
-    display: flex;
-    align-items: baseline;
-    gap: 8px;
-    margin-bottom: 10px;
-  }
-
-  .price b {
-    font-family: var(--numeral);
-    font-weight: 400;
-    font-size: 3rem;
-    line-height: 1;
-  }
-
-  .price small {
-    font-size: 0.75rem;
-    letter-spacing: 0.14em;
-    color: var(--ink-55);
-  }
-
-  .guests {
-    font-weight: 600;
-  }
-
-  .roll {
-    color: var(--ink-70);
-    font-size: 0.92rem;
-  }
-
   .note {
-    margin-top: 12px;
     font-size: 0.6875rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink-55);
+    margin-bottom: 8px;
+  }
+
+  .guests {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0 8px;
+  }
+
+  .guests b {
+    font-family: var(--numeral);
+    font-weight: 400;
+    font-size: 3.4rem;
+    line-height: 1;
+  }
+
+  .guests small {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+    color: var(--ink-70);
+  }
+
+  .price {
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--amber);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .features {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--line);
+    display: grid;
+    gap: 10px;
+    color: var(--ink-70);
+    font-size: 0.92rem;
+  }
+
+  .features li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .features .strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .features svg {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    padding: 3px;
+    border-radius: 50%;
+    background: rgba(240, 180, 120, 0.16);
+    fill: none;
+    stroke: var(--amber);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
 
   .fine {
