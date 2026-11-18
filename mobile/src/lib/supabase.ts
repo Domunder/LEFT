@@ -12,7 +12,7 @@ import 'react-native-url-polyfill/auto';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, processLock, type SupabaseClient } from '@supabase/supabase-js';
-import { AppState, Platform } from 'react-native';
+import { AppState } from 'react-native';
 
 import type { Database } from '@/types/database';
 
@@ -41,8 +41,7 @@ export function getSupabase(): SupabaseClient<Database> {
 
   client = createClient<Database>(SUPABASE_URL, SUPABASE_KEY, {
     auth: {
-      // AsyncStorage on native; the web build uses localStorage by default.
-      ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
+      storage: AsyncStorage,
       autoRefreshToken: true,
       persistSession: true,
       // Required on native — there is no URL to read a session out of.
@@ -51,16 +50,14 @@ export function getSupabase(): SupabaseClient<Database> {
     },
   });
 
-  if (Platform.OS !== 'web') {
-    // Refresh tokens only while the app is in the foreground.
-    AppState.addEventListener('change', (state) => {
-      if (state === 'active') {
-        client?.auth.startAutoRefresh();
-      } else {
-        client?.auth.stopAutoRefresh();
-      }
-    });
-  }
+  // Refresh tokens only while the app is in the foreground.
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') {
+      client?.auth.startAutoRefresh();
+    } else {
+      client?.auth.stopAutoRefresh();
+    }
+  });
 
   return client;
 }

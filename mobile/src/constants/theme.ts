@@ -1007,6 +1007,19 @@ export const Camera = {
     chevronSize: 12,
     chevronGap: 2,
     countdownHitSlop: 14,
+    /** The countdown's top padding: level with the 44pt close button's middle. */
+    countdownTop: 12,
+    /** Under the safe area: where the "Next photo" note starts, below name, counter and capsule. */
+    armedOffset: 104,
+    armedSlotHeight: 80,
+  },
+
+  /** Soft darkening where text sits on the picture: the header, and the controls row. */
+  scrim: {
+    top: ['rgba(0,0,0,0.45)', 'rgba(0,0,0,0)'] as const,
+    topHeight: 130,
+    bottom: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.4)'] as const,
+    bottomHeight: 110,
   },
 
   /** "17 left" — the roll. */
@@ -1019,11 +1032,9 @@ export const Camera = {
     lowColor: 'rgba(240,180,120,0.95)',
   },
 
-  /** The viewfinder — inset and rounded, 3:4 like the sensor and like a print. */
+  /** The viewfinder — full width and height down to the shutter bar, bottom corners rounded. */
   viewfinder: {
-    paddingX: 10,
-    radius: 26,
-    aspectRatio: 3 / 4,
+    radius: 32,
     /** Behind the preview, and what shows while permission is still unresolved. */
     bg: '#0a0a0c',
   },
@@ -1086,8 +1097,9 @@ export const Camera = {
   /** Flash and flip — glass buttons (`GlassButton`, 44pt) either side of the zoom, under the viewfinder. */
   controls: {
     paddingX: 24,
-    paddingTop: 16,
-    paddingBottom: 4,
+    /** The row's height along the frame's bottom edge; its content sits `paddingBottom` above it. */
+    height: 76,
+    paddingBottom: 16,
     /** Flash off, and flash on. */
     flashColor: ['rgba(240,237,232,0.6)', Colors.text] as const,
   },
@@ -1657,8 +1669,8 @@ export const Album = {
     frameRadius: 4,
     frameFill: 'rgba(255,255,255,0.035)',
     /** A frame that holds a photo: blurred past recognition, and dimmed. */
-    frameBlur: 22,
-    frameDim: 'rgba(8,8,10,0.25)',
+    frameBlur: 60,
+    frameDim: 'rgba(8,8,10,0.35)',
     frameFadeMs: 320,
     stripGap: 40,
     actionsGap: 12,
@@ -1694,14 +1706,27 @@ export const Album = {
  */
 export const ScrollEdge = {
   /** Heights of the two edges. The list is padded by the same amounts. */
-  top: 24,
-  /** Above the screen's bottom inset, which the edge covers as well. */
-  bottom: 56,
-  /** Stacked blurs, each shorter than the last, so the blur grows towards the edge. */
-  blurSteps: 3,
-  blurIntensity: 10,
-  /** `Colors.bg`, opaque -> clear. Not 'transparent': that fades through black. */
-  colors: [Colors.bg, 'rgba(16,16,16,0)'] as const,
+  top: 40,
+  /** Above the screen's bottom inset, which the edge covers as well. Lowered from 96 (2026-11-18). */
+  bottom: 72,
+  /**
+   * `Colors.bg`, opaque -> clear on a smoothstep curve, in many stops so the
+   * fade has no visible bands. Not 'transparent': that fades through black.
+   * There is no blur any more: RN cannot mask a blur, and stacked blurs showed
+   * as steps (the user, 2026-11-18).
+   */
+  colors: [
+    'rgba(16,16,16,0.97)',
+    'rgba(16,16,16,0.94)',
+    'rgba(16,16,16,0.85)',
+    'rgba(16,16,16,0.72)',
+    'rgba(16,16,16,0.57)',
+    'rgba(16,16,16,0.40)',
+    'rgba(16,16,16,0.25)',
+    'rgba(16,16,16,0.12)',
+    'rgba(16,16,16,0.03)',
+    'rgba(16,16,16,0)',
+  ] as const,
 } as const;
 
 /**
@@ -1776,6 +1801,49 @@ export const MissionsEditor = {
   captionGap: 12,
   /** "24 missions · 18 people so far" -> its note. */
   summaryNoteGap: 2,
+  /** Reached while creating the event: the list -> the pinned "Continue". */
+  continueGap: 12,
+
+  /** The "1 mission per guest" card: its sliders glyph and the 1·2·3 drawer. */
+  count: {
+    iconSize: 17,
+    drawerGap: 14,
+  },
+
+  /** A row's assignee: a name pill, or a round "give to" button. */
+  chip: {
+    height: 30,
+    paddingX: 11,
+    maxWidth: 130,
+    iconSize: 15,
+    hitSlop: 8,
+  },
+
+  /** Swipe a row left: Delete behind it, filled as in Mail and Reminders. */
+  swipe: {
+    actionWidth: 84,
+    iconSize: 16,
+    gap: 4,
+    /** The one filled red in the app: a destructive action you dragged out yourself. */
+    bg: 'rgb(204,72,62)',
+    /** The row slides over the action, so it must be opaque: the card over `bg`. */
+    rowBg: '#151515',
+  },
+
+  /** The column in front of every mission: a bullet, "+", or Select's check. */
+  lead: {
+    size: 22,
+    bulletSize: 6,
+    bulletColor: 'rgba(240,237,232,0.28)',
+    plusIconSize: 14,
+  },
+
+  /** Select mode: the round check in front of each row. */
+  select: {
+    size: 22,
+    iconSize: 13,
+    border: 'rgba(240,237,232,0.35)',
+  },
 
   /** The bordered card a list of rows sits in — 20's settings card. */
   card: {
@@ -1946,6 +2014,8 @@ export const MissionsCamera = {
     doneTextColor: Colors.textDim,
     /** The list scrolls past this share of the window — large text, three long missions. */
     maxListRatio: 0.5,
+    /** The least space a sheet leaves under the status bar, keyboard up or not. */
+    topGap: 24,
     /** The scrim leaving after a tap on it. */
     fadeMs: 200,
   },

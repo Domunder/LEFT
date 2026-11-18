@@ -100,6 +100,12 @@ export type QueuedShot = {
    */
   missionId?: string | null;
   /**
+   * Width / height of the viewfinder when the shutter fired. The developed
+   * print is centre-cropped to it, so it holds what the guest saw. Absent: the
+   * whole capture.
+   */
+  cropAspect?: number;
+  /**
    * False while `missionId` still has to reach the server — the tag step's
    * flag. Absent (old entries) or true: nothing owed.
    */
@@ -277,6 +283,8 @@ export async function enqueueShot(shot: {
   takenAt?: Date;
   /** The mission the guest armed for this shot. Tagged once the frame is claimed. */
   missionId?: string | null;
+  /** Width / height of the viewfinder; the print is cropped to it. */
+  cropAspect?: number;
 }): Promise<string> {
   const id = Crypto.randomUUID();
 
@@ -295,6 +303,7 @@ export async function enqueueShot(shot: {
       developAttempts: 0,
       width: shot.width,
       height: shot.height,
+      ...(shot.cropAspect ? { cropAspect: shot.cropAspect } : {}),
       ...(shot.missionId
         ? { missionId: shot.missionId, missionTagged: false, tagAttempts: 0 }
         : {}),
@@ -466,7 +475,7 @@ async function develop(item: QueuedShot) {
 
   const bytes = await raw.bytes();
   if (__DEV__) console.log('[queue] develop start', { id: item.id, bytes: bytes.length });
-  const result = developPhoto(bytes, item.look);
+  const result = developPhoto(bytes, item.look, item.cropAspect);
   if (__DEV__) console.log('[queue] develop done', { width: result.width, height: result.height });
 
   await originalFile(item.id).write(result.original);

@@ -59,11 +59,8 @@ export function isSignInCancelled(e: unknown): e is SignInCancelledError {
  */
 export const IS_EXPO_GO = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-/** Neither provider has a browser implementation. */
-export const IS_WEB = Platform.OS === 'web';
-
-/** True wherever the native modules are missing, so the buttons cannot work. */
-export const NATIVE_AUTH_UNAVAILABLE = IS_EXPO_GO || IS_WEB;
+/** True in Expo Go, where the native modules are missing, so the buttons cannot work. */
+export const NATIVE_AUTH_UNAVAILABLE = IS_EXPO_GO;
 
 /**
  * Apple's button is hidden on Android — Sign in with Apple has no native path

@@ -1,5 +1,5 @@
 /**
- * "Keep your films" — the prompt that turns a guest into an account.
+ * "Keep your moments" — the prompt that turns a guest into an account.
  *
  * This is the end-of-film sign-in CLAUDE.md's Open Gaps assign to screens 14/15.
  * A guest never signs up: they tap an invite link, type a name on 11 and film.
@@ -30,7 +30,6 @@ import { GlassPanel } from './glass-panel';
 import { Body, Caption, Label } from './typography';
 import { Colors, Films, Radii, Spacing } from '@/constants/theme';
 import {
-  IS_WEB,
   isSignInCancelled,
   linkIdentity,
   NATIVE_AUTH_UNAVAILABLE,
@@ -75,7 +74,7 @@ export function KeepYourFilm({ onLinked, onDismiss }: KeepYourFilmProps) {
   return (
     <GlassPanel radius={Radii.card} contentStyle={styles.content}>
       <View style={styles.headingRow}>
-        <Label small>Keep your films</Label>
+        <Label small>Keep your moments</Label>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Dismiss"
@@ -116,9 +115,7 @@ export function KeepYourFilm({ onLinked, onDismiss }: KeepYourFilmProps) {
         </Caption>
       ) : NATIVE_AUTH_UNAVAILABLE ? (
         <Caption style={styles.note}>
-          {IS_WEB
-            ? 'Google and Apple sign-in are native-only — use a development build.'
-            : 'Google and Apple sign-in need a development build — see docs/social-sign-in.md.'}
+          {'Google and Apple sign-in need a development build — see docs/social-sign-in.md.'}
         </Caption>
       ) : null}
     </GlassPanel>

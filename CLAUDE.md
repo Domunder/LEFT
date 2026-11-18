@@ -67,7 +67,8 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   invite opens without installing the app. See "The App Clip" below. **Needs
   a new native build** (the clip, the App Group, `@bacons/apple-targets`).
 - **In progress (2026-11-17, merged into `feature/web-camera`): missions.** Server
-  verified against the local stack with SQL; screens built (typecheck and
+  verified against the local stack with SQL; the migration is on the hosted
+  project since 2026-11-18; screens built (typecheck and
   lint clean), **never run on a device**; the mission notifications are not
   built. See "Missions" below.
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
@@ -252,7 +253,9 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   multi-lens device; `lib/zoom.ts` turns its `zoomLensSwitchFactors` into stops
   and labels them as ratios to the wide lens (0.5× / 1× / the telephoto's true
   factor). One lens and the front camera get no stops — the control hides,
-  pinch still zooms.
+  pinch still zooms. After a pinch the stops give way to one lit pill with
+  the live zoom ("1.2×", as the system camera does; the user, 2026-11-18); a
+  tap on it returns to 1× and the stops. **Not seen on a device.**
 - **Flash** (`fire` / `lightTorch` in `camera.tsx`): the LED is lit as a torch
   through the camera controller `Camera.flash.leadMs` before the exposure and
   read back; the front camera turns the viewfinder white instead. The camera's
@@ -293,6 +296,11 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
 - **`GrainOverlay`'s tiled image does not repeat reliably over a large area**
   (seen as one tile top-left over the viewfinder). Nothing uses it any more;
   the component is kept on purpose.
+- **Superseded 2026-11-18 (the user): the viewfinder is full screen** (top edge
+  to the shutter bar, bottom corners rounded); header and flash · zoom · flip
+  are glass over it, with soft scrims. Prints are centre-cropped to the frame's
+  aspect (`cropAspect` through `enqueueShot` → `developPhoto`). **Not seen on a
+  device.** The older note follows for history:
 - **Every camera control sits outside the viewfinder** (decided 2026-11-16 by
   the user, after seeing the 2026-11-15 version with the chrome floating in
   the picture on a device — do not move it back in): the roll counter in the
@@ -409,8 +417,11 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
 - **The library's title is "Moments"** (2026-11-16, the user; was "Your
   Moments"), and its list blurs and dissolves into the page at the top and
   bottom edge instead of being cut off (`components/ui/scroll-edge.tsx`,
-  tokens `ScrollEdge`): stacked blurs under a gradient in `Colors.bg`, since
-  RN has no progressive blur. **Not seen on a device.**
+  tokens `ScrollEdge`). Since 2026-11-18 it is one smooth gradient in
+  `Colors.bg` and no blur: the stacked blurs showed as steps on a device, and a
+  real progressive blur needs a masked view (native, new build). The list
+  scrolls up under the "Moments" header and fades out behind it, still
+  faintly visible. **Not seen on a device.**
 - **The library is a list of compact cards** (decided
   2026-11-16 by the user, replacing the full-screen carousel of photo stacks
   of 2026-11-15 — thumbnails blown up to the screen looked soft and only one
@@ -640,7 +651,30 @@ Decided by the user — do not re-litigate:
 
 - **Off by default; 1–3 per guest** (`events.missions_per_guest`, null = off),
   switched on 05.1 or on the host's Missions screen (`(host)/missions`, from
-  10).
+  10). **Switched on at 05.1, creating goes 05.1 → Missions → 09 (QR) → 10**
+  (2026-11-18, the user): `from=create` gives the screen a close X instead of
+  back and a pinned "Continue" to 09; 10 keeps its Missions row for edits,
+  and has a QR button back to 09.
+- **The planning screen (2026-11-18, the user):** the count is one row with a
+  sliders drawer; changing it never touches the list — "Generate N more"
+  (`generate_missions()`, migration `20261118000000_missions_generate_move.sql`)
+  tops the list up to `max_members` × per guest (personal ones included,
+  ceiling 200), unused library missions first, then repeats. **Laid out like
+  Apple Reminders** (the user's pick, same day): one mission list, each row
+  carries its assignee chip on the right (tap → "Who gets this?" sheet:
+  Anyone · every guest · someone not here yet), swipe left deletes, "Select"
+  deletes several. A "Guests" row opens a sheet listing everyone who joined
+  automatically plus named people, with a + for a name. A joined guest gets a
+  `mission_people` row only when a mission is first given to them
+  (`ensurePersonFor`). `components/ui/mission-assign.tsx`. Drag-and-drop was
+  built and removed the same day. Later the same day (the user): the 1·2·3
+  count left the screen — the top card reads "12 of 50 guests get a mission"
+  with a + that generates the rest, on/off is a switch beside the title, 05.1
+  only has the switch, sheets lift above the keyboard. The list is newest
+  first; rows have no Cancel and save on blur. An "Auto-assign" button was
+  built and removed (the start deals unassigned missions anyway);
+  `auto_assign_missions()` (migration `20261118010000_…`) stays on the
+  server, unused. **Not seen on a device.**
 - **The host plans before the start, and the start locks it.** The list is
   seeded from a library matched to the event type (`event_type_missions()`,
   20 each, then `general_missions()`, 60), as long as the group could use, at

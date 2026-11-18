@@ -87,6 +87,12 @@ export default function FilmsScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const [promptDismissed, setPromptDismissed] = useState(true);
   const [now, setNow] = useState(() => new Date());
+  /**
+   * The header's height. The list runs up under it (2026-11-18, the user):
+   * cards slide behind "Moments" and fade out there, still faintly visible,
+   * instead of being cut off at the header's lower edge.
+   */
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   const load = useCallback(async (isCancelled: () => boolean) => {
     try {
@@ -224,7 +230,7 @@ export default function FilmsScreen() {
               ? () => router.push({ pathname: '/(capture)/roll', params: { eventId: event.id } })
               : undefined
           }
-          photosLabel="Your shots"
+          photosLabel="Your photos"
         />
       );
     },
@@ -257,7 +263,9 @@ export default function FilmsScreen() {
         </View>
       ) : null}
 
-      <View style={styles.header}>
+      <View
+        style={styles.header}
+        onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
         <Display size="md">Moments</Display>
 
         <View style={styles.headerButtons}>
@@ -318,7 +326,7 @@ export default function FilmsScreen() {
           </View>
         </>
       ) : (
-        <View style={styles.listArea}>
+        <View style={[styles.listArea, { marginTop: -headerHeight }]}>
           <FlatList
             data={events}
             keyExtractor={(event) => event.id}
@@ -327,11 +335,14 @@ export default function FilmsScreen() {
             ItemSeparatorComponent={Separator}
             contentContainerStyle={[
               styles.list,
-              { paddingBottom: Math.max(Films.list.paddingBottom, Edge.bottom) + insets.bottom },
+              {
+                paddingTop: headerHeight + Edge.top - Films.header.gap,
+                paddingBottom: Math.max(Films.list.paddingBottom, Edge.bottom) + insets.bottom,
+              },
             ]}
             showsVerticalScrollIndicator={false}
           />
-          <ScrollEdge edge="top" />
+          <ScrollEdge edge="top" inset={headerHeight} />
           <ScrollEdge edge="bottom" inset={insets.bottom} />
         </View>
       )}
@@ -351,7 +362,9 @@ const styles = StyleSheet.create({
   backdropScrim: {
     backgroundColor: Colors.backdropScrim,
   },
+  // Above the list, which scrolls up under it.
   header: {
+    zIndex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -385,11 +398,9 @@ const styles = StyleSheet.create({
   // the list's own padding keeps the first card clear of it at rest.
   listArea: {
     flex: 1,
-    marginTop: -Films.header.gap,
   },
   list: {
     paddingHorizontal: Films.list.paddingX,
-    paddingTop: Edge.top,
   },
   separator: {
     height: Films.list.gap,

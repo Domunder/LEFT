@@ -1,48 +1,57 @@
 /**
  * Missions — the host's list of small photo challenges.
  *
- * Reached from 10's "Missions" row, with `eventId`. Not in the prototype: built
+ * Reached from 10's "Missions" row, with `eventId`, and — with `from=create` —
+ * straight after 05.1 when the host switched missions on: then there is no back
+ * (the event exists), a close X leaves for Moments as on 09, and a pinned
+ * "Continue" goes on to 09 (QR) and from there to 10. Not in the prototype: built
  * in the language of 20 (grouped hairline cards) and 02 (choice pills).
  *
- * What the server decides, and this screen only shows
- * (`supabase/migrations/20261117000000_missions.sql`):
+ * **Laid out like Apple Reminders** (decided 2026-11-18 by the user, after
+ * comparing how Reminders and Todoist assign an item to a person):
  *
- *  - **On or off, and how many each guest gets** (`missions_per_guest`, 1–3).
- *    Switching on fills an empty list from the event type's library; switching
- *    off keeps the list.
+ *  1. **How many each** — one quiet row, "1 mission per guest", with how far
+ *     the list reaches against the group size from 05.1. Its sliders open the
+ *     1 · 2 · 3 drawer and "Switch missions off". The count never adds or
+ *     removes missions; when the list is short, "Generate N more" tops it up
+ *     (`generate_missions()`).
+ *  2. **Guests** — a row that opens the Guests sheet: everyone who joined,
+ *     listed without the host doing anything, and names for people not there
+ *     yet (+). `components/ui/mission-assign.tsx`.
+ *  3. **The missions** — one list. Each row carries who it is for on the right:
+ *     a name, or a quiet person button for "anyone". Tap the text to edit, tap
+ *     the person to pick who gets it (Anyone · each guest · someone not here
+ *     yet), swipe left to delete. Given missions sort first. "Select" in the
+ *     header deletes several.
+ *
+ * What the server decides, and this screen only shows
+ * (`supabase/migrations/20261117000000_missions.sql`, `…18000000_…`):
+ *
  *  - **Everything is editable only in setup**, before the host taps "Start the
  *    Event" on 10 — the deal happens on that tap. After it (or once the event's
- *    end has passed) the same content is drawn read-only. A write that loses the
- *    race throws `MissionsLockedError`, and the re-read then shows the lock.
+ *    end has passed) the same content is drawn read-only. A write that loses
+ *    the race throws `MissionsLockedError`, and the re-read then shows the lock.
+ *  - **A given mission is personal**: `person_id` points at a `mission_people`
+ *    row, dealt to whoever holds that name first, up to the per-guest count. A
+ *    joined guest gets their row the first time something is given to them
+ *    (`ensurePersonFor`).
  *  - **Limits** (200 missions, 200 names, 3–140 characters, names unique per
- *    event) are the database's. The rows validate length before a round trip;
- *    everything else is shown as the server said it.
+ *    event) are the database's.
  *
  * Every write is followed by a re-read, so what is drawn is what the server
  * holds — nothing is added or removed locally as truth.
- *
- * "For specific people": a name the host types is picked by that guest when
- * joining; a guest who already joined can be linked directly
- * (`assignPerson`). A person's missions are dealt to whoever holds the name,
- * first, up to the per-guest count; the shared list fills the rest at random,
- * each mission to one guest only — hence the arithmetic line.
  *
  * The ambient glow lives in (host)/_layout.tsx, which is why this is `transparent`.
  */
 
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView } from 'react-native-gesture-handler';
+import ReanimatedSwipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, {
   FadeIn,
   FadeOut,
@@ -51,15 +60,26 @@ import Animated, {
   ReduceMotion,
 } from 'react-native-reanimated';
 
-import { ChoicePillButton } from '@/components/ui/choice-pill';
+import { CircleIconButton } from '@/components/ui/circle-back-button';
+import {
+  AssignSheet,
+  AssigneeChip,
+  buildGuests,
+  GuestsSheet,
+  type AssignTarget,
+  type Guest,
+} from '@/components/ui/mission-assign';
 import { MissionCard, MissionRow, TextButton } from '@/components/ui/mission-editor';
 import { PillButton } from '@/components/ui/pill-button';
 import { PressScale } from '@/components/ui/press-scale';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { useToast } from '@/components/ui/toast-host';
 import { Body, Caption, Display, Label } from '@/components/ui/typography';
-import { Colors, MissionsEditor as T, Press, Springs } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScrollEdged } from '@/components/ui/scroll-edge';
+import { Colors, MissionsEditor as T, Press, ScrollEdge as Edge, Springs } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { getSession } from '@/lib/auth';
 import { messageFor } from '@/lib/auth-errors';
@@ -77,25 +97,19 @@ import {
   addPerson,
   assignPerson,
   deleteMission,
+  deleteMissions,
   deletePerson,
+  generateMissions,
   listHostMissions,
+  MAX_EVENT_MISSIONS,
   MISSIONS_PER_GUEST_DEFAULT,
-  MISSIONS_PER_GUEST_MAX,
-  MISSIONS_PER_GUEST_MIN,
   MissionsLockedError,
+  moveMission,
   setMissionsPerGuest,
   updateMission,
+  type EventMission,
   type HostMissions,
-  type MissionPerson,
 } from '@/lib/missions';
-
-/** `mission_people.name`: `char_length(btrim(name)) between 1 and 60`. */
-const NAME_MAX = 60;
-
-const PER_GUEST_CHOICES = Array.from(
-  { length: MISSIONS_PER_GUEST_MAX - MISSIONS_PER_GUEST_MIN + 1 },
-  (_, index) => MISSIONS_PER_GUEST_MIN + index
-);
 
 /* Rows cross-fade in and out — no travel, so this stays on under reduced
    motion — and the list closes up behind them on the default spring, which
@@ -124,13 +138,6 @@ function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
-function nameProblem(text: string): string | null {
-  const length = text.trim().length;
-  if (length === 0) return 'Type a name first.';
-  if (length > NAME_MAX) return `At most ${NAME_MAX} characters.`;
-  return null;
-}
-
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 /** Postgres' unique_violation — a name already on the list. */
@@ -157,8 +164,12 @@ function describeWriteError(e: unknown): string {
 }
 
 export default function MissionsScreen() {
+  const insets = useSafeAreaInsets();
   const toast = useToast();
-  const { eventId } = useLocalSearchParams<{ eventId?: string }>();
+  const router = useRouter();
+  const { eventId, from } = useLocalSearchParams<{ eventId?: string; from?: string }>();
+  /** Opened right after creating the event, as the step before 09. */
+  const fromCreate = from === 'create';
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [members, setMembers] = useState<EventMember[]>([]);
@@ -167,10 +178,19 @@ export default function MissionsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   /** The per-guest count while its write is in flight; undefined otherwise. */
   const [pendingPerGuest, setPendingPerGuest] = useState<number | null | undefined>(undefined);
-  /** The person whose card is showing "who is this?" chips. */
-  const [linkingId, setLinkingId] = useState<string | null>(null);
-  /** A guest whose chip was tapped and is being added. */
-  const [addingUserId, setAddingUserId] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  /** Select mode, and the missions ticked in it. */
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
+  const [deleting, setDeleting] = useState(false);
+  /** Rows with their editor open: a swipe must not delete them. */
+  const [editingRows, setEditingRows] = useState<ReadonlySet<string>>(() => new Set());
+  /** The sheets: the mission being given to someone, and the guest list. */
+  const [assigning, setAssigning] = useState<EventMission | null>(null);
+  const [assignBusy, setAssignBusy] = useState(false);
+  const [guestsOpen, setGuestsOpen] = useState(false);
+  /** A name whose "who is this?" list is showing, in the Guests sheet's menu. */
+  const [linkingName, setLinkingName] = useState<Person | null>(null);
 
   /*
     Only the newest read may land. Two quick writes each re-read, and their
@@ -217,7 +237,7 @@ export default function MissionsScreen() {
   const event = data?.event;
   const liveEventId = event?.id;
 
-  // The roster is live, as on 10: "18 people so far" moves while the host edits.
+  // The roster is live, as on 10: a guest who joins appears in the Guests list.
   useEffect(() => {
     if (!liveEventId) return;
     return subscribeToMembers(liveEventId, setMembers);
@@ -260,6 +280,81 @@ export default function MissionsScreen() {
     [toast, write]
   );
 
+  const setRowEditing = useCallback((missionId: string, editing: boolean) => {
+    setEditingRows((previous) => {
+      if (previous.has(missionId) === editing) return previous;
+      const next = new Set(previous);
+      if (editing) next.add(missionId);
+      else next.delete(missionId);
+      return next;
+    });
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // The way in and out
+  // -------------------------------------------------------------------------
+
+  // Select is offered wherever rows can be deleted: the host, in setup, missions on.
+  const canSelect =
+    !!event &&
+    data?.userId === event.host_id &&
+    event.missions_per_guest !== null &&
+    event.status === 'setup' &&
+    !isDeveloped(event) &&
+    (data?.missions.pool.length ?? 0) +
+      (data?.missions.people.reduce((sum, p) => sum + p.missions.length, 0) ?? 0) >
+      0;
+
+  const selectToggle = canSelect ? (
+    <TextButton
+      label={selecting ? 'Done' : 'Select'}
+      strong={selecting}
+      onPress={() => {
+        setSelecting((on) => !on);
+        setSelected(new Set());
+      }}
+    />
+  ) : null;
+
+  // Created by 05.1's `router.replace`: nothing behind to go back to, so a
+  // close X leaves for Moments instead.
+  const header = (
+    <ScreenHeader
+      back={!fromCreate}
+      right={
+        selectToggle || fromCreate ? (
+          <View style={styles.headerRight}>
+            {selectToggle}
+            {fromCreate ? (
+              <CircleIconButton
+                icon="x"
+                accessibilityLabel="Close, back to your moments"
+                onPress={() => router.replace('/(library)/films')}
+              />
+            ) : null}
+          </View>
+        ) : undefined
+      }
+      style={styles.header}
+    />
+  );
+
+  // Shown in every state, so a failed load never strands the host mid-setup.
+  const nextId = event?.id ?? eventId;
+  const continueButton = fromCreate ? (
+    <PillButton
+      label="Continue"
+      icon="arrow-right"
+      disabled={pendingPerGuest !== undefined}
+      onPress={() =>
+        router.replace(
+          nextId ? { pathname: '/(host)/invite', params: { eventId: nextId } } : '/(host)/invite'
+        )
+      }
+      style={styles.continue}
+    />
+  ) : null;
+
   // -------------------------------------------------------------------------
   // Loading, error, not the host
   // -------------------------------------------------------------------------
@@ -267,7 +362,7 @@ export default function MissionsScreen() {
   if (state.kind !== 'ready' || !data || !event) {
     return (
       <Screen transparent>
-        <ScreenHeader style={styles.header} />
+        {header}
         <Intro />
         <View style={styles.centerState}>
           {state.kind === 'error' ? (
@@ -295,6 +390,7 @@ export default function MissionsScreen() {
             </View>
           )}
         </View>
+        {continueButton}
       </Screen>
     );
   }
@@ -302,7 +398,7 @@ export default function MissionsScreen() {
   if (data.userId !== event.host_id) {
     return (
       <Screen transparent>
-        <ScreenHeader style={styles.header} />
+        {header}
         <Intro />
         <View style={styles.centerState}>
           <Body small color={Colors.textDim} style={styles.centerText}>
@@ -324,30 +420,35 @@ export default function MissionsScreen() {
   /** The server refuses every write once the event has started or its end has passed. */
   const locked = event.status !== 'setup' || isDeveloped(event);
 
-  const personalCount = people.reduce((sum, person) => sum + person.missions.length, 0);
-  const totalMissions = pool.length + personalCount;
-
-  const memberName = (userId: string | null) =>
-    members.find((member) => member.user_id === userId)?.display_name;
+  const guests = buildGuests(people, members, data.userId);
+  /** Newest first, whoever it is for: a mission just added stays at the top, under "Add". */
+  const missions = [...pool, ...people.flatMap((person) => person.missions)].sort(
+    (a, b) => b.seq - a.seq
+  );
+  const totalMissions = missions.length;
+  const nameOf = (personId: string | null) =>
+    personId ? people.find((person) => person.id === personId)?.name : undefined;
 
   /*
-    Who goes short, computed the way the deal does it: each guest takes their
-    own name's missions first (up to the count), then draws from the shared
-    list, and every mission goes to one guest only.
+    How far the list reaches, against the group the host sized on 05.1 (not
+    just who joined so far): every mission goes to one guest only, so N guests
+    at K each need N x K. `generate_missions()` tops up to exactly that, within
+    the 200-mission ceiling.
   */
-  const poolDemand = perGuest
-    ? members.reduce((sum, member) => {
-        const own = people.find((person) => person.claimed_by === member.user_id);
-        return sum + perGuest - Math.min(own?.missions.length ?? 0, perGuest);
-      }, 0)
+  const group = event.max_members;
+  const needed = perGuest
+    ? Math.max(0, Math.min(group * perGuest, MAX_EVENT_MISSIONS) - totalMissions)
     : 0;
-  const short = missionsOn && pool.length < poolDemand;
 
-  /** Joined guests who do not hold a name yet — offered as chips. */
-  const unnamed = members.filter((member) => !people.some((p) => p.claimed_by === member.user_id));
+  const joinedCount = members.length;
+  const waitingCount = people.filter((p) => !p.claimed_by).length;
+  const guestsLine =
+    joinedCount === 0 && waitingCount === 0
+      ? 'Nobody has joined yet'
+      : `${joinedCount} joined${waitingCount > 0 ? ` · ${waitingCount} not here yet` : ''}`;
 
-  const chipLabel = (member: EventMember) =>
-    member.user_id === data.userId ? `${member.display_name} (you)` : member.display_name;
+  const selectedIds = missions.map((m) => m.id).filter((id) => selected.has(id));
+  const allSelected = missions.length > 0 && selectedIds.length === missions.length;
 
   // -------------------------------------------------------------------------
   // Actions
@@ -365,7 +466,7 @@ export default function MissionsScreen() {
   const confirmSwitchOff = () => {
     Alert.alert(
       'Switch missions off?',
-      'Nobody will get a mission. Your list is kept, in case you switch them back on.',
+      'Missions are off. Your list is kept.',
       [
         { text: 'Cancel', style: 'cancel' },
         { text: 'Switch off', style: 'destructive', onPress: () => void changePerGuest(null) },
@@ -373,85 +474,113 @@ export default function MissionsScreen() {
     );
   };
 
-  /** Link an existing name to a guest who joined. */
-  const link = (person: MissionPerson, member: EventMember) =>
-    writeOrToast(() => assignPerson(person.id, member.user_id), `Couldn't link ${person.name}.`);
-
-  /**
-   * A chip from the roster: the guest's own name goes on the list, linked to
-   * them. If that name is already there, offer to link it instead.
-   */
-  const addFromRoster = async (member: EventMember) => {
-    if (addingUserId) return;
-    setAddingUserId(member.user_id);
-
-    try {
-      // Not through `write`: the clash below is answered with a question, not an error.
-      const person = await addPerson(event.id, member.display_name);
-      await assignPerson(person.id, member.user_id);
-      await reload();
-    } catch (e) {
-      await reload();
-      const existing = people.find((person) => sameName(person.name, member.display_name));
-
-      if (isDuplicate(e) && existing) {
-        const holder = memberName(existing.claimed_by);
-        Alert.alert(
-          `“${existing.name}” is already on the list`,
-          holder
-            ? `It is linked to ${holder}. Link it to ${member.display_name} instead?`
-            : `Link it to ${member.display_name}? They get its missions.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Link', onPress: () => void link(existing, member) },
-          ]
-        );
-      } else {
-        toast.show({
-          initials: '!',
-          title: `Couldn't add ${member.display_name}.`,
-          message: describeWriteError(e),
-        });
-      }
-    } finally {
-      setAddingUserId(null);
-    }
+  const generate = async () => {
+    if (generating) return;
+    setGenerating(true);
+    await writeOrToast(() => generateMissions(event.id), "Couldn't generate missions.");
+    setGenerating(false);
   };
 
-  const confirmRemove = (person: Person) => {
+  /**
+   * The name row a joined guest's missions hang on: theirs if they hold one,
+   * else a new one in their display name, linked to them. A same-named row
+   * nobody holds is linked instead of duplicated.
+   */
+  const ensurePersonFor = async (member: EventMember): Promise<string> => {
+    const held = people.find((person) => person.claimed_by === member.user_id);
+    if (held) return held.id;
+
+    const free = people.find(
+      (person) => !person.claimed_by && sameName(person.name, member.display_name)
+    );
+    const personId = free ? free.id : (await addPerson(event.id, member.display_name)).id;
+    await assignPerson(personId, member.user_id);
+    return personId;
+  };
+
+  const assignTo = async (mission: EventMission, target: AssignTarget) => {
+    setAssignBusy(true);
+    const done = await writeOrToast(async () => {
+      const personId =
+        target.kind === 'anyone'
+          ? null
+          : target.kind === 'person'
+            ? target.personId
+            : target.kind === 'member'
+              ? await ensurePersonFor(target.member)
+              : (await addPerson(event.id, target.name)).id;
+      if (personId !== mission.person_id) await moveMission(mission.id, personId);
+    }, "Couldn't give the mission to them.");
+    setAssignBusy(false);
+    if (done) setAssigning(null);
+  };
+
+  const confirmDelete = () => {
+    const count = selectedIds.length;
+    if (count === 0) return;
+    Alert.alert(count === 1 ? 'Delete this mission?' : `Delete ${count} missions?`, undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () =>
+          void (async () => {
+            setDeleting(true);
+            const ok = await writeOrToast(
+              () => deleteMissions(selectedIds),
+              "Couldn't delete the missions."
+            );
+            setDeleting(false);
+            if (ok) {
+              setSelected(new Set());
+              setSelecting(false);
+            }
+          })(),
+      },
+    ]);
+  };
+
+  const confirmRemoveName = (person: Person) => {
     const count = person.missions.length;
     Alert.alert(
       `Remove ${person.name}?`,
       count > 0
-        ? `${count === 1 ? 'Their mission goes' : `Their ${count} missions go`} with them.`
-        : 'They stay in the group; only the name leaves the list.',
+        ? `${count === 1 ? 'Their mission goes' : `Their ${count} missions go`} back to anyone.`
+        : undefined,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => void writeOrToast(() => deletePerson(person.id), `Couldn't remove ${person.name}.`),
+          onPress: () =>
+            void writeOrToast(async () => {
+              // Their missions stay on the list, for anyone, rather than vanishing.
+              for (const mission of person.missions) await moveMission(mission.id, null);
+              await deletePerson(person.id);
+            }, `Couldn't remove ${person.name}.`),
         },
       ]
     );
   };
 
-  const openPersonMenu = (person: Person) => {
-    const holder = person.claimed_by ? (memberName(person.claimed_by) ?? 'their guest') : null;
+  const openNameMenu = (guest: Extract<Guest, { kind: 'named' }>) => {
+    const person = guest.person;
+    const unnamed = members.filter((m) => !people.some((p) => p.claimed_by === m.user_id));
 
-    // Android shows three buttons at most; this never needs more.
+    // Android shows three buttons at most, and iOS allows one cancel: build it.
+    const first = guest.member
+      ? {
+          text: `Unlink from ${guest.member.display_name}`,
+          onPress: () =>
+            void writeOrToast(() => assignPerson(person.id, null), `Couldn't unlink ${person.name}.`),
+        }
+      : unnamed.length > 0
+        ? { text: 'This is someone who joined', onPress: () => setLinkingName(person) }
+        : null;
+
     Alert.alert(person.name, undefined, [
-      holder
-        ? {
-            text: `Unlink from ${holder}`,
-            onPress: () =>
-              void writeOrToast(() => assignPerson(person.id, null), `Couldn't unlink ${person.name}.`),
-          }
-        : {
-            text: 'Link to someone who joined',
-            onPress: () => setLinkingId(person.id),
-          },
-      { text: `Remove ${person.name}`, style: 'destructive', onPress: () => confirmRemove(person) },
+      ...(first ? [first] : []),
+      { text: `Remove ${person.name}`, style: 'destructive', onPress: () => confirmRemoveName(person) },
       { text: 'Cancel', style: 'cancel' },
     ]);
   };
@@ -460,379 +589,330 @@ export default function MissionsScreen() {
   // The screen
   // -------------------------------------------------------------------------
 
+  // While selecting, the pinned area is the delete button; otherwise "Continue"
+  // (only when creating).
+  const bottom = selecting ? (
+    <PillButton
+      label={
+        deleting
+          ? 'Deleting…'
+          : selectedIds.length > 0
+            ? `Delete ${selectedIds.length}`
+            : 'Tick the missions to delete'
+      }
+      icon="trash-2"
+      variant="secondary"
+      disabled={deleting || selectedIds.length === 0}
+      onPress={confirmDelete}
+      style={styles.continue}
+    />
+  ) : (
+    continueButton
+  );
+
+  const unnamedMembers = members.filter((m) => !people.some((p) => p.claimed_by === m.user_id));
+
   return (
-    <Screen transparent edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
-        // iOS: the keyboard's height becomes inset, so an open row can scroll above it.
-        automaticallyAdjustKeyboardInsets
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => void refresh()}
-            tintColor={Colors.textMuted}
+    <View style={styles.root}>
+      {/* Something pinned at the bottom: then the bottom inset is the screen's. */}
+      <Screen transparent edges={bottom ? ['top', 'bottom'] : ['top']}>
+        <ScrollEdged bottomInset={bottom ? 0 : insets.bottom} >
+        <ScrollView
+          contentContainerStyle={[styles.content, { paddingBottom: Math.max(T.paddingBottom, Edge.bottom) }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          // iOS: the keyboard's height becomes inset, so an open row can scroll above it.
+          automaticallyAdjustKeyboardInsets
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => void refresh()}
+              tintColor={Colors.textMuted}
+            />
+          }>
+          {header}
+          <Intro
+            right={
+              !locked ? (
+                <ToggleSwitch
+                  value={missionsOn}
+                  disabled={pendingPerGuest !== undefined || selecting}
+                  onValueChange={(on) =>
+                    on ? void changePerGuest(MISSIONS_PER_GUEST_DEFAULT) : confirmSwitchOff()
+                  }
+                  accessibilityLabel="Missions"
+                />
+              ) : undefined
+            }
           />
-        }>
-        <ScreenHeader style={styles.header} />
-        <Intro />
 
-        {stale ? (
-          <Caption color={Colors.textMuted} style={styles.stale}>
-            Couldn&rsquo;t refresh — this may be out of date. Pull down to try again.
-          </Caption>
-        ) : null}
+          {stale ? (
+            <Caption color={Colors.textMuted} style={styles.stale}>
+              Couldn&rsquo;t refresh — this may be out of date. Pull down to try again.
+            </Caption>
+          ) : null}
 
-        {locked ? (
-          <View style={styles.lockNote} accessibilityRole="text">
-            <Feather name="lock" size={T.lockNote.iconSize} color={Colors.textMuted} />
-            <Body small color={Colors.textMuted} style={styles.flexText}>
-              {event.status === 'setup'
-                ? 'Locked — this event has ended.'
-                : 'Locked — the missions were dealt when the event started.'}
-            </Body>
-          </View>
-        ) : null}
-
-        {!missionsOn ? (
-          // ---------------------------------------------------------------- off
-          <View style={styles.empty}>
-            <View style={styles.emptyTile}>
-              <Feather name="target" size={T.empty.iconSize} color={Colors.textMuted} />
-            </View>
-            <Display size="xxs" style={styles.emptyHeadline}>
-              Missions are off.
-            </Display>
-            <Body small color={Colors.textDim} style={styles.centerText}>
-              {locked
-                ? 'This event has no missions. They can only be switched on before it starts.'
-                :'Give every guest a small photo challenge, like “A photo with someone you have never met”. You can rewrite the list before you start.'}
-            </Body>
-            {!locked ? (
-              <PillButton
-                label={pendingPerGuest !== undefined ? 'Switching on…' : 'Switch missions on'}
-                icon="target"
-                disabled={pendingPerGuest !== undefined}
-                onPress={() => void changePerGuest(MISSIONS_PER_GUEST_DEFAULT)}
-                style={styles.emptyButton}
-              />
-            ) : null}
-          </View>
-        ) : (
-          // ----------------------------------------------------------------- on
-          <LayoutAnimationConfig skipEntering>
-            {/* Missions per guest */}
-            <View style={styles.section}>
-              <Label small style={styles.label}>
-                Missions per guest
-              </Label>
-              {locked ? (
-                <Body color={Colors.textStrong}>{plural(perGuest ?? 0, 'mission', 'missions')} each</Body>
-              ) : (
-                <View accessibilityRole="radiogroup" style={styles.perGuestRow}>
-                  {PER_GUEST_CHOICES.map((count) => (
-                    <ChoicePillButton
-                      key={count}
-                      label={String(count)}
-                      selected={count === perGuest}
-                      disabled={pendingPerGuest !== undefined}
-                      onPress={() => {
-                        if (count !== perGuest) void changePerGuest(count);
-                      }}
-                    />
-                  ))}
-                </View>
-              )}
-
-              <Body small color={Colors.textDim} style={styles.summary}>
-                {plural(totalMissions, 'mission', 'missions')} ·{' '}
-                {plural(members.length, 'person', 'people')}
-                {locked ? '' : ' so far'}
+          {locked ? (
+            <View style={styles.lockNote} accessibilityRole="text">
+              <Feather name="lock" size={T.lockNote.iconSize} color={Colors.textMuted} />
+              <Body small color={Colors.textMuted} style={styles.flexText}>
+                {event.status === 'setup'
+                  ? 'Locked — this event has ended.'
+                  : 'Locked — the event has started.'}
               </Body>
-              {short ? (
-                <Caption color={Colors.textFaint} style={styles.summaryNote}>
-                  {perGuest === 1
-                    ? 'Some guests won’t get one.'
-                    : `Some guests will get fewer than ${perGuest}.`}
-                </Caption>
+            </View>
+          ) : null}
+
+          {!missionsOn ? (
+            // -------------------------------------------------------------- off
+            <View style={styles.empty}>
+              <View style={styles.emptyTile}>
+                <Feather name="target" size={T.empty.iconSize} color={Colors.textMuted} />
+              </View>
+              <Display size="xxs" style={styles.emptyHeadline}>
+                Missions are off.
+              </Display>
+              <Body small color={Colors.textDim} style={styles.centerText}>
+                {locked
+                  ? 'No missions. You can switch them on before the event starts.'
+                  : 'Give every guest a small photo mission. You can edit the list before the event starts.'}
+              </Body>
+              {!locked ? (
+                <PillButton
+                  label={pendingPerGuest !== undefined ? 'Switching on…' : 'Switch missions on'}
+                  icon="target"
+                  disabled={pendingPerGuest !== undefined}
+                  onPress={() => void changePerGuest(MISSIONS_PER_GUEST_DEFAULT)}
+                  style={styles.emptyButton}
+                />
               ) : null}
             </View>
-
-            {/* For specific people */}
-            <View style={styles.section}>
-              <Label small style={styles.label}>
-                For specific people
-              </Label>
-              <Caption color={Colors.textFaint} style={styles.caption}>
-                {locked
-                  ? 'Written for someone by name. They got these first.'
-                  : 'Write missions for someone by name. They get these first.'}
-              </Caption>
-
-              {people.map((person) => (
-                <Animated.View
-                  key={person.id}
-                  entering={ROW_IN}
-                  exiting={ROW_OUT}
-                  layout={ROW_LAYOUT}
-                  style={styles.personGap}>
-                  <PersonCard
-                    person={person}
-                    perGuest={perGuest ?? 0}
-                    locked={locked}
-                    holderName={memberName(person.claimed_by)}
-                    linking={linkingId === person.id}
-                    unnamed={unnamed}
-                    chipLabel={chipLabel}
-                    onMenu={() => openPersonMenu(person)}
-                    onLink={(member) => {
-                      setLinkingId(null);
-                      void link(person, member);
-                    }}
-                    onCancelLink={() => setLinkingId(null)}
-                    onAddMission={(body) => write(() => addMission(event.id, body, person.id))}
-                    onSaveMission={(id, body) => write(() => updateMission(id, body))}
-                    onDeleteMission={(id) => write(() => deleteMission(id))}
-                  />
-                </Animated.View>
-              ))}
-
-              {locked ? (
-                people.length === 0 ? (
-                  <Body small color={Colors.textDim}>
-                    Nobody was named.
-                  </Body>
-                ) : null
-              ) : (
-                <Animated.View layout={ROW_LAYOUT}>
-                  <MissionCard>
-                    <MissionRow
-                      key="add-person"
-                      addLabel="Add someone by name"
-                      placeholder="Their name"
-                      autoCapitalize="words"
-                      maxLength={NAME_MAX}
-                      validate={nameProblem}
-                      onSave={(name) => write(() => addPerson(event.id, name))}
-                    />
-                    {unnamed.length > 0 ? (
-                      <View key="roster" style={styles.rosterBlock}>
-                        <Caption color={Colors.textFaint} style={styles.rosterLabel}>
-                          Or pick someone who has joined
-                        </Caption>
-                        <View style={styles.chips}>
-                          {unnamed.map((member) => (
-                            <ChoicePillButton
-                              key={member.user_id}
-                              label={chipLabel(member)}
-                              icon="user-plus"
-                              disabled={addingUserId !== null}
-                              onPress={() => void addFromRoster(member)}
-                            />
-                          ))}
-                        </View>
-                      </View>
-                    ) : null}
-                  </MissionCard>
-                </Animated.View>
-              )}
-            </View>
-
-            {/* Everyone else */}
-            <View style={styles.section}>
-              <Label small style={styles.label}>
-                Everyone else
-              </Label>
-              <Caption color={Colors.textFaint} style={styles.caption}>
-                Dealt at random. Each mission goes to one guest only.
-              </Caption>
-
-              {locked && pool.length === 0 ? (
-                <Body small color={Colors.textDim}>
-                  The list was empty.
-                </Body>
-              ) : (
+          ) : (
+            // --------------------------------------------------------------- on
+            <LayoutAnimationConfig skipEntering>
+              {/* Who is in the group. */}
+              <View style={styles.section}>
                 <MissionCard>
-                  {pool.map((mission) => (
-                    <Animated.View
-                      key={mission.id}
-                      entering={ROW_IN}
-                      exiting={ROW_OUT}
-                      layout={ROW_LAYOUT}>
-                      <MissionRow
-                        body={mission.body}
-                        locked={locked}
-                        onSave={(body) => write(() => updateMission(mission.id, body))}
-                        onDelete={() => write(() => deleteMission(mission.id))}
-                      />
-                    </Animated.View>
-                  ))}
-                  {!locked ? (
-                    <Animated.View key="add-mission" layout={ROW_LAYOUT}>
-                      <MissionRow onSave={(body) => write(() => addMission(event.id, body))} />
-                    </Animated.View>
-                  ) : null}
+                  <PressScale
+                    key="guests"
+                    accessibilityRole="button"
+                    accessibilityLabel={`Guests. ${guestsLine}`}
+                    accessibilityHint="Shows everyone, and adds a name"
+                    disabled={selecting}
+                    onPress={() => setGuestsOpen(true)}
+                    scale={Press.cardScale}
+                    style={styles.cardRow}>
+                    <Feather name="users" size={T.row.iconSize} color={Colors.textMuted} />
+                    <View style={styles.rowCopy}>
+                      <Text style={styles.rowTitle}>Guests</Text>
+                      <Text style={styles.rowDetail}>{guestsLine}</Text>
+                    </View>
+                    <Feather name="chevron-right" size={T.count.iconSize} color={Colors.textMuted} />
+                  </PressScale>
                 </MissionCard>
-              )}
-            </View>
-
-            {!locked ? (
-              <View style={styles.footer}>
-                <PressScale
-                  accessibilityRole="button"
-                  onPress={confirmSwitchOff}
-                  disabled={pendingPerGuest !== undefined}
-                  hitSlop={T.footer.hitSlop}
-                  scale={Press.pillScale}>
-                  <Text style={styles.footerLink}>Switch missions off</Text>
-                </PressScale>
               </View>
-            ) : null}
-          </LayoutAnimationConfig>
-        )}
-      </ScrollView>
-    </Screen>
+
+              {/* The missions */}
+              <View style={styles.section}>
+                <View style={styles.labelRow}>
+                  <Label small>Missions</Label>
+                  {needed > 0 && !locked && !selecting ? (
+                    generating ? (
+                      <ActivityIndicator size="small" color={Colors.textMuted} />
+                    ) : (
+                      <TextButton label={`+ Add ${needed}`} strong onPress={() => void generate()} />
+                    )
+                  ) : null}
+                  {selecting ? (
+                    <TextButton
+                      label={allSelected ? 'Deselect all' : 'Select all'}
+                      onPress={() =>
+                        setSelected(allSelected ? new Set() : new Set(missions.map((m) => m.id)))
+                      }
+                    />
+                  ) : null}
+                </View>
+                <Caption color={Colors.textFaint} style={styles.caption}>
+                  {needed > 0 && !locked
+                    ? `Only ${plural(totalMissions, 'mission', 'missions')} for ${group} guests — some would get none. "Add" fills the list from ideas.`
+                    : locked
+                    ? 'Named missions went to that guest. The rest were random.'
+                    : 'Tap a person to assign a mission. The rest are random.'}
+                </Caption>
+
+                {locked && missions.length === 0 ? (
+                  <Body small color={Colors.textDim}>
+                    The list was empty.
+                  </Body>
+                ) : (
+                  // Opaque, like the rows that slide over Delete, so the card is one surface.
+                  <MissionCard style={styles.swipeRow}>
+                    {!locked && !selecting ? (
+                      <MissionRow
+                        key="add-mission"
+                        onSave={(body) => write(() => addMission(event.id, body))}
+                      />
+                    ) : null}
+                    {missions.map((mission) => (
+                      <Animated.View
+                        key={mission.id}
+                        entering={ROW_IN}
+                        exiting={ROW_OUT}
+                        layout={ROW_LAYOUT}>
+                        <SwipeToDelete
+                          enabled={!locked && !selecting && !editingRows.has(mission.id)}
+                          label={mission.body}
+                          onDelete={() =>
+                            void writeOrToast(
+                              () => deleteMission(mission.id),
+                              "Couldn't delete the mission."
+                            )
+                          }>
+                          <MissionRow
+                            body={mission.body}
+                            locked={locked}
+                            selecting={selecting}
+                            selected={selected.has(mission.id)}
+                            onToggle={() =>
+                              setSelected((previous) => {
+                                const next = new Set(previous);
+                                if (next.has(mission.id)) next.delete(mission.id);
+                                else next.add(mission.id);
+                                return next;
+                              })
+                            }
+                            onEditingChange={(editing) => setRowEditing(mission.id, editing)}
+                            onSave={(body) => write(() => updateMission(mission.id, body))}
+                            trailing={
+                              <AssigneeChip
+                                name={nameOf(mission.person_id)}
+                                locked={locked}
+                                onPress={() => setAssigning(mission)}
+                              />
+                            }
+                          />
+                        </SwipeToDelete>
+                      </Animated.View>
+                    ))}
+                  </MissionCard>
+                )}
+              </View>
+            </LayoutAnimationConfig>
+          )}
+        </ScrollView>
+        </ScrollEdged>
+        {bottom}
+      </Screen>
+
+      {assigning ? (
+        <AssignSheet
+          mission={assigning}
+          guests={guests}
+          selfId={data.userId}
+          busy={assignBusy}
+          onAssign={(target) => void assignTo(assigning, target)}
+          onClose={() => setAssigning(null)}
+        />
+      ) : null}
+
+      {guestsOpen ? (
+        <GuestsSheet
+          guests={guests}
+          selfId={data.userId}
+          perGuest={perGuest ?? 0}
+          locked={locked}
+          countFor={(guest) => (guest.kind === 'named' ? guest.person.missions.length : 0)}
+          onAddName={(name) => write(() => addPerson(event.id, name))}
+          onNameMenu={openNameMenu}
+          onClose={() => {
+            setGuestsOpen(false);
+            setLinkingName(null);
+          }}
+          linking={
+            linkingName
+              ? {
+                  name: linkingName.name,
+                  members: unnamedMembers,
+                  onPick: (member) => {
+                    const person = linkingName;
+                    setLinkingName(null);
+                    void writeOrToast(
+                      () => assignPerson(person.id, member.user_id),
+                      `Couldn't link ${person.name}.`
+                    );
+                  },
+                  onCancel: () => setLinkingName(null),
+                }
+              : null
+          }
+        />
+      ) : null}
+    </View>
   );
 }
 
 // ---------------------------------------------------------------------------
 
 /** The headline and its one line, the same in every state. */
-function Intro() {
+function Intro({ right }: { right?: React.ReactNode }) {
   return (
     <>
-      <Display size="md" style={styles.headline}>
-        Missions
-      </Display>
+      <View style={styles.titleRow}>
+        <Display size="md" style={styles.title}>
+          Missions
+        </Display>
+        {right}
+      </View>
       <Body small color={Colors.textDim} style={styles.intro}>
-        Each guest gets their own. Edit them before you start — after that they&rsquo;re locked.
+        Small photo challenges, one card per guest. Edit them until you start the event.
       </Body>
     </>
   );
 }
 
-type PersonCardProps = {
-  person: Person;
-  perGuest: number;
-  locked: boolean;
-  /** The joined guest who holds this name, if any. */
-  holderName: string | undefined;
-  /** Showing the "who is this?" chips. */
-  linking: boolean;
-  unnamed: EventMember[];
-  chipLabel: (member: EventMember) => string;
-  onMenu: () => void;
-  onLink: (member: EventMember) => void;
-  onCancelLink: () => void;
-  onAddMission: (body: string) => Promise<void>;
-  onSaveMission: (missionId: string, body: string) => Promise<void>;
-  onDeleteMission: (missionId: string) => Promise<void>;
+type SwipeProps = {
+  enabled: boolean;
+  label: string;
+  onDelete: () => void;
+  children: React.ReactNode;
 };
 
-/** One named person: who they are, whether they joined, and their missions. */
-function PersonCard({
-  person,
-  perGuest,
-  locked,
-  holderName,
-  linking,
-  unnamed,
-  chipLabel,
-  onMenu,
-  onLink,
-  onCancelLink,
-  onAddMission,
-  onSaveMission,
-  onDeleteMission,
-}: PersonCardProps) {
-  const joined = person.claimed_by !== null;
-  const status = joined
-    ? holderName && !sameName(holderName, person.name)
-      ? `Joined as ${holderName}`
-      : 'Joined'
-    : locked
-      ? 'Never joined'
-      : 'Will pick their name when joining';
-
-  const count = person.missions.length;
-  /** They are dealt at most `perGuest`; say so when more were written. */
-  const overflow = perGuest > 0 && count > perGuest;
+/** Swipe a row left for Delete, as in Mail and Reminders. */
+function SwipeToDelete({ enabled, label, onDelete, children }: SwipeProps) {
+  const ref = useRef<SwipeableMethods>(null);
 
   return (
-    <MissionCard>
-      <View key="header" style={styles.personHeader}>
-        <View style={styles.personCopy}>
-          <View style={styles.nameRow}>
-            <View
-              style={[styles.dot, { backgroundColor: joined ? Colors.green : T.person.waitingDot }]}
-            />
-            <Text style={styles.personName}>{person.name}</Text>
-          </View>
-          <Text style={styles.personStatus}>{status}</Text>
-          {overflow ? (
-            <Text style={styles.personStatus}>
-              Gets {perGuest} of these {count}, at {perGuest} per guest.
-            </Text>
-          ) : null}
-        </View>
-        {!locked ? (
-          <PressScale
-            accessibilityRole="button"
-            accessibilityLabel={`Options for ${person.name}`}
-            onPress={onMenu}
-            scale={Press.iconScale}
-            style={styles.personAction}>
-            <Feather name="more-horizontal" size={T.row.iconSize} color={Colors.textMuted} />
-          </PressScale>
-        ) : null}
-      </View>
-
-      {linking && !locked ? (
-        <View key="linking" style={styles.rosterBlock}>
-          <Caption color={Colors.textFaint} style={styles.rosterLabel}>
-            {unnamed.length > 0
-              ? `Who is ${person.name}?`
-              : 'Everyone who has joined already has a name.'}
-          </Caption>
-          <View style={styles.chips}>
-            {unnamed.map((member) => (
-              <ChoicePillButton
-                key={member.user_id}
-                label={chipLabel(member)}
-                icon="link"
-                onPress={() => onLink(member)}
-              />
-            ))}
-          </View>
-          <View style={styles.linkCancel}>
-            <TextButton label="Cancel" onPress={onCancelLink} />
-          </View>
-        </View>
-      ) : null}
-
-      {person.missions.map((mission) => (
-        <Animated.View key={mission.id} entering={ROW_IN} exiting={ROW_OUT} layout={ROW_LAYOUT}>
-          <MissionRow
-            body={mission.body}
-            locked={locked}
-            onSave={(body) => onSaveMission(mission.id, body)}
-            onDelete={() => onDeleteMission(mission.id)}
-          />
-        </Animated.View>
-      ))}
-
-      {!locked ? (
-        <Animated.View key="add" layout={ROW_LAYOUT}>
-          <MissionRow addLabel={`Add a mission for ${person.name}`} onSave={onAddMission} />
-        </Animated.View>
-      ) : null}
-    </MissionCard>
+    <ReanimatedSwipeable
+      ref={ref}
+      enabled={enabled}
+      friction={2}
+      rightThreshold={T.swipe.actionWidth / 2}
+      overshootRight={false}
+      childrenContainerStyle={styles.swipeRow}
+      renderRightActions={() => (
+        <PressScale
+          accessibilityRole="button"
+          accessibilityLabel={`Delete mission: ${label}`}
+          onPress={() => {
+            ref.current?.close();
+            onDelete();
+          }}
+          scale={Press.cardScale}
+          style={styles.swipeAction}>
+          <Feather name="trash-2" size={T.swipe.iconSize} color={Colors.text} />
+          <Text style={styles.swipeLabel}>Delete</Text>
+        </PressScale>
+      )}>
+      {children}
+    </ReanimatedSwipeable>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   content: {
     flexGrow: 1,
     paddingBottom: T.paddingBottom,
@@ -840,8 +920,19 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: T.backGap,
   },
-  headline: {
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.row.gap,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.row.gap,
     marginBottom: T.headlineGap,
+  },
+  title: {
+    flex: 1,
   },
   intro: {
     marginBottom: T.introGap,
@@ -906,86 +997,59 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: T.sectionGap,
   },
-  label: {
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: T.labelGap,
   },
   caption: {
     marginBottom: T.captionGap,
   },
-  perGuestRow: {
+  cardRow: {
     flexDirection: 'row',
-    gap: T.perGuest.gap,
-  },
-  summary: {
-    marginTop: T.captionGap,
-  },
-  summaryNote: {
-    marginTop: T.summaryNoteGap,
-  },
-  personGap: {
-    marginBottom: T.cardGap,
-  },
-  personHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: T.person.headerGap,
+    alignItems: 'center',
+    gap: T.row.gap,
     paddingVertical: T.row.paddingY,
     paddingHorizontal: T.row.paddingX,
   },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: T.person.dotGap,
-  },
-  dot: {
-    width: T.person.dotSize,
-    height: T.person.dotSize,
-    borderRadius: T.person.dotSize / 2,
-  },
-  personCopy: {
+  rowCopy: {
     flex: 1,
     minWidth: 0,
     gap: T.person.statusGap,
   },
-  personName: {
+  rowTitle: {
     ...Typography.titleMd,
     color: Colors.text,
   },
-  personStatus: {
+  rowDetail: {
     ...Typography.metaMd,
     color: Colors.textFaint,
   },
-  personAction: {
-    width: T.row.actionSize,
-    height: T.row.actionSize,
-    marginVertical: T.row.actionInset,
-    marginRight: T.row.actionInset,
+  actionLabel: {
+    ...Typography.titleSm,
+    color: Colors.text,
+    flex: 1,
+  },
+  actionBusy: {
+    color: Colors.textMuted,
+  },
+  swipeRow: {
+    backgroundColor: T.swipe.rowBg,
+  },
+  swipeAction: {
+    width: T.swipe.actionWidth,
+    alignSelf: 'stretch',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: T.swipe.gap,
+    backgroundColor: T.swipe.bg,
   },
-  rosterBlock: {
-    paddingVertical: T.row.paddingY,
-    paddingHorizontal: T.row.paddingX,
+  swipeLabel: {
+    ...Typography.metaMd,
+    color: Colors.text,
   },
-  rosterLabel: {
-    marginBottom: T.roster.labelGap,
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: T.roster.gap,
-  },
-  linkCancel: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: T.roster.bottomGap,
-  },
-  footer: {
-    alignItems: 'center',
-    paddingTop: T.footer.paddingTop - T.sectionGap,
-  },
-  footerLink: {
-    ...Typography.titleSm,
-    color: Colors.textMuted,
+  continue: {
+    marginTop: T.continueGap,
   },
 });

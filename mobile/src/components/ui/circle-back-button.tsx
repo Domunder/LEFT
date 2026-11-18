@@ -16,7 +16,7 @@
  * `variant` is the fuller control and wins when both are given.
  */
 
-import { Feather } from '@expo/vector-icons';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
@@ -31,6 +31,8 @@ export type CircleButtonVariant = 'flat' | 'glass' | 'light' | 'outline';
 
 type CircleIconButtonProps = {
   icon?: React.ComponentProps<typeof Feather>['name'];
+  /** A glyph Feather lacks (10's QR code); replaces `icon` when given. */
+  materialIcon?: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
   onPress?: () => void;
   /** Blurred glass fill, for use over video. Shorthand for variant="glass". */
   glass?: boolean;
@@ -48,6 +50,7 @@ type CircleIconButtonProps = {
 /** Generic circular icon button — the base for back, info, settings and plus. */
 export function CircleIconButton({
   icon = 'chevron-left',
+  materialIcon,
   onPress,
   glass = false,
   variant,
@@ -60,12 +63,11 @@ export function CircleIconButton({
   const resolved: CircleButtonVariant = variant ?? (glass ? 'glass' : 'flat');
   const dimensions = { width: size, height: size, borderRadius: size / 2 };
 
-  const content = (
-    <Feather
-      name={icon}
-      size={iconSize}
-      color={iconColor ?? (resolved === 'light' ? Colors.onLight : Colors.textMuted)}
-    />
+  const color = iconColor ?? (resolved === 'light' ? Colors.onLight : Colors.textMuted);
+  const content = materialIcon ? (
+    <MaterialCommunityIcons name={materialIcon} size={iconSize} color={color} />
+  ) : (
+    <Feather name={icon} size={iconSize} color={color} />
   );
 
   return (

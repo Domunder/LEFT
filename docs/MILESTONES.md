@@ -85,7 +85,7 @@ Zum Vergleich ONCE: bis 5 Gäste gratis, 10 → 2 CHF, 25 → 4, 50 → 14, 100 
   neue Schema hat.
 
 Vorläufig entschieden (bitte widersprechen, falls falsch): Looks heissen
-Golden, Chrome, Faded, Mono; Events dauern höchstens 31 Tage; nach Event-Ende kann man per Link
+Golden, Chrome, Faded, Mono; Events dauern höchstens 62 Tage (zwei Monate); nach Event-Ende kann man per Link
 weiterhin beitreten, um das Album zu sehen; ein belichtetes Bild wird nie
 zurückerstattet.
 

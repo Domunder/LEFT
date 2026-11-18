@@ -12,12 +12,15 @@
  */
 
 import { ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { ScrollEdged } from '@/components/ui/scroll-edge';
 
 import { Body, Caption, Display, Label } from '@/components/ui/typography';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import type { LegalBlock, LegalSection } from '@/constants/legal';
-import { Colors, LegalPage as Token, Spacing } from '@/constants/theme';
+import { Colors, LegalPage as Token, ScrollEdge as Edge, Spacing } from '@/constants/theme';
 
 type LegalPageProps = {
   title: string;
@@ -31,13 +34,15 @@ type LegalPageProps = {
 };
 
 export function LegalPageView({ title, updated, intro, sections, draftNotice }: LegalPageProps) {
+  const insets = useSafeAreaInsets();
   return (
     <Screen edges={['top']}>
       <ScreenHeader />
 
+      <ScrollEdged bottomInset={insets.bottom}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: Math.max(Token.paddingBottom, Edge.bottom) }]}
         // The document is the whole screen; let the scroll position survive a
         // rotation or a keyboard rather than snapping back to the top.
         contentInsetAdjustmentBehavior="automatic">
@@ -65,6 +70,7 @@ export function LegalPageView({ title, updated, intro, sections, draftNotice }: 
           </View>
         ))}
       </ScrollView>
+      </ScrollEdged>
     </Screen>
   );
 }

@@ -64,6 +64,11 @@ export function pinchZoom(from: number, scale: number, device: ZoomDevice): numb
   return Math.min(device.maxZoom, Math.max(device.minZoom, from * scale));
 }
 
+/** A zoom factor as the camera says it — "1.2×" — relative to the wide lens. */
+export function zoomLabel(zoom: number, device: ZoomDevice): string {
+  return label(zoom / wideZoom(device));
+}
+
 /** The stop a zoom factor sits on, if it sits on one. */
 export function stopAt(stops: ZoomStop[], zoom: number): ZoomStop | undefined {
   return stops.find((stop) => Math.abs(stop.zoom - zoom) < 0.01);

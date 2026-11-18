@@ -3,25 +3,33 @@
  *
  * `MissionRow` is both an existing mission and the "Add a mission" row at the
  * end of a list — the same row, so the composer opens exactly where the new
- * mission will appear. Tap the text to edit it in place; Return or "Save"
- * commits, "Cancel" puts the old text back.
+ * mission will appear. Tap the text to edit it in place; Return, "Save" or
+ * leaving the row commits — there is no Cancel (decided 2026-11-18 by the
+ * user), as in Reminders.
  *
  * The row validates before it asks the server (3–140 characters, the
  * migration's `check`), and shows the server's refusal under the input when it
  * comes anyway. It never changes the list itself: the screen re-reads the list
  * after every write, so what is drawn is what the server holds.
  *
- * A blur keeps the draft. Leaving a half-written mission by scrolling must not
- * throw it away — the row stays open, with its Cancel and Save, until one of
- * them is pressed. An untouched draft simply closes.
+ * A blur saves. An untouched or emptied composer simply closes; a draft the
+ * server or the length check refuses stays open with the reason under it.
  *
  * `MissionCard` is the bordered card the rows sit in (20's settings card), and
  * draws the dividers so a row does not need to know whether it is last.
  */
 
 import { Feather } from '@expo/vector-icons';
-import { Children, Fragment, isValidElement, useState, type ReactNode } from 'react';
-import { StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { PressScale } from '@/components/ui/press-scale';
 import { Colors, MissionsEditor as T, Press } from '@/constants/theme';
@@ -92,6 +100,19 @@ type MissionRowProps = {
   maxLength?: number;
   placeholder?: string;
   autoCapitalize?: 'none' | 'sentences' | 'words';
+  /**
+   * Select mode: the row is a checkbox — a tap toggles it, nothing edits or
+   * deletes. Existing rows only; a composer renders nothing while selecting.
+   */
+  selecting?: boolean;
+  selected?: boolean;
+  onToggle?: () => void;
+  /** Told when the row opens or closes its editor (a swipe must not delete then). */
+  onEditingChange?: (editing: boolean) => void;
+  /** Existing rows: drawn after the text instead of the delete button. */
+  trailing?: ReactNode;
+  /** A composer that opens as soon as it mounts (the Guests sheet's +). */
+  startOpen?: boolean;
 };
 
 export function MissionRow({
@@ -104,10 +125,23 @@ export function MissionRow({
   maxLength = MISSION_BODY_MAX,
   placeholder = 'A photo with…',
   autoCapitalize = 'sentences',
+  selecting = false,
+  selected = false,
+  onToggle,
+  onEditingChange,
+  trailing,
+  startOpen = false,
 }: MissionRowProps) {
   const composer = body === undefined;
 
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(startOpen);
+
+  // Read through a ref so a new callback identity is not an editing change.
+  const editingListener = useRef(onEditingChange);
+  editingListener.current = onEditingChange;
+  useEffect(() => {
+    editingListener.current?.(editing);
+  }, [editing]);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,9 +162,13 @@ export function MissionRow({
   const unchanged = !composer && trimmed === body?.trim();
   const problem = validate(draft);
 
-  const commit = async () => {
-    if (busy) return;
-    if (unchanged) {
+  /** Blur and a button can land together; only one save may run. */
+  const saving = useRef(false);
+
+  /** `leaving`: the field lost focus, so a composer closes after adding. */
+  const commit = async (leaving = false) => {
+    if (saving.current) return;
+    if (unchanged || (composer && trimmed.length === 0)) {
       close();
       return;
     }
@@ -139,11 +177,12 @@ export function MissionRow({
       return;
     }
 
+    saving.current = true;
     setBusy(true);
     setError(null);
     try {
       await onSave(trimmed);
-      if (composer) {
+      if (composer && !leaving) {
         // Stay open and focused for the next one, as a list app does.
         setDraft('');
       } else {
@@ -152,6 +191,7 @@ export function MissionRow({
     } catch (e) {
       setError(messageFor(e));
     } finally {
+      saving.current = false;
       setBusy(false);
     }
   };
@@ -169,13 +209,50 @@ export function MissionRow({
     }
   };
 
+  /*
+    A list of missions (rows with a trailing assignee) and every composer get a
+    leading column the width of Select's check, so the text of a mission, the
+    "+ Add" label and a ticked row all start on the same line — as in Reminders.
+  */
+  const listed = composer || trailing !== undefined;
+  const bullet = listed ? (
+    <View style={styles.lead}>
+      <View style={styles.bullet} />
+    </View>
+  ) : null;
+  /** Keeps the text on the mission column where there is no bullet. */
+  const spacer = listed ? <View style={styles.lead} /> : null;
+
   // -- read-only ------------------------------------------------------------
   if (locked) {
     if (composer) return null;
     return (
       <View style={styles.row}>
-        <Text style={[styles.body, styles.bodyLocked]}>{body}</Text>
+        {bullet}
+        <Text style={[styles.body, styles.bodyLocked, styles.selectBody]}>{body}</Text>
+        {trailing}
       </View>
+    );
+  }
+
+  // -- select mode ----------------------------------------------------------
+  if (selecting) {
+    if (composer) return null;
+    return (
+      <PressScale
+        accessibilityRole="checkbox"
+        accessibilityState={{ checked: selected }}
+        accessibilityLabel={body}
+        onPress={onToggle}
+        scale={Press.cardScale}
+        style={styles.row}>
+        <View style={[styles.check, selected && styles.checkOn]}>
+          {selected ? (
+            <Feather name="check" size={T.select.iconSize} color={Colors.onLight} />
+          ) : null}
+        </View>
+        <Text style={[styles.body, styles.selectBody]}>{body}</Text>
+      </PressScale>
     );
   }
 
@@ -186,6 +263,8 @@ export function MissionRow({
 
     return (
       <View style={styles.editing}>
+        <View style={styles.editRow}>
+        {composer ? spacer : bullet}
         <TextInput
           value={draft}
           onChangeText={(text) => {
@@ -198,10 +277,8 @@ export function MissionRow({
           submitBehavior="submit"
           returnKeyType={composer ? 'next' : 'done'}
           onSubmitEditing={() => void commit()}
-          onBlur={() => {
-            // An untouched draft closes; anything typed waits for Save or Cancel.
-            if (composer ? trimmed.length === 0 : unchanged) close();
-          }}
+          // Leaving the row saves it, as in Reminders.
+          onBlur={() => void commit(true)}
           maxLength={maxLength}
           autoCapitalize={autoCapitalize}
           editable={!busy}
@@ -211,25 +288,24 @@ export function MissionRow({
           accessibilityLabel={composer ? addLabel : 'Edit mission'}
           style={[styles.body, styles.input]}
         />
+        {/* The + (or ✓ when editing) is the button that adds: where the eye ends. */}
+        <SubmitButton
+          icon={composer ? 'plus' : 'check'}
+          label={composer ? addLabel : 'Save mission'}
+          busy={busy}
+          disabled={problem !== null || unchanged}
+          onPress={() => void commit()}
+        />
+        </View>
 
-        <View style={styles.footer}>
+        {error || showCounter ? (
           <Text
-            style={[styles.meta, error ? styles.error : null]}
+            style={[styles.meta, listed && styles.footerIndented, error ? styles.error : null]}
             accessibilityLiveRegion="polite"
             numberOfLines={3}>
-            {error ?? (showCounter ? `${draft.length}/${maxLength}` : '')}
+            {error ?? `${draft.length}/${maxLength}`}
           </Text>
-
-          <View style={styles.footerButtons}>
-            <TextButton label="Cancel" onPress={close} disabled={busy} />
-            <TextButton
-              label={busy ? 'Saving…' : composer ? 'Add' : 'Save'}
-              onPress={() => void commit()}
-              disabled={busy || problem !== null || unchanged}
-              strong
-            />
-          </View>
-        </View>
+        ) : null}
       </View>
     );
   }
@@ -243,8 +319,11 @@ export function MissionRow({
         onPress={open}
         scale={Press.cardScale}
         style={styles.row}>
-        <Feather name="plus" size={T.row.iconSize} color={Colors.textMuted} />
+        {spacer}
         <Text style={[styles.body, styles.addLabel]}>{addLabel}</Text>
+        <View style={[styles.submit, styles.submitOn]}>
+          <Feather name="plus" size={T.lead.plusIconSize} color={Colors.onLight} />
+        </View>
       </PressScale>
     );
   }
@@ -252,6 +331,7 @@ export function MissionRow({
   // -- an existing mission --------------------------------------------------
   return (
     <View style={styles.row}>
+      {bullet}
       <PressScale
         accessibilityRole="button"
         accessibilityLabel={body}
@@ -264,7 +344,9 @@ export function MissionRow({
         {error ? <Text style={[styles.rowError, styles.error]}>{error}</Text> : null}
       </PressScale>
 
-      {onDelete ? (
+      {trailing !== undefined ? (
+        trailing
+      ) : onDelete ? (
         <PressScale
           accessibilityRole="button"
           accessibilityLabel={`Delete mission: ${body}`}
@@ -284,6 +366,40 @@ export function MissionRow({
 }
 
 // ---------------------------------------------------------------------------
+
+type SubmitProps = {
+  icon: 'plus' | 'check';
+  label: string;
+  busy: boolean;
+  disabled: boolean;
+  onPress: () => void;
+};
+
+/** The round + / ✓ at the end of an open row — the same column as the assignee chips. */
+function SubmitButton({ icon, label, busy, disabled, onPress }: SubmitProps) {
+  const off = disabled || busy;
+  return (
+    <PressScale
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: off, busy }}
+      onPress={onPress}
+      disabled={off}
+      hitSlop={T.chip.hitSlop}
+      scale={Press.iconScale}
+      style={[styles.submit, off ? styles.submitOff : styles.submitOn]}>
+      {busy ? (
+        <ActivityIndicator size="small" color={Colors.textMuted} />
+      ) : (
+        <Feather
+          name={icon}
+          size={T.lead.plusIconSize}
+          color={off ? Colors.textGhost : Colors.onLight}
+        />
+      )}
+    </PressScale>
+  );
+}
 
 type TextButtonProps = {
   label: string;
@@ -348,6 +464,55 @@ const styles = StyleSheet.create({
   },
   addLabel: {
     color: Colors.textMuted,
+    flex: 1,
+  },
+  lead: {
+    width: T.lead.size,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bullet: {
+    width: T.lead.bulletSize,
+    height: T.lead.bulletSize,
+    borderRadius: T.lead.bulletSize / 2,
+    backgroundColor: T.lead.bulletColor,
+  },
+  submit: {
+    width: T.chip.height,
+    height: T.chip.height,
+    borderRadius: T.chip.height / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitOn: {
+    backgroundColor: Colors.text,
+  },
+  submitOff: {
+    backgroundColor: Colors.surfaceSubtle,
+  },
+  editRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.row.gap,
+  },
+  footerIndented: {
+    paddingLeft: T.lead.size + T.row.gap,
+  },
+  check: {
+    width: T.select.size,
+    height: T.select.size,
+    borderRadius: T.select.size / 2,
+    borderWidth: 1.5,
+    borderColor: T.select.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkOn: {
+    backgroundColor: Colors.text,
+    borderColor: Colors.text,
+  },
+  selectBody: {
+    flex: 1,
   },
   action: {
     width: T.row.actionSize,
@@ -364,6 +529,7 @@ const styles = StyleSheet.create({
     gap: T.editor.footerGap,
   },
   input: {
+    flex: 1,
     color: Colors.text,
     padding: 0,
     textAlignVertical: 'top',
@@ -381,7 +547,6 @@ const styles = StyleSheet.create({
   meta: {
     ...Typography.metaMd,
     color: Colors.textFaint,
-    flex: 1,
   },
   rowError: {
     ...Typography.metaMd,

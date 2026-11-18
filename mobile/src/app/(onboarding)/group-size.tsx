@@ -37,7 +37,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, type ScrollViewInstance } from 'react-native';
+import { ScrollView, StyleSheet, Text, type ScrollViewInstance } from 'react-native';
 import Animated, { Easing, FadeInDown, LinearTransition } from 'react-native-reanimated';
 
 import { GroupSizeRow } from '@/components/ui/group-size-row';
@@ -135,19 +135,19 @@ export default function GroupSizeScreen() {
   function selectGroup(next: number) {
     if (next === groupSize) return;
     // Web has no haptics engine; calling through is a no-op but noisy in logs.
-    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    void Haptics.selectionAsync();
     setGroupSize(next);
   }
 
   function selectRoll(next: RollSize) {
     if (next === rollSize) return;
-    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    void Haptics.selectionAsync();
     setRollSize(next);
   }
 
   function selectMissions(next: number | null) {
     if (next === missionsPerGuest) return;
-    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    void Haptics.selectionAsync();
     if (missionsPerGuest === null && next !== null) revealMissions.current = true;
     setMissionsPerGuest(next);
   }
@@ -186,8 +186,8 @@ export default function GroupSizeScreen() {
       */
       creation.fail(
         narrowed.problem === 'ended'
-          ? 'That ending time has already passed. Pick a new one to continue.'
-          : 'Something is missing from your film. Go back and fill it in.',
+          ? 'That end time has passed. Pick a new one.'
+          : 'Something is missing. Go back and fill it in.',
         narrowed.problem === 'ended' ? 'ending' : undefined
       );
       return;
@@ -207,8 +207,14 @@ export default function GroupSizeScreen() {
     // starts prefilled with this one's answers.
     reset();
 
-    // 09 reads this param; it falls back to the newest event only when missing.
-    router.replace({ pathname: '/(host)/invite', params: { eventId: event.id } });
+    // With missions on, the host plans them first (Missions → 09 → 10); 10 keeps
+    // its Missions row for edits until the start. 09 reads `eventId`; it falls
+    // back to the newest event only when missing.
+    if (event.missions_per_guest != null) {
+      router.replace({ pathname: '/(host)/missions', params: { eventId: event.id, from: 'create' } });
+    } else {
+      router.replace({ pathname: '/(host)/invite', params: { eventId: event.id } });
+    }
   }
 
   return (
@@ -221,7 +227,7 @@ export default function GroupSizeScreen() {
       */}
       <Display size="sm" style={styles.headline}>
         How many people{'\n'}
-        <Em>for your moment?</Em>
+        <Em>for your event?</Em>
       </Display>
 
       <Body small style={styles.subcopy}>

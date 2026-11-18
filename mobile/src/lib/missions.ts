@@ -35,6 +35,8 @@ export type Mission = {
 export const MISSIONS_PER_GUEST_MIN = 1;
 export const MISSIONS_PER_GUEST_MAX = 3;
 export const MISSIONS_PER_GUEST_DEFAULT = 1;
+/** `max_event_missions()`: personal and shared together. The server is the authority. */
+export const MAX_EVENT_MISSIONS = 200;
 
 /** Someone else already claimed that name. */
 export class MissionNameTakenError extends Error {
@@ -208,6 +210,36 @@ export async function updateMission(missionId: string, body: string): Promise<vo
 export async function deleteMission(missionId: string): Promise<void> {
   const { error } = await getSupabase().from('event_missions').delete().eq('id', missionId);
   if (error) throw describeLocked(error);
+}
+
+/** Delete several missions at once (Select mode). */
+export async function deleteMissions(missionIds: string[]): Promise<void> {
+  if (missionIds.length === 0) return;
+  const { error } = await getSupabase().from('event_missions').delete().in('id', missionIds);
+  if (error) throw describeLocked(error);
+}
+
+/**
+ * Move a mission onto a named person (personal) or, with `personId` null, back
+ * to the shared list. The foreign key keeps it inside its own event.
+ */
+export async function moveMission(missionId: string, personId: string | null): Promise<void> {
+  const { error } = await getSupabase()
+    .from('event_missions')
+    .update({ person_id: personId })
+    .eq('id', missionId);
+  if (error) throw describeLocked(error);
+}
+
+/**
+ * Top the shared list up until it covers the whole group (`max_members` ×
+ * per guest), from the event's mission library. Returns how many were added;
+ * 0 when the list was already long enough.
+ */
+export async function generateMissions(eventId: string): Promise<number> {
+  const { data, error } = await getSupabase().rpc('generate_missions', { p_event_id: eventId });
+  if (error) throw describeLocked(error);
+  return data ?? 0;
 }
 
 /** List a name for personal missions. */

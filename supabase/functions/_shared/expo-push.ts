@@ -42,8 +42,8 @@ export function bodyFor(kind: NotificationKind, shotsLeft: number | null): strin
   }
 
   if (shotsLeft === null) return 'Ends in about an hour. Last chance to take a few more.';
-  if (shotsLeft === 1) return 'Ends in about an hour. You have 1 shot left.';
-  return `Ends in about an hour. You have ${shotsLeft} shots left.`;
+  if (shotsLeft === 1) return 'Ends in about an hour. You have 1 photo left.';
+  return `Ends in about an hour. You have ${shotsLeft} photos left.`;
 }
 
 export function buildMessages(

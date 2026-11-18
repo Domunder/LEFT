@@ -23,7 +23,6 @@
 import * as Haptics from 'expo-haptics';
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Platform,
   StyleSheet,
   Text,
   View,
@@ -187,7 +186,7 @@ export function Wheel({
     if (selected === lastReported.current) return;
     lastReported.current = selected;
     // Web has no haptics engine; calling through is a no-op but noisy in logs.
-    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    void Haptics.selectionAsync();
     onIndexChange(selected);
   }
 

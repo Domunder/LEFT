@@ -29,7 +29,7 @@
 import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, Share, StyleSheet, View, type ViewInstance } from 'react-native';
+import { Share, StyleSheet, View, type ViewInstance } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { captureRef } from 'react-native-view-shot';
 
@@ -49,12 +49,6 @@ const EASING = Easing.bezier(...Motion.bezier).factory();
 /** The QR block trails the headline in, as the dial does on 05.1. */
 const ENTER_DELAY = { code: 120 } as const;
 
-/**
- * Saving needs a real photo library and a native view to capture — neither exists
- * in a browser, and Expo Go has no view-shot module.
- */
-const CAN_SAVE = Platform.OS !== 'web';
-
 type LoadState =
   | { kind: 'loading' }
   | { kind: 'ready'; event: Event }
@@ -68,6 +62,9 @@ export default function InviteScreen() {
   const { eventId, from } = useLocalSearchParams<{ eventId?: string; from?: string }>();
   /** Opened over a running camera rather than at the end of creating the event. */
   const fromCamera = from === 'camera';
+  /** Opened from 10's QR button: 10 is right behind, so going there is going back. */
+  const fromGroup = from === 'group';
+  const backToGroup = fromGroup && router.canGoBack();
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [sharing, setSharing] = useState(false);
@@ -124,7 +121,7 @@ export default function InviteScreen() {
   }, [event]);
 
   const handleSave = useCallback(async () => {
-    if (!event || !CAN_SAVE) return;
+    if (!event) return;
     setSave({ kind: 'saving' });
 
     try {
@@ -157,9 +154,17 @@ export default function InviteScreen() {
         <View style={styles.headerSpacer} />
         <CircleIconButton
           icon="x"
-          accessibilityLabel={fromCamera ? 'Close, back to the camera' : 'Close, back to your moments'}
+          accessibilityLabel={
+            fromCamera
+              ? 'Close, back to the camera'
+              : backToGroup
+                ? 'Close, back to your group'
+                : 'Close, back to your moments'
+          }
           onPress={() =>
-            fromCamera && router.canGoBack() ? router.back() : router.replace('/(library)/films')
+            (fromCamera || fromGroup) && router.canGoBack()
+              ? router.back()
+              : router.replace('/(library)/films')
           }
         />
       </View>
@@ -215,7 +220,7 @@ export default function InviteScreen() {
             label="Save QR"
             icon="download"
             onPress={handleSave}
-            disabled={!event || !CAN_SAVE}
+            disabled={!event}
             busy={save.kind === 'saving'}
           />
         </View>
@@ -240,7 +245,15 @@ export default function InviteScreen() {
         <PillButton
           label="See who's joined"
           icon="arrow-right"
-          onPress={() => router.push('/(host)/group')}
+          onPress={() =>
+            backToGroup
+              ? router.back()
+              : router.push(
+                  event
+                    ? { pathname: '/(host)/group', params: { eventId: event.id } }
+                    : '/(host)/group'
+                )
+          }
         />
       )}
     </Screen>

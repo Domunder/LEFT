@@ -7,7 +7,13 @@
  * **Not in the prototype** — frame 13 drew a video recorder. Designed in the
  * existing language; the decisions that are this screen's own:
  *
- *  - The viewfinder is 3:4, inset and rounded, and **shows the film**: every
+ *  - **Full-screen viewfinder (2026-11-18, supersedes the "controls outside the
+ *    frame" bullet below):** the frame runs under the status bar down to the
+ *    shutter bar; header and flash · zoom · flip are glass laid over it, in
+ *    their old places. The developed photo is centre-cropped to the frame's
+ *    shape (`cropAspect`, `developPhoto`), so the print still holds exactly
+ *    what the frame showed.
+ *  - The viewfinder (formerly 3:4, inset) **shows the film**: every
  *    live frame is drawn through the same shader that bakes the JPEG
  *    (`components/ui/film-camera.tsx`). Mono's viewfinder is black and white.
  *  - Zoom stops are the phone's own lenses and nothing else (`lib/zoom.ts`); a
@@ -60,7 +66,9 @@ import { useNetworkState } from 'expo-network';
 import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   ReduceMotion,
   useAnimatedStyle,
@@ -101,7 +109,7 @@ import { latestShotThumb } from '@/lib/my-shots';
 import { at } from '@/lib/pair';
 import { askForPushOnce } from '@/lib/push';
 import { enqueueShot, subscribeToQueue } from '@/lib/upload-queue';
-import { pinchZoom, stopAt, stopsForDevice, wideZoom } from '@/lib/zoom';
+import { pinchZoom, stopAt, stopsForDevice, wideZoom, zoomLabel } from '@/lib/zoom';
 
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -157,7 +165,7 @@ export default function CameraScreen() {
     return (
       <StateScreen onClose={leave} eyebrow="No connection">
         <Display size="md">
-          Can&apos;t reach <Em>your film.</Em>
+          Can&apos;t reach <Em>your event.</Em>
         </Display>
         <Body small>
           This phone hasn&apos;t opened the event yet, so it needs a connection once. After that the
@@ -202,7 +210,7 @@ export default function CameraScreen() {
     return (
       <StateScreen onClose={leave} eyebrow={event.name}>
         <Display size="md">
-          That was your <Em>last shot.</Em>
+          That was your <Em>last photo.</Em>
         </Display>
         <Body small>
           Your roll is used up. Everyone&apos;s photos appear together when the film is developed.
@@ -434,17 +442,13 @@ function Viewfinder({
   }, [device]);
 
   /*
-    The largest 3:4 frame the space between header and controls can hold,
-    computed rather than left to flexbox: `aspectRatio` with a max on both axes
-    gives up the ratio on tall phones, and the preview would then show more than
-    the photo contains.
+    The viewfinder fills the screen down to the shutter bar. Its shape is
+    measured, and the developed photo is cropped to it (`cropAspect`), so the
+    print holds exactly what the frame showed.
   */
-  const [area, setArea] = useState({ width: 0, height: 0 });
-  const frameWidth = Math.min(area.width, area.height * T.viewfinder.aspectRatio);
-  const frame = {
-    width: frameWidth,
-    height: frameWidth / T.viewfinder.aspectRatio,
-  };
+  const insets = useSafeAreaInsets();
+  const [frame, setFrame] = useState({ width: 0, height: 0 });
+  const cropAspect = frame.width > 0 && frame.height > 0 ? frame.width / frame.height : undefined;
 
   /*
     The last photo, for the tile bottom-left. Re-read whenever the queue moves:
@@ -516,6 +520,8 @@ function Viewfinder({
   const zoom = useSharedValue(1);
   /** The stop the zoom sits on; '' while a pinch has it between two. */
   const [selected, setSelected] = useState('');
+  /** The pinched zoom, "1.2×" — what the selector shows instead of its stops. */
+  const [liveLabel, setLiveLabel] = useState('');
 
   /*
     A new device (first mount, or the flip) starts on its wide lens. Keyed on
@@ -527,6 +533,7 @@ function Viewfinder({
     const wide = wideZoom(device);
     zoom.value = wide;
     setSelected(stopAt(stopsForDevice(device), wide)?.label ?? '');
+    setLiveLabel('');
     if (__DEV__) {
       console.log('[camera] device', {
         name: device.localizedName,
@@ -578,7 +585,10 @@ function Viewfinder({
     })
     .onUpdate((e) => {
       if (!device) return;
-      zoom.value = pinchZoom(pinchFrom.current, e.scale, device);
+      const next = pinchZoom(pinchFrom.current, e.scale, device);
+      zoom.value = next;
+      const text = zoomLabel(next, device);
+      setLiveLabel((current) => (current === text ? current : text));
       setSelected('');
     });
 
@@ -673,6 +683,7 @@ function Viewfinder({
         width: picture.width,
         height: picture.height,
         missionId,
+        cropAspect,
       });
       // Shot for it: the mission reads as done (the queue owes its tag) and lets go.
       if (missionId) setArmedId((current) => (current === missionId ? null : current));
@@ -703,6 +714,7 @@ function Viewfinder({
     look,
     flash,
     armedFor,
+    cropAspect,
   ]);
 
   // --- status -------------------------------------------------------------
@@ -718,119 +730,151 @@ function Viewfinder({
           text: "That one didn't save. Try again.",
         }
       : offline
-        ? { icon: 'wifi-off' as const, text: 'Offline. Your shots are saved.' }
+        ? { icon: 'wifi-off' as const, text: 'Offline. Your photos are saved.' }
         : null;
 
   return (
-    <Screen padded={false}>
-      <View style={styles.header}>
-        <View style={styles.headerSide}>
-          <CircleIconButton glass icon="x" accessibilityLabel="Back to your moments" onPress={onClose} />
-        </View>
-
-        <View style={styles.headerCenter}>
-          <Label small numberOfLines={1}>
-            {eventName}
-          </Label>
-          <RollCounter shotsLeft={shotsLeft} />
-          {dealt ? (
-            <MissionCapsule
-              done={missionsDone}
-              total={missions.length}
-              onPress={() => setMissionSheet('list')}
+    <Screen padded={false} edges={['bottom']}>
+      {/*
+        The viewfinder is the screen: it runs under the status bar and down to
+        the shutter bar. The header and the controls are laid over it
+        (2026-11-18, the user), in the places they had around the old frame.
+      */}
+      <GestureDetector gesture={pinch}>
+        <View
+          style={styles.viewfinder}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            setFrame({ width, height });
+          }}>
+          {device ? (
+            <FilmCamera
+              ref={camera}
+              style={StyleSheet.absoluteFill}
+              device={device}
+              isActive={focused}
+              look={look}
+              photoOutput={photoOutput}
+              zoom={zoom}
+              onConfigured={handleConfigured}
+              onStarted={handleStarted}
+              onStopped={handleStopped}
+              onError={handleError}
             />
           ) : null}
-        </View>
 
-        {/*
-          The countdown is the way to the film's "developing" state, as the
-          status capsule is on a moment's card. On an unlimited roll the
-          roll-empty screen never comes, and this is the only way from here to
-          the host's "develop now" (2026-11-16).
-        */}
-        <View style={[styles.headerSide, styles.headerRight]}>
-          <PressScale
-            accessibilityRole="button"
-            accessibilityLabel="See how the film is doing"
-            hitSlop={T.header.countdownHitSlop}
-            onPress={onOpenFilm}
-            style={styles.headerCountdown}>
-            <EventCountdown endsAt={endsAt} />
-            <Feather name="chevron-right" size={T.header.chevronSize} color={Colors.textMuted} />
-          </PressScale>
-        </View>
-      </View>
+          {screenFlash ? (
+            <View style={[StyleSheet.absoluteFill, styles.screenFlash]} pointerEvents="none" />
+          ) : null}
+          <Animated.View
+            style={[StyleSheet.absoluteFill, styles.blackout, blackoutStyle]}
+            pointerEvents="none"
+          />
 
-      <View
-        style={styles.viewfinderArea}
-        onLayout={(e) => {
-          const { width, height } = e.nativeEvent.layout;
-          setArea({ width: width - T.viewfinder.paddingX * 2, height });
-        }}>
-        <GestureDetector gesture={pinch}>
-          <View style={[styles.viewfinder, frame]}>
-            {device ? (
-              <FilmCamera
-                ref={camera}
-                style={StyleSheet.absoluteFill}
-                device={device}
-                isActive={focused}
-                look={look}
-                photoOutput={photoOutput}
-                zoom={zoom}
-                onConfigured={handleConfigured}
-                onStarted={handleStarted}
-                onStopped={handleStopped}
-                onError={handleError}
+          {/* Keeps the header's and the controls' text readable over a bright picture. */}
+          <LinearGradient
+            colors={T.scrim.top}
+            style={[styles.scrimTop, { height: insets.top + T.scrim.topHeight }]}
+            pointerEvents="none"
+          />
+          <LinearGradient colors={T.scrim.bottom} style={styles.scrimBottom} pointerEvents="none" />
+
+          <View style={[styles.header, { paddingTop: insets.top + T.header.paddingTop }]}>
+            <View style={styles.headerSide}>
+              <CircleIconButton
+                glass
+                icon="x"
+                accessibilityLabel="Back to your moments"
+                onPress={onClose}
+              />
+            </View>
+
+            <View style={styles.headerCenter}>
+              <Label small numberOfLines={1}>
+                {eventName}
+              </Label>
+              <RollCounter shotsLeft={shotsLeft} />
+              {dealt ? (
+                <MissionCapsule
+                  done={missionsDone}
+                  total={missions.length}
+                  onPress={() => setMissionSheet('list')}
+                />
+              ) : null}
+            </View>
+
+            {/*
+              The countdown is the way to the film's "developing" state, as the
+              status capsule is on a moment's card. On an unlimited roll the
+              roll-empty screen never comes, and this is the only way from here to
+              the host's "develop now" (2026-11-16).
+            */}
+            <View style={[styles.headerSide, styles.headerRight]}>
+              <PressScale
+                accessibilityRole="button"
+                accessibilityLabel="See how the film is doing"
+                hitSlop={T.header.countdownHitSlop}
+                onPress={onOpenFilm}
+                style={styles.headerCountdown}>
+                <EventCountdown endsAt={endsAt} />
+                <Feather name="chevron-right" size={T.header.chevronSize} color={Colors.textMuted} />
+              </PressScale>
+            </View>
+          </View>
+
+          {armed ? (
+            <View
+              style={[styles.armedSlot, { top: insets.top + T.header.armedOffset }]}
+              pointerEvents="box-none">
+              <MissionArmedNote body={armed.body} onDisarm={() => setArmedId(null)} />
+            </View>
+          ) : null}
+
+          {note ? (
+            <View
+              style={[styles.note, { bottom: T.controls.height + T.note.inset }]}
+              accessibilityLiveRegion="polite">
+              <Feather name={note.icon} size={T.note.iconSize} color={T.note.color} />
+              <Text style={styles.noteText}>{note.text}</Text>
+            </View>
+          ) : null}
+
+          {/* Flash · zoom · flip, along the frame's bottom edge. */}
+          <View style={styles.controls}>
+            <GlassButton
+              icon={flash ? 'zap' : 'zap-off'}
+              color={at(T.controls.flashColor, flash)}
+              accessibilityLabel={flash ? 'Flash on' : 'Flash off'}
+              onPress={() => setFlash((on) => !on)}
+            />
+            {stops.length > 0 || (selected === '' && liveLabel !== '') ? (
+              <ZoomSelector
+                stops={stops}
+                selected={selected}
+                live={liveLabel}
+                onSelect={(stop) => {
+                  zoom.value = stop.zoom;
+                  setSelected(stop.label);
+                }}
+                onReset={() => {
+                  if (!device) return;
+                  const wide = wideZoom(device);
+                  zoom.value = wide;
+                  setLiveLabel('');
+                  setSelected(stopAt(stops, wide)?.label ?? '');
+                }}
               />
             ) : null}
-
-            {screenFlash ? (
-              <View style={[StyleSheet.absoluteFill, styles.screenFlash]} pointerEvents="none" />
-            ) : null}
-            <Animated.View
-              style={[StyleSheet.absoluteFill, styles.blackout, blackoutStyle]}
-              pointerEvents="none"
-            />
-
-            {armed ? <MissionArmedNote body={armed.body} onDisarm={() => setArmedId(null)} /> : null}
-
-            {note ? (
-              <View style={styles.note} accessibilityLiveRegion="polite">
-                <Feather name={note.icon} size={T.note.iconSize} color={T.note.color} />
-                <Text style={styles.noteText}>{note.text}</Text>
-              </View>
-            ) : null}
+            <GlassButton icon="refresh-cw" accessibilityLabel="Switch camera" onPress={flip} />
           </View>
-        </GestureDetector>
-      </View>
-
-      {/* Flash · zoom · flip, under the frame. Nothing is drawn over the picture. */}
-      <View style={styles.controls}>
-        <GlassButton
-          icon={flash ? 'zap' : 'zap-off'}
-          color={at(T.controls.flashColor, flash)}
-          accessibilityLabel={flash ? 'Flash on' : 'Flash off'}
-          onPress={() => setFlash((on) => !on)}
-        />
-        {stops.length > 0 ? (
-          <ZoomSelector
-            stops={stops}
-            selected={selected}
-            onSelect={(stop) => {
-              zoom.value = stop.zoom;
-              setSelected(stop.label);
-            }}
-          />
-        ) : null}
-        <GlassButton icon="refresh-cw" accessibilityLabel="Switch camera" onPress={flip} />
-      </View>
+        </View>
+      </GestureDetector>
 
       <View style={styles.bottom}>
         <View style={styles.bottomSide}>
           <PressScale
             accessibilityRole="button"
-            accessibilityLabel="Your shots"
+            accessibilityLabel="Your photos"
             accessibilityHint="Shows the photos you have taken"
             hitSlop={8}
             scale={GlassTokens.pressScale}
@@ -915,11 +959,35 @@ const styles = StyleSheet.create({
   },
 
   // --- camera ---
+  // The frame: the whole screen above the shutter bar, its bottom corners rounded.
+  viewfinder: {
+    flex: 1,
+    borderBottomLeftRadius: T.viewfinder.radius,
+    borderBottomRightRadius: T.viewfinder.radius,
+    overflow: 'hidden',
+    backgroundColor: T.viewfinder.bg,
+  },
+  scrimTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  scrimBottom: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: T.scrim.bottomHeight,
+  },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: T.header.paddingX,
-    paddingTop: T.header.paddingTop,
     paddingBottom: T.header.paddingBottom,
   },
   headerSide: {
@@ -927,6 +995,8 @@ const styles = StyleSheet.create({
   },
   headerRight: {
     alignItems: 'flex-end',
+    // Level with the close button's centre.
+    paddingTop: T.header.countdownTop,
   },
   headerCountdown: {
     flexDirection: 'row',
@@ -938,28 +1008,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: T.header.nameGap,
   },
-  // Centres the 3:4 frame in whatever height the header and controls leave.
-  viewfinderArea: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: T.viewfinder.paddingX,
-  },
-  viewfinder: {
-    borderRadius: T.viewfinder.radius,
-    overflow: 'hidden',
-    backgroundColor: T.viewfinder.bg,
+  armedSlot: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: T.header.armedSlotHeight,
   },
   screenFlash: {
     backgroundColor: T.flash.screenColor,
   },
-  // Flash · zoom · flip, between the frame and the shutter.
+  // Flash · zoom · flip, over the frame's bottom edge.
   controls: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: T.controls.height,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: T.controls.paddingX,
-    paddingTop: T.controls.paddingTop,
     paddingBottom: T.controls.paddingBottom,
   },
   // "Your shots" and invite. The glass draws the edge; a photo covers it.
@@ -974,7 +1042,6 @@ const styles = StyleSheet.create({
   },
   note: {
     position: 'absolute',
-    bottom: T.note.inset,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',

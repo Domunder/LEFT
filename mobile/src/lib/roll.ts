@@ -35,7 +35,7 @@ export function rollNumeral(roll: RollSize): string {
 
 /** Spoken form, for accessibility labels: "24 shots each". */
 export function rollWords(roll: RollSize): string {
-  return roll === null ? 'Unlimited shots each' : `${roll} shots each`;
+  return roll === null ? 'Unlimited photos each' : `${roll} photos each`;
 }
 
 /**

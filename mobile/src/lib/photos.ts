@@ -32,7 +32,7 @@ export type RollState = {
 /** The roll is used up. Not an error to retry — the camera shows its empty state. */
 export class RollEmptyError extends Error {
   constructor() {
-    super('Your roll is empty');
+    super('No photos left');
     this.name = 'RollEmptyError';
   }
 }
@@ -70,7 +70,7 @@ export async function claimShot(
   }
 
   const row = data?.[0];
-  if (!row) throw new Error('The shot was not recorded');
+  if (!row) throw new Error('The photo was not saved');
   return { shotsTaken: row.shots_taken, shotsLeft: row.shots_left ?? null };
 }
 

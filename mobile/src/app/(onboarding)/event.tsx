@@ -91,7 +91,7 @@ export default function EventScreen() {
                 .easing(Easing.bezier(...Motion.bezier).factory())}
               style={styles.field}>
               <TextField
-                label="Name your film"
+                label="Name your event"
                 value={filmName}
                 onChangeText={setFilmName}
                 placeholder={placeholder}

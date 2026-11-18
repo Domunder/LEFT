@@ -20,7 +20,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 
 import { LookCard } from '@/components/ui/look-card';
@@ -75,7 +75,7 @@ export default function LookScreen() {
   function select(next: FilmLook) {
     if (next === look) return;
     // Web has no haptics engine; calling through is a no-op but noisy in logs.
-    if (Platform.OS !== 'web') void Haptics.selectionAsync();
+    void Haptics.selectionAsync();
     setLook(next);
   }
 
