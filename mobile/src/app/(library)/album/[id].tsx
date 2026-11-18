@@ -80,7 +80,7 @@ type LoadState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; albu
 /** `waiting` holds the sheet dark; `playing` develops it; `done` is a plain album. */
 type Reveal = 'waiting' | 'playing' | 'done';
 
-const NO_THUMBS: readonly string[] = [];
+const NO_FRAMES: ImageSource[] = [];
 
 const plural = (count: number, one: string, many: string) =>
   `${count} ${count === 1 ? one : many}`;
@@ -139,7 +139,8 @@ export default function AlbumScreen() {
     before the reveal (RLS), and at that blur a stand-in says the same thing —
     there is a picture here, and it cannot be seen yet.
   */
-  const [ownThumbs, setOwnThumbs] = useState<readonly string[]>(NO_THUMBS);
+  // `null` until the viewer's frames are known, so stand-ins never flash first.
+  const [ownThumbs, setOwnThumbs] = useState<readonly string[] | null>(null);
   const waiting = state.kind === 'ready' && !state.album.developed;
   useEffect(() => {
     if (!id || !waiting) return;
@@ -151,13 +152,15 @@ export default function AlbumScreen() {
       cancelled = true;
     };
   }, [id, waiting]);
-  const hiddenFrames = useMemo<ImageSource[]>(
-    () => [
-      ...ownThumbs.map((uri) => ({ uri })),
-      ...samplesFor(id ?? '', T.developing.frames),
-    ],
-    [id, ownThumbs]
-  );
+  const hiddenFrames = useMemo<ImageSource[]>(() => {
+    if (ownThumbs === null) return NO_FRAMES;
+    // Stock pictures only for someone with no photos of their own; otherwise
+    // the viewer's own frames, repeated to fill the strip.
+    if (ownThumbs.length === 0) return samplesFor(id ?? '', T.developing.frames);
+    return Array.from({ length: T.developing.frames }, (_, i) => ({
+      uri: ownThumbs[i % ownThumbs.length],
+    }));
+  }, [id, ownThumbs]);
 
   // The host developing early, or the scheduled job catching up with the clock.
   useEffect(() => {

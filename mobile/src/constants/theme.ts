@@ -1669,8 +1669,8 @@ export const Album = {
     frameRadius: 4,
     frameFill: 'rgba(255,255,255,0.035)',
     /** A frame that holds a photo: blurred past recognition, and dimmed. */
-    frameBlur: 22,
-    frameDim: 'rgba(8,8,10,0.25)',
+    frameBlur: 60,
+    frameDim: 'rgba(8,8,10,0.35)',
     frameFadeMs: 320,
     stripGap: 40,
     actionsGap: 12,
