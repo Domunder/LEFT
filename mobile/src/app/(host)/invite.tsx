@@ -68,6 +68,9 @@ export default function InviteScreen() {
   const { eventId, from } = useLocalSearchParams<{ eventId?: string; from?: string }>();
   /** Opened over a running camera rather than at the end of creating the event. */
   const fromCamera = from === 'camera';
+  /** Opened from 10's QR button: 10 is right behind, so going there is going back. */
+  const fromGroup = from === 'group';
+  const backToGroup = fromGroup && router.canGoBack();
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [sharing, setSharing] = useState(false);
@@ -157,9 +160,17 @@ export default function InviteScreen() {
         <View style={styles.headerSpacer} />
         <CircleIconButton
           icon="x"
-          accessibilityLabel={fromCamera ? 'Close, back to the camera' : 'Close, back to your moments'}
+          accessibilityLabel={
+            fromCamera
+              ? 'Close, back to the camera'
+              : backToGroup
+                ? 'Close, back to your group'
+                : 'Close, back to your moments'
+          }
           onPress={() =>
-            fromCamera && router.canGoBack() ? router.back() : router.replace('/(library)/films')
+            (fromCamera || fromGroup) && router.canGoBack()
+              ? router.back()
+              : router.replace('/(library)/films')
           }
         />
       </View>
@@ -240,7 +251,15 @@ export default function InviteScreen() {
         <PillButton
           label="See who's joined"
           icon="arrow-right"
-          onPress={() => router.push('/(host)/group')}
+          onPress={() =>
+            backToGroup
+              ? router.back()
+              : router.push(
+                  event
+                    ? { pathname: '/(host)/group', params: { eventId: event.id } }
+                    : '/(host)/group'
+                )
+          }
         />
       )}
     </Screen>

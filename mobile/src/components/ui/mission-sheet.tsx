@@ -12,27 +12,37 @@
  * way to be sent off without a finger.
  */
 
-import { Feather } from '@expo/vector-icons';
-import { useEffect, type ReactNode } from 'react';
-import { BackHandler, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeOut, ReduceMotion } from 'react-native-reanimated';
+import { Feather } from "@expo/vector-icons";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  BackHandler,
+  Keyboard,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from "react-native";
+import Animated, { FadeOut, ReduceMotion } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { PillButton } from './pill-button';
-import { PressScale } from './press-scale';
-import { Sheet } from './sheet';
-import { Body, Display, Em, Label } from './typography';
-import { Colors, MissionsCamera as M, Press } from '@/constants/theme';
-import { Typography } from '@/constants/typography';
-import type { Mission } from '@/lib/missions';
+import { PillButton } from "./pill-button";
+import { PressScale } from "./press-scale";
+import { Sheet } from "./sheet";
+import { Body, Display, Em, Label } from "./typography";
+import { Colors, MissionsCamera as M, Press, SheetMotion } from "@/constants/theme";
+import { Typography } from "@/constants/typography";
+import type { Mission } from "@/lib/missions";
 
-const plural = (n: number) => (n === 1 ? '1 for you' : `${n} for you`);
+const plural = (n: number) => (n === 1 ? "1 for you" : `${n} for you`);
 
 /** The intro's copy, shown once per event (`left:missions-intro:{eventId}`). */
 export function missionsIntroCopy(count: number): string {
   return (
     `Small challenges from the host — ${plural(count)}. Tap Missions, pick one, then take ` +
-    'the photo. Already took it? Mark it in Your shots. Nobody sees them until the film is ' +
-    'developed.'
+    "the photo. Already took it? Mark it in Your shots. Nobody sees them until the film is " +
+    "developed."
   );
 }
 
@@ -40,18 +50,57 @@ export function missionsIntroCopy(count: number): string {
 
 type OverlayProps = {
   onClose: () => void;
+  /** The sheet ends in a `SheetList last`, which runs to the bottom edge. */
+  listLast?: boolean;
   /** Holds the sheet while a request it started runs. */
   locked?: boolean;
   children: ReactNode;
 };
 
-/** A `Sheet` over whatever screen renders it, with a fade for leaving without a drag. */
-function SheetOverlay({ onClose, locked = false, children }: OverlayProps) {
+/** The keyboard's height while it is up, 0 otherwise. */
+function useKeyboardHeight(): number {
+  const [keyboard, setKeyboard] = useState(0);
   useEffect(() => {
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (!locked) onClose();
-      return true;
-    });
+    const show = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hide = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const a = Keyboard.addListener(show, (e) => setKeyboard(e.endCoordinates.height));
+    const b = Keyboard.addListener(hide, () => setKeyboard(0));
+    return () => {
+      a.remove();
+      b.remove();
+    };
+  }, []);
+  return keyboard;
+}
+
+/**
+ * A `Sheet` over whatever screen renders it, with a fade for leaving without a
+ * drag. It always rises from the bottom edge — or, while the keyboard is up,
+ * from the keyboard's top edge — and never grows past the status bar: the
+ * sheet is capped to the space left, and its list (`SheetList`) is what gives
+ * way, scrolling, so the title and the field being typed into stay whole.
+ */
+export function SheetOverlay({
+  onClose,
+  locked = false,
+  listLast = false,
+  children,
+}: OverlayProps) {
+  const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const keyboard = useKeyboardHeight();
+  // The sheet is drawn `overdraw` past its bottom edge (see `Sheet`).
+  const maxHeight =
+    height - keyboard - insets.top - M.sheet.topGap + SheetMotion.overdraw;
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        if (!locked) onClose();
+        return true;
+      },
+    );
     return () => subscription.remove();
   }, [locked, onClose]);
 
@@ -59,24 +108,55 @@ function SheetOverlay({ onClose, locked = false, children }: OverlayProps) {
     <Animated.View
       style={StyleSheet.absoluteFill}
       // A cross-fade is also what reduced motion asks for, so it always plays.
-      exiting={FadeOut.duration(M.sheet.fadeMs).reduceMotion(ReduceMotion.Never)}
-      accessibilityViewIsModal>
-      <Sheet onDismiss={onClose} locked={locked}>
-        {children}
-      </Sheet>
+      exiting={FadeOut.duration(M.sheet.fadeMs).reduceMotion(
+        ReduceMotion.Never,
+      )}
+      accessibilityViewIsModal
+    >
+      <View style={[styles.keyboard, { paddingBottom: keyboard }]}>
+        <Sheet
+          onDismiss={onClose}
+          locked={locked}
+          maxHeight={maxHeight}
+          flushBottom={listLast}
+        >
+          {children}
+        </Sheet>
+      </View>
     </Animated.View>
   );
 }
 
-/** The rows, scrolling once they outgrow half the window (large text). */
-function List({ children }: { children: ReactNode }) {
+/**
+ * The rows, scrolling once they outgrow half the window (large text), and
+ * shrinking further when the sheet around them is capped (keyboard up).
+ */
+export function SheetList({
+  children,
+  last = false,
+}: {
+  children: ReactNode;
+  /** Ends the sheet: scrolls to the bottom edge, the last row clear of the home indicator. */
+  last?: boolean;
+}) {
   const { height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  // With the keyboard up the inset is under it; a little room is enough then.
+  const keyboard = useKeyboardHeight();
+  const tail = keyboard > 0 ? M.sheet.gap : insets.bottom + M.sheet.gap;
+
   return (
     <ScrollView
-      style={{ maxHeight: height * M.sheet.maxListRatio }}
-      contentContainerStyle={styles.list}
+      style={[
+        styles.listFrame,
+        { maxHeight: height * M.sheet.maxListRatio + (last ? tail : 0) },
+      ]}
+      contentContainerStyle={[styles.list, last && { paddingBottom: tail }]}
       showsVerticalScrollIndicator={false}
-      bounces={false}>
+      bounces={false}
+      // A tap on a sheet's + must add, not just close the keyboard first.
+      keyboardShouldPersistTaps="handled"
+    >
       {children}
     </ScrollView>
   );
@@ -110,7 +190,9 @@ function Row({
     <>
       <View style={styles.rowText}>
         {personal ? <Label small>Just for you</Label> : null}
-        <Text style={[styles.rowBody, dimmed && styles.rowBodyDone]}>{body}</Text>
+        <Text style={[styles.rowBody, dimmed && styles.rowBodyDone]}>
+          {body}
+        </Text>
         {detail ? <Body small>{detail}</Body> : null}
       </View>
       {trailing}
@@ -123,7 +205,8 @@ function Row({
         style={styles.row}
         accessible
         accessibilityRole="text"
-        accessibilityLabel={accessibilityLabel}>
+        accessibilityLabel={accessibilityLabel}
+      >
         {content}
       </View>
     );
@@ -137,15 +220,17 @@ function Row({
       disabled={disabled}
       scale={Press.cardScale}
       onPress={onPress}
-      style={styles.row}>
+      style={styles.row}
+    >
       {content}
     </PressScale>
   );
 }
 
-const icon = (name: React.ComponentProps<typeof Feather>['name'], color: string = Colors.text) => (
-  <Feather name={name} size={M.sheet.iconSize} color={color} />
-);
+const icon = (
+  name: React.ComponentProps<typeof Feather>["name"],
+  color: string = Colors.text,
+) => <Feather name={name} size={M.sheet.iconSize} color={color} />;
 
 // --- 13: the list ------------------------------------------------------------
 
@@ -160,7 +245,13 @@ type ListSheetProps = {
   onClose: () => void;
 };
 
-export function MissionListSheet({ missions, armedId, intro, onArm, onClose }: ListSheetProps) {
+export function MissionListSheet({
+  missions,
+  armedId,
+  intro,
+  onArm,
+  onClose,
+}: ListSheetProps) {
   const done = missions.filter((mission) => mission.photoId !== null).length;
 
   return (
@@ -173,12 +264,12 @@ export function MissionListSheet({ missions, armedId, intro, onArm, onClose }: L
           {intro
             ? missionsIntroCopy(missions.length)
             : done === missions.length
-              ? 'All done. Nobody sees them until the film is developed.'
-              : 'Pick one, then take the photo. Already took it? Mark it in Your shots.'}
+              ? "All done. Nobody sees them until the film is developed."
+              : "Pick one, then take the photo. Already took it? Mark it in Your shots."}
         </Body>
       </View>
 
-      <List>
+      <SheetList>
         {missions.map((mission) => {
           const isDone = mission.photoId !== null;
           const isArmed = mission.id === armedId;
@@ -199,23 +290,25 @@ export function MissionListSheet({ missions, armedId, intro, onArm, onClose }: L
               trailing={
                 isDone ? (
                   <View style={styles.trailing}>
-                    {icon('check', M.capsule.doneColor)}
-                    <Text style={[styles.trailingText, styles.doneText]}>Done</Text>
+                    {icon("check", M.capsule.doneColor)}
+                    <Text style={[styles.trailingText, styles.doneText]}>
+                      Done
+                    </Text>
                   </View>
                 ) : isArmed ? (
                   <View style={styles.trailing}>
-                    {icon('target')}
+                    {icon("target")}
                     <Text style={styles.trailingText}>Next photo</Text>
                   </View>
                 ) : (
-                  icon('camera', Colors.textMuted)
+                  icon("camera", Colors.textMuted)
                 )
               }
               onPress={isDone ? undefined : () => onArm(mission)}
             />
           );
         })}
-      </List>
+      </SheetList>
 
       {intro ? <PillButton label="Got it" onPress={onClose} /> : null}
     </SheetOverlay>
@@ -241,8 +334,9 @@ export function MissionPickerSheet({
   onPick,
   onClose,
 }: PickerSheetProps) {
-  const current = missions.find((mission) => mission.photoId === photoId) ?? null;
-  const check = icon('check');
+  const current =
+    missions.find((mission) => mission.photoId === photoId) ?? null;
+  const check = icon("check");
 
   return (
     <SheetOverlay onClose={onClose} locked={busy}>
@@ -251,11 +345,12 @@ export function MissionPickerSheet({
           Which <Em>mission?</Em>
         </Display>
         <Body small>
-          Mark what this photo was for. Nobody sees it until the film is developed.
+          Mark what this photo was for. Nobody sees it until the film is
+          developed.
         </Body>
       </View>
 
-      <List>
+      <SheetList>
         {missions.map((mission) => {
           const here = mission.id === current?.id;
           const elsewhere = !here && mission.photoId !== null;
@@ -264,7 +359,11 @@ export function MissionPickerSheet({
               key={mission.id}
               body={mission.body}
               personal={mission.personal}
-              detail={elsewhere ? 'Done with another photo. Picking it moves it here.' : undefined}
+              detail={
+                elsewhere
+                  ? "Done with another photo. Picking it moves it here."
+                  : undefined
+              }
               selected={here}
               disabled={busy}
               accessibilityLabel={
@@ -287,7 +386,7 @@ export function MissionPickerSheet({
           trailing={current === null ? check : null}
           onPress={current === null ? onClose : () => onPick(null)}
         />
-      </List>
+      </SheetList>
 
       {error ? (
         <Body small color={Colors.destructive} accessibilityLiveRegion="polite">
@@ -302,12 +401,18 @@ const styles = StyleSheet.create({
   block: {
     gap: M.sheet.gap / 2,
   },
+  keyboard: {
+    flex: 1,
+  },
+  listFrame: {
+    flexShrink: 1,
+  },
   list: {
     gap: M.sheet.rowGap,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: M.sheet.rowInnerGap,
     paddingVertical: M.sheet.rowPaddingY,
     paddingHorizontal: M.sheet.rowPaddingX,
@@ -328,8 +433,8 @@ const styles = StyleSheet.create({
     color: M.sheet.doneTextColor,
   },
   trailing: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: M.capsule.gap,
   },
   trailingText: {

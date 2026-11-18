@@ -60,7 +60,8 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   review (2026-11-16)" below. **`linkIdentity` was rewritten and has never run
   on a device.**
 - **In progress (2026-11-17, branch `feature/missions`): missions.** Server
-  verified against the local stack with SQL; screens built (typecheck and
+  verified against the local stack with SQL; the migration is on the hosted
+  project since 2026-11-18; screens built (typecheck and
   lint clean), **never run on a device**; the mission notifications are not
   built. See "Missions" below.
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
@@ -502,7 +503,30 @@ Decided by the user — do not re-litigate:
 
 - **Off by default; 1–3 per guest** (`events.missions_per_guest`, null = off),
   switched on 05.1 or on the host's Missions screen (`(host)/missions`, from
-  10).
+  10). **Switched on at 05.1, creating goes 05.1 → Missions → 09 (QR) → 10**
+  (2026-11-18, the user): `from=create` gives the screen a close X instead of
+  back and a pinned "Continue" to 09; 10 keeps its Missions row for edits,
+  and has a QR button back to 09.
+- **The planning screen (2026-11-18, the user):** the count is one row with a
+  sliders drawer; changing it never touches the list — "Generate N more"
+  (`generate_missions()`, migration `20261118000000_missions_generate_move.sql`)
+  tops the list up to `max_members` × per guest (personal ones included,
+  ceiling 200), unused library missions first, then repeats. **Laid out like
+  Apple Reminders** (the user's pick, same day): one mission list, each row
+  carries its assignee chip on the right (tap → "Who gets this?" sheet:
+  Anyone · every guest · someone not here yet), swipe left deletes, "Select"
+  deletes several. A "Guests" row opens a sheet listing everyone who joined
+  automatically plus named people, with a + for a name. A joined guest gets a
+  `mission_people` row only when a mission is first given to them
+  (`ensurePersonFor`). `components/ui/mission-assign.tsx`. Drag-and-drop was
+  built and removed the same day. Later the same day (the user): the 1·2·3
+  count left the screen — the top card reads "12 of 50 guests get a mission"
+  with a + that generates the rest, on/off is a switch beside the title, 05.1
+  only has the switch, sheets lift above the keyboard. The list is newest
+  first; rows have no Cancel and save on blur. An "Auto-assign" button was
+  built and removed (the start deals unassigned missions anyway);
+  `auto_assign_missions()` (migration `20261118010000_…`) stays on the
+  server, unused. **Not seen on a device.**
 - **The host plans before the start, and the start locks it.** The list is
   seeded from a library matched to the event type (`event_type_missions()`,
   20 each, then `general_missions()`, 60), as long as the group could use, at

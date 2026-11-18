@@ -1776,6 +1776,49 @@ export const MissionsEditor = {
   captionGap: 12,
   /** "24 missions · 18 people so far" -> its note. */
   summaryNoteGap: 2,
+  /** Reached while creating the event: the list -> the pinned "Continue". */
+  continueGap: 12,
+
+  /** The "1 mission per guest" card: its sliders glyph and the 1·2·3 drawer. */
+  count: {
+    iconSize: 17,
+    drawerGap: 14,
+  },
+
+  /** A row's assignee: a name pill, or a round "give to" button. */
+  chip: {
+    height: 30,
+    paddingX: 11,
+    maxWidth: 130,
+    iconSize: 15,
+    hitSlop: 8,
+  },
+
+  /** Swipe a row left: Delete behind it, filled as in Mail and Reminders. */
+  swipe: {
+    actionWidth: 84,
+    iconSize: 16,
+    gap: 4,
+    /** The one filled red in the app: a destructive action you dragged out yourself. */
+    bg: 'rgb(204,72,62)',
+    /** The row slides over the action, so it must be opaque: the card over `bg`. */
+    rowBg: '#151515',
+  },
+
+  /** The column in front of every mission: a bullet, "+", or Select's check. */
+  lead: {
+    size: 22,
+    bulletSize: 6,
+    bulletColor: 'rgba(240,237,232,0.28)',
+    plusIconSize: 14,
+  },
+
+  /** Select mode: the round check in front of each row. */
+  select: {
+    size: 22,
+    iconSize: 13,
+    border: 'rgba(240,237,232,0.35)',
+  },
 
   /** The bordered card a list of rows sits in — 20's settings card. */
   card: {
@@ -1946,6 +1989,8 @@ export const MissionsCamera = {
     doneTextColor: Colors.textDim,
     /** The list scrolls past this share of the window — large text, three long missions. */
     maxListRatio: 0.5,
+    /** The least space a sheet leaves under the status bar, keyboard up or not. */
+    topGap: 24,
     /** The scrim leaving after a tap on it. */
     fadeMs: 200,
   },

@@ -207,8 +207,14 @@ export default function GroupSizeScreen() {
     // starts prefilled with this one's answers.
     reset();
 
-    // 09 reads this param; it falls back to the newest event only when missing.
-    router.replace({ pathname: '/(host)/invite', params: { eventId: event.id } });
+    // With missions on, the host plans them first (Missions → 09 → 10); 10 keeps
+    // its Missions row for edits until the start. 09 reads `eventId`; it falls
+    // back to the newest event only when missing.
+    if (event.missions_per_guest != null) {
+      router.replace({ pathname: '/(host)/missions', params: { eventId: event.id, from: 'create' } });
+    } else {
+      router.replace({ pathname: '/(host)/invite', params: { eventId: event.id } });
+    }
   }
 
   return (

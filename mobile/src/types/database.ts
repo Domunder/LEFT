@@ -477,6 +477,7 @@ export type Database = {
         Args: { p_person_id: string; p_user_id?: string }
         Returns: undefined
       }
+      auto_assign_missions: { Args: { p_event_id: string }; Returns: number }
       can_edit_missions: { Args: { p_event_id: string }; Returns: boolean }
       claim_mission_person: {
         Args: { p_event_id: string; p_person_id: string }
@@ -592,6 +593,7 @@ export type Database = {
       free_max_members: { Args: never; Returns: number }
       general_missions: { Args: never; Returns: string[] }
       generate_invite_code: { Args: never; Returns: string }
+      generate_missions: { Args: { p_event_id: string }; Returns: number }
       invoke_edge_function: { Args: { p_name: string }; Returns: boolean }
       is_event_developed: { Args: { p_event_id: string }; Returns: boolean }
       is_event_due_for_purge: { Args: { p_event_id: string }; Returns: boolean }

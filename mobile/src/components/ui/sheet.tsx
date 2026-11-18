@@ -22,9 +22,23 @@ type SheetProps = PropsWithChildren<{
   onDismiss?: () => void;
   /** Neither the scrim nor a drag closes it — while its action is running. */
   locked?: boolean;
+  /** Caps the card (overdraw included); its children shrink to fit. */
+  maxHeight?: number;
+  /**
+   * The last child is a scrolling list that runs to the card's bottom edge and
+   * keeps the home-indicator inset inside itself, so rows are never cut off
+   * above an empty strip.
+   */
+  flushBottom?: boolean;
 }>;
 
-export function Sheet({ children, onDismiss, locked = false }: SheetProps) {
+export function Sheet({
+  children,
+  onDismiss,
+  locked = false,
+  maxHeight,
+  flushBottom = false,
+}: SheetProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dismiss = onDismiss ?? (() => router.back());
@@ -44,7 +58,10 @@ export function Sheet({ children, onDismiss, locked = false }: SheetProps) {
         locked={locked}
         style={[
           styles.sheet,
-          { paddingBottom: insets.bottom + Spacing.lg + SheetMotion.overdraw },
+          {
+            paddingBottom: (flushBottom ? 0 : insets.bottom + Spacing.lg) + SheetMotion.overdraw,
+            maxHeight,
+          },
         ]}>
         <View style={styles.handle} />
         {children}
