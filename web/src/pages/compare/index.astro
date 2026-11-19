@@ -1,0 +1,210 @@
+---
+import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
+import GetApp from '../../components/GetApp.astro';
+import CompareTable from '../../components/CompareTable.astro';
+import { SITE } from '../../site';
+import { APPS, CHECKED, CHECKED_LABEL, COMPARE_FAQ, LEFT_APP } from '../../compare';
+
+const title = `Disposable camera apps for events, compared (${CHECKED.slice(0, 4)})`;
+const description = `LEFT, ${APPS.map((app) => app.name).join(', ')} side by side: price, whether guests need the app, photo limits, the reveal and how long photos are kept. Checked ${CHECKED_LABEL}.`;
+
+const all = [LEFT_APP, ...APPS];
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'LEFT', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: 'Compare', item: SITE.url + '/compare/' },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Disposable camera apps for events',
+    itemListElement: all.map((app, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: app.name,
+      url: app.page ? `${SITE.url}/compare/${app.slug}/` : app.url,
+    })),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: COMPARE_FAQ.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  },
+];
+---
+
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <section class="intro">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="wrap head">
+      <p class="eyebrow">Compare</p>
+      <h1>Disposable camera apps, <em>side by side.</em></h1>
+      <p class="lede">
+        Every app here turns your guests’ phones into one shared camera. They differ in what they cost, whether guests
+        have to install anything, how many photos each guest gets and when the album is revealed. Here are the facts,
+        from each app’s own website and store listing.
+      </p>
+      <p class="checked">Prices and features checked {CHECKED_LABEL}. We make LEFT, so read us with that in mind.</p>
+    </div>
+  </section>
+
+  <section class="table-section">
+    <div class="wrap">
+      <h2 class="sr-only">Comparison table</h2>
+      <CompareTable apps={all} />
+    </div>
+  </section>
+
+  <section class="apps">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">The apps</p>
+        <h2>Which one <em>fits your event?</em></h2>
+      </div>
+      <ul class="app-list">
+        {
+          all.map((app) => (
+            <li class="reveal">
+              <h3>{app.name}</h3>
+              <p>{app.summary}</p>
+              <p class="fit">
+                <strong>Best for:</strong> {app.bestFor}
+              </p>
+              {app.page && (
+                <a class="text-link" href={`/compare/${app.slug}/`}>
+                  LEFT vs {app.name} →
+                </a>
+              )}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <Faq items={COMPARE_FAQ} />
+
+  <section class="sources">
+    <div class="wrap">
+      <h2 class="small">Sources</h2>
+      <ul>
+        {
+          APPS.flatMap((app) =>
+            app.sources.map((source) => (
+              <li>
+                {app.name}: <a href={source.url} rel="nofollow noopener" target="_blank">{source.label}</a>
+              </li>
+            )),
+          )
+        }
+      </ul>
+      <p>
+        Prices are in US dollars unless stated, as listed on {CHECKED_LABEL}. App names are trademarks of their owners;
+        LEFT is not affiliated with them. Spotted something out of date? Write to
+        <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a> and we will fix it.
+      </p>
+    </div>
+  </section>
+
+  <GetApp />
+</Base>
+
+<style>
+  .intro {
+    padding-top: 160px;
+    padding-bottom: 32px;
+    overflow: hidden;
+  }
+
+  .intro .glow {
+    left: -25%;
+    top: -30%;
+  }
+
+  .head {
+    display: grid;
+    gap: 22px;
+  }
+
+  .checked {
+    font-size: 0.85rem;
+    color: var(--ink-55);
+  }
+
+  .table-section {
+    padding-top: 24px;
+  }
+
+  .app-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 12px;
+  }
+
+  .app-list li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 28px;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+  }
+
+  .app-list p {
+    color: var(--ink-70);
+  }
+
+  .fit strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .app-list .text-link {
+    justify-self: start;
+    margin-top: 4px;
+  }
+
+  .sources {
+    padding-block: 0 40px;
+    font-size: 0.85rem;
+    color: var(--ink-55);
+  }
+
+  .sources .wrap {
+    display: grid;
+    gap: 14px;
+  }
+
+  .sources .small {
+    font-family: var(--sans);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .sources ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 4px;
+  }
+
+  .sources a {
+    color: var(--ink-70);
+  }
+</style>

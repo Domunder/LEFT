@@ -1,0 +1,266 @@
+---
+/** LEFT vs one competitor: one page per app in src/compare.ts with `page: true`. */
+import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
+import GetApp from '../../components/GetApp.astro';
+import CompareTable from '../../components/CompareTable.astro';
+import { SITE } from '../../site';
+import { APPS, CHECKED, CHECKED_LABEL, LEFT_APP, type CompareApp } from '../../compare';
+
+export function getStaticPaths() {
+  return APPS.filter((app) => app.page).map((app) => ({ params: { slug: app.slug }, props: { app } }));
+}
+
+type Props = { app: CompareApp };
+const { app } = Astro.props;
+const vs = app.vs!;
+
+const title = `LEFT vs ${app.name}: ${vs.titleTail} (${CHECKED.slice(0, 4)})`;
+const description = vs.description;
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'LEFT', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: 'Compare', item: SITE.url + '/compare/' },
+      { '@type': 'ListItem', position: 3, name: `LEFT vs ${app.name}`, item: `${SITE.url}/compare/${app.slug}/` },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: vs.faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  },
+];
+
+const others = APPS.filter((other) => other.page && other.slug !== app.slug);
+---
+
+<Base title={title} description={description} jsonLd={jsonLd}>
+  <section class="intro">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="wrap head">
+      <p class="eyebrow"><a href="/compare/">Compare</a> · LEFT vs {app.name}</p>
+      <h1>LEFT vs {app.name}: <em>{vs.headline}</em></h1>
+      <p class="lede">{vs.lede}</p>
+      <p class="checked">Checked {CHECKED_LABEL} against {app.name}’s own website and store listing. We make LEFT.</p>
+    </div>
+  </section>
+
+  <section class="short">
+    <div class="wrap two">
+      <div class="card reveal">
+        <p class="eyebrow">Pick {app.name} if</p>
+        <ul>{vs.pickThem.map((line) => <li>{line}</li>)}</ul>
+      </div>
+      <div class="card us reveal">
+        <p class="eyebrow">Pick LEFT if</p>
+        <ul>{vs.pickUs.map((line) => <li>{line}</li>)}</ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="table-section">
+    <div class="wrap">
+      <h2 class="table-title reveal">Feature by feature</h2>
+      <CompareTable apps={[LEFT_APP, app]} caption={`LEFT and ${app.name} compared`} />
+    </div>
+  </section>
+
+  <section class="diffs">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <p class="eyebrow">The differences</p>
+        <h2>What actually <em>changes at your event.</em></h2>
+      </div>
+      <div class="diff-list">
+        {
+          vs.differences.map((diff) => (
+            <article class="reveal">
+              <h3>{diff.title}</h3>
+              <p>{diff.text}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <Faq items={vs.faq} />
+
+  <section class="more">
+    <div class="wrap more-inner reveal">
+      <p class="lede">
+        Also compared:
+        {others.map((other, index) => (
+          <>
+            {index > 0 && ', '}
+            <a href={`/compare/${other.slug}/`}>LEFT vs {other.name}</a>
+          </>
+        ))}
+        {others.length > 0 && ' — '}or <a href="/compare/">every app side by side</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class="sources">
+    <div class="wrap">
+      <h2 class="small">Sources</h2>
+      <ul>
+        {
+          app.sources.map((source) => (
+            <li>
+              <a href={source.url} rel="nofollow noopener" target="_blank">{source.label}</a>
+            </li>
+          ))
+        }
+      </ul>
+      <p>
+        {app.name} is a trademark of its owner; LEFT is not affiliated with it. Spotted something out of date? Write to
+        <a href={`mailto:${SITE.contactEmail}`}>{SITE.contactEmail}</a> and we will fix it.
+      </p>
+    </div>
+  </section>
+
+  <GetApp />
+</Base>
+
+<style>
+  .intro {
+    padding-top: 160px;
+    padding-bottom: 32px;
+    overflow: hidden;
+  }
+
+  .intro .glow {
+    left: -25%;
+    top: -30%;
+  }
+
+  .head {
+    display: grid;
+    gap: 22px;
+  }
+
+  .head .eyebrow a {
+    color: inherit;
+  }
+
+  .checked {
+    font-size: 0.85rem;
+    color: var(--ink-55);
+  }
+
+  .short {
+    padding-block: 24px;
+  }
+
+  .two {
+    display: grid;
+    gap: 12px;
+  }
+
+  @media (min-width: 800px) {
+    .two {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 28px;
+    display: grid;
+    gap: 14px;
+    align-content: start;
+  }
+
+  .card.us {
+    border-color: rgba(240, 180, 120, 0.35);
+  }
+
+  .card ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 8px;
+    color: var(--ink-70);
+  }
+
+  .table-title {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    margin-bottom: 24px;
+  }
+
+  .diff-list {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+
+  .diff-list article {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 28px;
+    display: grid;
+    gap: 12px;
+    align-content: start;
+  }
+
+  .diff-list p {
+    color: var(--ink-70);
+  }
+
+  .more {
+    padding-block: 0;
+  }
+
+  .more-inner {
+    padding: 28px clamp(22px, 4vw, 40px);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--card);
+  }
+
+  .more a {
+    color: var(--ink);
+  }
+
+  .sources {
+    padding-block: 56px 40px;
+    font-size: 0.85rem;
+    color: var(--ink-55);
+  }
+
+  .sources .wrap {
+    display: grid;
+    gap: 14px;
+  }
+
+  .sources .small {
+    font-family: var(--sans);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .sources ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 4px;
+  }
+
+  .sources a {
+    color: var(--ink-70);
+  }
+</style>

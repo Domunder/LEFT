@@ -181,6 +181,12 @@ const year = new Date().getFullYear();
             <li><a href="/#faq">FAQ</a></li>
           </ul>
           <ul>
+            <li><a href="/compare/">Compare apps</a></li>
+            <li><a href="/compare/pov/">LEFT vs POV</a></li>
+            <li><a href="/compare/once/">LEFT vs Once</a></li>
+            <li><a href="/compare/lense/">LEFT vs Lense</a></li>
+          </ul>
+          <ul>
             <li><a href="/terms/">Terms</a></li>
             <li><a href="/privacy/">Privacy</a></li>
           </ul>
@@ -466,7 +472,8 @@ const year = new Date().getFullYear();
 
   .site-footer nav {
     display: flex;
-    gap: 64px;
+    flex-wrap: wrap;
+    gap: 24px 64px;
   }
 
   .site-footer ul {

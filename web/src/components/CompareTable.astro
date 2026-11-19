@@ -1,0 +1,97 @@
+---
+/**
+ * The comparison table (src/compare.ts). A real <table> for search engines and
+ * screen readers; on a narrow screen it scrolls sideways with the first
+ * column pinned.
+ */
+import { ROWS, type CompareApp } from '../compare';
+
+type Props = { apps: CompareApp[]; caption?: string };
+const { apps, caption = 'Disposable camera apps for events compared' } = Astro.props;
+---
+
+<div class="scroller reveal" role="region" aria-label={caption} tabindex="0">
+  <table>
+    <caption class="sr-only">{caption}</caption>
+    <thead>
+      <tr>
+        <th scope="col"><span class="sr-only">Feature</span></th>
+        {apps.map((app) => <th scope="col" class:list={{ us: app.slug === 'left' }}>{app.name}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {
+        ROWS.map((row) => (
+          <tr>
+            <th scope="row">{row.label}</th>
+            {apps.map((app) => (
+              <td class:list={{ us: app.slug === 'left' }}>{app.facts[row.key]}</td>
+            ))}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .scroller {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    background: var(--card);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 720px;
+    font-size: 0.9rem;
+  }
+
+  th,
+  td {
+    text-align: left;
+    vertical-align: top;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  tbody tr:last-child th,
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  thead th {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 1.15rem;
+    color: var(--ink);
+  }
+
+  tbody th {
+    font-weight: 500;
+    color: var(--ink-55);
+    font-size: 0.8rem;
+    letter-spacing: 0.02em;
+    min-width: 140px;
+  }
+
+  td {
+    color: var(--ink-70);
+    min-width: 150px;
+  }
+
+  th:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--card);
+    z-index: 1;
+  }
+
+  .us {
+    background: rgba(240, 180, 120, 0.06);
+    color: var(--ink);
+  }
+</style>
