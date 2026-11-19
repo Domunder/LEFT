@@ -44,6 +44,12 @@ import tripFriends from '../assets/photos/trip-friends.jpg';
 import weddingChampagne from '../assets/photos/wedding-champagne.jpg';
 import weddingNight from '../assets/photos/wedding-night.jpg';
 import partyDance from '../assets/photos/party-dance.jpg';
+import partyFloor from '../assets/photos/party-floor.jpg';
+import grandpaDance from '../assets/photos/grandpa-dance.jpg';
+import dinnerTable from '../assets/photos/dinner-table.jpg';
+import tripCar from '../assets/photos/trip-car.jpg';
+import weddingToast from '../assets/photos/wedding-toast.jpg';
+import type { ImageMetadata } from 'astro';
 
 /**
  * No photo appears twice across the eight screenshots (the film picker shows
@@ -68,7 +74,7 @@ const MOMENTS = [
     title: 'Lena’s 30th',
     photos: 57,
     people: 14,
-    status: '1d 4h left',
+    status: '01d 04h left',
     live: true,
     more: 0,
     strip: [birthdayCandle, partyConfetti, partyWine, dinnerCandle],
@@ -85,31 +91,129 @@ const MOMENTS = [
 ];
 
 /**
- * The eight screenshots, in listing order (docs/LAUNCH.md §10). A screenshot
- * shows a part of one screen, not the whole phone: the phone is wider than
- * the picture and runs off one edge. `line` says where the headline stands —
- * the phone is cut at the opposite edge, so 'top' shows a screen's upper part
- * and 'bottom' its lower part.
+ * The eight screenshots, in listing order (docs/LAUNCH.md §10). The headline
+ * stands at the top; under it a composition (2026-11-19, the user: "not
+ * always just an iPhone from top and bottom"): a phone tilted a few degrees
+ * that runs off the bottom edge, sometimes a second phone behind it, and
+ * prints that float beside or above it.
+ *
+ * Every position is in vw, measured from the stage's top-left corner, so the
+ * same composition serves the 9:19.5 iPhone and the 9:16 Android picture —
+ * the shorter Android picture only cuts the phones a little higher. A
+ * phone's `x`/`w` place its frame, `r` tilts it about its centre. A print is
+ * a photo on paper: `by` writes who took it on the margin, `mission` hangs
+ * the caption the viewer shows, `look` picks the film, `veiled` keeps it
+ * undeveloped.
  */
-const SHOTS = [
-  { screen: 'camera', line: 'top', lines: ['One roll each.', 'Make every shot count.'], glow: '12% 4%', photo: weddingDance, tile: sample1, mission: { done: 1, total: 3 } },
-  { screen: 'missions', line: 'bottom', lines: ['A secret dare', 'in every pocket.'], glow: '88% 96%', photo: partyToast, mission: { done: 1, total: 3 } },
-  // 9:16 cuts deeper: from below, the hero would be cut through the faces.
-  { screen: 'album', line: 'bottom', android: 'top', lines: ['The whole night,', 'developed together.'], glow: '90% 96%', photo: weddingCrowd },
+type PhoneSpec = {
+  screen: 'camera' | 'looks' | 'moments' | 'album' | 'invite' | 'developing' | 'missions' | 'viewer';
+  photo?: ImageMetadata;
+  tile?: ImageMetadata;
+  mission?: { done: number; total: number; armed?: string };
+  viewer?: { by: string; index: number; count: number; mission?: string };
+  x: number;
+  y: number;
+  w: number;
+  r: number;
+  z?: number;
+  /** The 9:16 Android picture is shorter: a phone whose point is low on its screen moves or shrinks there. */
+  android?: { x?: number; y?: number; w?: number; r?: number };
+};
+type PrintSpec = {
+  src: ImageMetadata;
+  x: number;
+  y: number;
+  w: number;
+  r: number;
+  z?: number;
+  by?: string;
+  mission?: string;
+  look?: 'golden' | 'chrome' | 'faded' | 'mono';
+  veiled?: boolean;
+  android?: { x?: number; y?: number; w?: number; r?: number };
+};
+type ShotSpec = { lines: [string, string]; glow: string; phones: PhoneSpec[]; prints: PrintSpec[] };
+
+const SHOTS: ShotSpec[] = [
   {
-    screen: 'viewer',
-    line: 'bottom',
-    lines: ['Every dare', 'gets its answer.'],
-    glow: '10% 98%',
-    photo: friendsLaugh,
-    viewer: { by: 'Marc', index: 87, count: 412, mission: 'A photo with someone you have never met' },
+    lines: ['One roll each.', 'Make every shot count.'],
+    glow: '85% 30%',
+    phones: [{ screen: 'camera', photo: weddingDance, tile: sample1, mission: { done: 1, total: 3 }, x: 6, y: 10, w: 76, r: -6 }],
+    prints: [
+      { src: partyFloor, x: 63, y: 4, w: 34, r: 9, z: 2, by: 'Jonas' },
+      { src: weddingToast, x: 70, y: 52, w: 28, r: -5, z: 2, by: 'Lena' },
+    ],
   },
-  { screen: 'invite', line: 'top', lines: ['One scan.', 'Everyone’s in.'], glow: '50% -4%' },
-  { screen: 'looks', line: 'bottom', lines: ['Pick the film', 'for your night.'], glow: '88% 96%', photo: weddingFriends },
-  // …and from below, this screen's own headline would be halved.
-  { screen: 'developing', line: 'bottom', android: 'top', lines: ['Hidden until', 'it’s over.'], glow: '10% 98%' },
-  { screen: 'moments', line: 'top', lines: ['Every event,', 'one album.'], glow: '50% 2%' },
-] as const;
+  {
+    lines: ['A secret dare', 'in every pocket.'],
+    glow: '10% 30%',
+    phones: [{ screen: 'missions', photo: partyToast, tile: sample1, mission: { done: 1, total: 3 }, x: 22, y: 8, w: 76, r: 6, android: { x: 34, y: 4, w: 62 } }],
+    prints: [{ src: grandpaDance, x: 2, y: 30, w: 42, r: -8, z: 2, by: 'Aylin', mission: 'A dance with the oldest guest', android: { y: 14, w: 38 } }],
+  },
+  {
+    lines: ['The whole night,', 'developed together.'],
+    glow: '50% 20%',
+    phones: [{ screen: 'album', photo: weddingCrowd, x: 14, y: 26, w: 72, r: -3 }],
+    prints: [
+      { src: partyDance, x: 2, y: 6, w: 34, r: -12, z: 2, by: 'Marc' },
+      { src: sample6, x: 36, y: -2, w: 30, r: 4, z: 1, by: 'Sofia' },
+      { src: weddingMono, x: 66, y: 8, w: 32, r: 13, z: 2, by: 'Tom', look: 'mono' },
+    ],
+  },
+  {
+    lines: ['Every dare', 'gets its answer.'],
+    glow: '15% 40%',
+    phones: [
+      {
+        screen: 'viewer',
+        photo: friendsLaugh,
+        viewer: { by: 'Marc', index: 87, count: 412, mission: 'A photo with someone you have never met' },
+        x: 20,
+        y: 8,
+        w: 74,
+        r: 5,
+        android: { x: 32, y: 4, w: 62 },
+      },
+    ],
+    prints: [{ src: partyFlash, x: 1, y: 44, w: 36, r: -10, z: 2, by: 'Nina', mission: 'Catch someone mid-laugh' }],
+  },
+  {
+    lines: ['One scan.', 'Everyone’s in.'],
+    glow: '50% 10%',
+    phones: [
+      { screen: 'camera', photo: sample2, tile: tripCar, x: 44, y: 4, w: 62, r: 10, z: 0 },
+      { screen: 'invite', x: 3, y: 14, w: 70, r: -6, z: 1 },
+    ],
+    prints: [],
+  },
+  {
+    lines: ['Pick the film', 'for your night.'],
+    glow: '80% 25%',
+    phones: [{ screen: 'looks', photo: weddingFriends, x: 4, y: 12, w: 74, r: -5 }],
+    prints: [
+      { src: weddingFriends, x: 66, y: 2, w: 31, r: 10, z: 2, look: 'chrome', by: 'Chrome' },
+      { src: weddingFriends, x: 69, y: 44, w: 29, r: -6, z: 2, look: 'mono', by: 'Mono' },
+    ],
+  },
+  {
+    lines: ['Hidden until', 'it’s over.'],
+    glow: '50% 20%',
+    phones: [{ screen: 'developing', x: 14, y: 22, w: 72, r: 4 }],
+    prints: [
+      { src: dinnerTable, x: 0, y: 2, w: 32, r: -11, z: 2, veiled: true, by: 'Developing…' },
+      { src: tripCar, x: 66, y: 6, w: 31, r: 9, z: 2, veiled: true, by: 'Developing…' },
+    ],
+  },
+  {
+    lines: ['Every event,', 'one album.'],
+    glow: '20% 25%',
+    phones: [{ screen: 'moments', x: 22, y: 10, w: 74, r: 5 }],
+    prints: [
+      { src: tripSunset, x: 1, y: 8, w: 34, r: -9, z: 2, by: 'Road trip' },
+      { src: birthdayCandle, x: 4, y: 62, w: 30, r: 6, z: 2, by: 'Lena’s 30th' },
+    ],
+  },
+];
 
 export function getStaticPaths() {
   const shots = ['ios', 'android'].flatMap((platform) =>
@@ -124,9 +228,8 @@ const [platform, number] = String(id).split('-');
 const wide = platform === 'feature' || platform === 'header' || platform === 'search';
 const shot = wide ? null : SHOTS[Number(number) - 1];
 const device = platform === 'ios' ? 'iphone' : 'android';
-const flipped = shot && platform === 'android' && 'android' in shot;
-const line = shot && (flipped ? shot.android : shot.line);
-const glow = shot && (flipped ? `${shot.glow.split(' ')[0]} 2%` : shot.glow);
+const place = (item: { x: number; y: number; w: number; r: number; z?: number }) =>
+  `left:${item.x}vw;top:${item.y}vw;width:${item.w}vw;rotate:${item.r}deg;z-index:${item.z ?? 1}`;
 /** Three device pixels per point, and the phone fills most of the picture. */
 const DETAIL = 1.2;
 ---
@@ -142,26 +245,55 @@ const DETAIL = 1.2;
   <body class={platform}>
     {
       shot && (
-        <main class:list={['shot', line]} style={`--glow:${glow}`}>
+        <main class="shot" style={`--glow:${shot.glow}`}>
           <h1>
             {shot.lines[0]}
             <br />
             <em>{shot.lines[1]}</em>
           </h1>
           <div class="stage">
-            <Phone
-              screen={shot.screen}
-              photo={'photo' in shot ? shot.photo : undefined}
-              mission={'mission' in shot ? shot.mission : undefined}
-              viewer={'viewer' in shot ? shot.viewer : undefined}
-              tile={'tile' in shot ? shot.tile : sample1}
-              prints={PRINTS}
-              moments={MOMENTS}
-              device={device}
-              label=""
-              eager
-              detail={DETAIL}
-            />
+            {shot.phones.map((spec) => (
+              <div class="ph" style={place(device === 'android' ? { ...spec, ...spec.android } : spec)}>
+                <Phone
+                  screen={spec.screen}
+                  photo={spec.photo}
+                  mission={spec.mission}
+                  viewer={spec.viewer}
+                  tile={spec.tile ?? sample1}
+                  prints={PRINTS}
+                  moments={MOMENTS}
+                  device={device}
+                  label=""
+                  eager
+                  detail={DETAIL}
+                />
+              </div>
+            ))}
+            {shot.prints.map((print) => (
+              <figure class:list={['print', { veiled: print.veiled }]} style={place(device === 'android' ? { ...print, ...print.android } : print)}>
+                <span class="paper">
+                  <Image
+                    src={print.src}
+                    alt=""
+                    width={Math.round(print.w * 3 * 4.4)}
+                    height={Math.round(print.w * 3 * 4.4 * 1.25)}
+                    fit="cover"
+                    quality={86}
+                    loading="eager"
+                    class={`look-${print.look ?? 'golden'}`}
+                  />
+                </span>
+                {print.by && <figcaption>{print.by}</figcaption>}
+                {print.mission && (
+                  <span class="chip">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M12 22a10 10 0 100-20 10 10 0 000 20zM12 18a6 6 0 100-12 6 6 0 000 12zM12 14a2 2 0 100-4 2 2 0 000 4z" />
+                    </svg>
+                    {print.mission}
+                  </span>
+                )}
+              </figure>
+            ))}
           </div>
         </main>
       )
@@ -231,7 +363,7 @@ const DETAIL = 1.2;
 </style>
 
 <style>
-  /* ── A screenshot: the line, and a part of the phone ───────────── */
+  /* ── A screenshot: the line, and a composition under it ─────────── */
   .shot {
     width: 100vw;
     height: 100vh;
@@ -240,12 +372,8 @@ const DETAIL = 1.2;
     flex-direction: column;
     align-items: center;
     background:
-      radial-gradient(125vw 125vw at var(--glow), rgba(240, 190, 140, 0.26), transparent 62%),
+      radial-gradient(110vw 110vw at var(--glow), rgba(240, 190, 140, 0.24), transparent 62%),
       var(--bg);
-  }
-
-  .shot.bottom {
-    flex-direction: column-reverse;
   }
 
   h1 {
@@ -257,42 +385,114 @@ const DETAIL = 1.2;
   }
 
   .shot h1 {
+    position: relative;
+    z-index: 5;
     flex: none;
     font-size: 10.8vw;
     line-height: 1.1;
-    padding: 7.4vh 0 4.4vh;
+    padding: 7.4vh 0 3vh;
   }
 
-  .shot.bottom h1 {
-    padding: 4vh 0 6.6vh;
-  }
-
-  /* The phone hangs from the line's side and leaves by the other edge. */
   .stage {
+    position: relative;
     flex: 1;
-    min-height: 0;
+    width: 100%;
+  }
+
+  .ph,
+  .print {
+    position: absolute;
+    margin: 0;
+  }
+
+  .ph :global(.phone) {
+    width: 100%;
+  }
+
+  /* A print: the photo on off-white paper, who took it on the margin. */
+  .print {
+    filter: drop-shadow(0 2.4vw 3.2vw rgba(0, 0, 0, 0.6));
+  }
+
+  .paper {
+    display: block;
+    padding: 1.5vw 1.5vw 7vw;
+    border-radius: 1vw;
+    background: var(--ink);
+  }
+
+  .paper :global(img) {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    border-radius: 0.4vw;
+  }
+
+  .print figcaption {
+    position: absolute;
+    left: 2.4vw;
+    right: 2.4vw;
+    bottom: 1.6vw;
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 4vw;
+    line-height: 1;
+    color: #2a2622;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  /* The viewer's mission caption, hung under the print as a glass capsule. */
+  .chip {
+    position: absolute;
+    left: 50%;
+    top: calc(100% - 1.2vw);
+    translate: -50% 0;
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    align-items: center;
+    gap: 1.4vw;
+    width: max-content;
+    max-width: 62vw;
+    padding: 1.8vw 3.2vw;
+    border-radius: 99vw;
+    background: rgba(28, 26, 24, 0.86);
+    border: 0.25vw solid rgba(240, 237, 232, 0.16);
+    font-family: var(--sans);
+    font-size: 3.1vw;
+    font-weight: 500;
+    color: var(--ink);
   }
 
-  .shot.bottom .stage {
-    align-items: flex-end;
-  }
-
-  .stage :global(.phone) {
+  .chip svg {
     flex: none;
-    width: 104vw;
+    width: 3.6vw;
+    height: 3.6vw;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
   }
 
-  /* 9:16 is shorter than an iPhone's 9:19.5: a smaller line, a larger part. */
+  /* Not developed yet: the paper is dark and the picture is only a glow. */
+  .veiled .paper {
+    background: #1c1a18;
+    overflow: hidden;
+  }
+
+  .veiled figcaption {
+    color: var(--ink-70);
+  }
+
+  .veiled .paper :global(img) {
+    filter: blur(1.7vw) brightness(0.6) saturate(0.75);
+    transform: scale(1.15);
+  }
+
+  /* 9:16 is shorter than an iPhone's 9:19.5: a smaller line, less air. */
   .android .shot h1 {
     font-size: 9.6vw;
-    padding: 5.6vh 0 3.6vh;
-  }
-
-  .android .shot.bottom h1 {
-    padding: 3.4vh 0 5.2vh;
+    padding: 5.6vh 0 2.4vh;
   }
 
   /* ── Google Play's feature graphic, 1024x500 ───────────────────── */

@@ -17,8 +17,10 @@ phone mocks (`web/src/store/Shot.astro`, `web/scripts/store-assets.mjs`).
 
 Upload the screenshots in their numbered order: camera, missions, album,
 mission-photo (a print in the viewer with its mission), invite, film,
-developing, moments (2026-11-18; the name screen is no longer shown). Each shows a part of one screen, not the whole
-phone. The texts for the listings are in `docs/LAUNCH.md` §10.
+developing, moments (2026-11-18; the name screen is no longer shown). Each is a
+composition under the headline (2026-11-19): a phone tilted a few degrees,
+sometimes a second one behind it, and prints floating beside or above it —
+placed in `SHOTS` in `Shot.astro`. The texts for the listings are in `docs/LAUNCH.md` §10.
 
 Not here, because the app does not need it: iPad screenshots (the app is
 iPhone-only, `supportsTablet: false`), Play's tablet screenshots (optional),
@@ -36,5 +38,6 @@ a promo video.
 - The Android set and the feature graphic use an Android handset drawn in CSS
   (the mock library only has iPhones) with Android's status bar; the screens
   themselves are the same layouts as on iOS.
-- No photo appears twice across a set of eight, and every moment on the
-  Moments screen has a full strip.
+- No photo appears twice across a set of eight, except where a print echoes
+  its own phone (the film picker's looks, Moments' strips); every moment on
+  the Moments screen has a full strip.

@@ -172,6 +172,12 @@ const prints: Print[] = Astro.props.prints ?? [
   { src: weddingChampagne, by: 'Marc' },
 ];
 
+/**
+ * The developing state's five frames: with 412 photos taken, every frame holds
+ * one, blurred (the app puts the viewer's own frames and stand-ins there).
+ */
+const devFrames = [photo, ...prints.map((print) => print.src), weddingCrowd, partyFloor, tripSunset, dinnerTable].slice(0, 5);
+
 /** Your Moments: the last tile of a strip stands for the rest of the album. */
 const moments: Moment[] = Astro.props.moments ?? [
   {
@@ -237,7 +243,24 @@ const ICON = {
   link: 'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71',
   share: 'M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13',
   flag: 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7',
+  zapOff: 'M12.41 6.75L13 2l-2.43 2.92M18.57 12.91L21 10h-5.34M8 8l-5 6h9l-1 8 5-6M1 1l22 22',
 };
+
+/** MaterialCommunityIcons' `qrcode` — the invite tile's glyph (filled, not a Feather stroke). */
+const QR_GLYPH =
+  'M3 11h2v2H3v-2m8-6h2v4h-2V5m-2 6h4v4h-2v-2H9v-2m6 0h2v2h2v-2h2v2h-2v2h2v4h-2v2h-2v-2h-4v2h-2v-4h4v-2h2v-2h-2v-2m4 8v-4h-2v4h2M15 3h6v6h-6V3m2 2v2h2V5h-2M3 3h6v6H3V3m2 2v2h2V5H5m-2 10h6v6H3v-6m2 2v2h2v-2H5z';
+
+/**
+ * A running moment's capsule reads as `statusLabel()` writes it: both
+ * numbers padded to two digits ("01d 04h left"), so a caller's "1d 4h left"
+ * is brought into that form.
+ */
+const statusText = (status: string) =>
+  status.replace(/^(\d+)([dhms]) (\d+)([dhms]) left$/, (_, a, u, b, v) => `${a.padStart(2, '0')}${u} ${b.padStart(2, '0')}${v} left`);
+
+/** The mission the next photo is armed for, in the sheet's list. */
+const armedInList = missionList.find((item) => item.state === 'armed')?.body;
+const doneInList = missionList.filter((item) => item.state === 'done').length;
 ---
 
 <figure class:list={['phone', { android }, className]} role="img" aria-label={label} style={geometry}>
@@ -263,7 +286,7 @@ const ICON = {
               <span class="scrim-top" />
               <span class="scrim-bottom" />
               <div class="cam-head">
-                <span class="round lg glass">
+                <span class="round glass">
                   <svg viewBox="0 0 24 24"><path d={ICON.x} /></svg>
                 </span>
                 <span class="cam-title">
@@ -280,25 +303,26 @@ const ICON = {
                   )}
                 </span>
                 <span class="until">
-                  <b>01</b><small>D</small><b class="dim">04</b><small>H</small>
+                  <b>01</b><small>D</small><b class="dim">04</b><small class="dim">H</small>
                   <svg viewBox="0 0 24 24"><path d={ICON.next} /></svg>
                 </span>
               </div>
-              {mission?.armed && (
+              {(screen === 'missions' ? armedInList : mission?.armed) && (
                 <span class="armed">
                   <svg viewBox="0 0 24 24"><path d={ICON.target} /></svg>
-                  <span>Next photo: {mission.armed}</span>
-                  <svg viewBox="0 0 24 24" class="dim"><path d={ICON.x} /></svg>
+                  <span>Next photo: {screen === 'missions' ? armedInList : mission?.armed}</span>
+                  <svg viewBox="0 0 24 24" class="close"><path d={ICON.x} /></svg>
                 </span>
               )}
               <div class="cam-controls">
-                <span class="round lg glass">
-                  <svg viewBox="0 0 24 24"><path d={ICON.zap} /></svg>
+                {/* Flash starts off: the app's `useState(false)`, drawn as zap-off, dimmed. */}
+                <span class="round lg glass bright off-tone">
+                  <svg viewBox="0 0 24 24"><path d={ICON.zapOff} /></svg>
                 </span>
                 <span class="zoom glass">
                   <i>0.5×</i><i class="on">1×</i><i>4×</i>
                 </span>
-                <span class="round lg glass">
+                <span class="round lg glass bright">
                   <svg viewBox="0 0 24 24"><path d={ICON.flip} /></svg>
                 </span>
               </div>
@@ -309,7 +333,7 @@ const ICON = {
               </span>
               <span class="shutter"><i /></span>
               <span class="tile glass">
-                <svg viewBox="0 0 24 24"><path d={ICON.qr} /></svg>
+                <svg viewBox="0 0 24 24" class="glyph"><path d={QR_GLYPH} /></svg>
               </span>
             </div>
             {screen === 'missions' && (
@@ -317,10 +341,22 @@ const ICON = {
                 <span class="sheet-dim" />
                 <div class="m-sheet">
                   <span class="grabber" />
-                  <p class="headline xs">
-                    Your <em>missions.</em>
-                  </p>
-                  <p class="m-sub">Pick one, then take the photo.</p>
+                  <div class="m-block">
+                    <p class="m-title">
+                      <span class="headline xs">
+                        Your <em>missions.</em>
+                      </span>
+                      <b>
+                        {doneInList}
+                        <i>/{missionList.length}</i>
+                      </b>
+                    </p>
+                    <p class="m-sub">
+                      {doneInList === missionList.length
+                        ? 'All done. Photos stay hidden until the film is developed.'
+                        : 'Pick one, then take the photo.'}
+                    </p>
+                  </div>
                   <div class="m-rows">
                     {missionList.map((item, index) => (
                       <span class:list={['m-row', `is-${item.state}`]} style={`--n:${index}`}>
@@ -391,10 +427,10 @@ const ICON = {
           <div class="s moments">
             <div class="lib-head">
               <p class="headline sm">Moments</p>
-              <span class="round lg glass">
+              <span class="round lg glass bright">
                 <svg viewBox="0 0 24 24"><path d={ICON.settings} /></svg>
               </span>
-              <span class="round lg glass">
+              <span class="round lg glass bright">
                 <svg viewBox="0 0 24 24"><path d={ICON.users} /></svg>
               </span>
               <span class="round lg light">
@@ -420,7 +456,7 @@ const ICON = {
                     </span>
                     <span class="status-cap">
                       {moment.live && <i class="live-dot" />}
-                      {moment.status}
+                      {statusText(moment.status)}
                       {moment.live && <svg viewBox="0 0 24 24"><path d={ICON.next} /></svg>}
                     </span>
                   </div>
@@ -443,13 +479,20 @@ const ICON = {
                           {counted && <em>+{moment.more}</em>}
                         </span>
                       ) : (
-                        <span class="blank" />
+                        <span class="blank">
+                          {tile === 0 && (
+                            <svg viewBox="0 0 24 24"><path d={ICON.image} /></svg>
+                          )}
+                        </span>
                       );
                     })}
                   </div>
                 </div>
               ))}
             </div>
+            {/* The list dissolves into the page under the header and at the bottom edge (`ScrollEdge`). */}
+            <span class="edge-top" />
+            <span class="edge-bottom" />
           </div>
         )
       }
@@ -483,8 +526,10 @@ const ICON = {
                 </span>
               ))}
             </div>
+            {/* A soft edge where the grid scrolls under the back button, instead of a divider. */}
+            <span class="top-fade" />
             <div class="float">
-              <span class="round lg glass">
+              <span class="round lg glass bright">
                 <svg viewBox="0 0 24 24"><path d={ICON.back} /></svg>
               </span>
             </div>
@@ -515,17 +560,19 @@ const ICON = {
                 </svg>
               </span>
               <span class="share-row">
-                <span class="share">
+                <span class="share glass">
                   <svg viewBox="0 0 24 24"><path d={ICON.link} /></svg>Share Link
                 </span>
-                <span class="share">
+                <span class="share glass">
                   <svg viewBox="0 0 24 24"><path d={ICON.download} /></svg>Save QR
                 </span>
               </span>
+              {/* The status line under the buttons, reserved even when empty. */}
+              <span class="qr-status" />
             </div>
             <span class="cta">
-              See who’s joined
               <svg viewBox="0 0 24 24"><path d={ICON.arrow} /></svg>
+              See who’s joined
             </span>
           </div>
         )
@@ -534,10 +581,12 @@ const ICON = {
       {
         screen === 'viewer' && (
           <div class="s viewer">
-            <Image src={photo} alt="" width={px(720)} height={px(1560)} fit="cover" quality={q(64)} loading={loading} class="look-golden" />
-            <span class="v-shade" />
+            {/* The whole photo, `contentFit="contain"`: a 3:4 print on the viewer's near-black. */}
+            <span class="v-photo">
+              <Image src={photo} alt="" width={px(720)} height={px(960)} fit="cover" quality={q(64)} loading={loading} class="look-golden" />
+            </span>
             <div class="v-top">
-              <span class="round lg glass">
+              <span class="round lg glass bright">
                 <svg viewBox="0 0 24 24"><path d={ICON.x} /></svg>
               </span>
               <span class="v-count glass">
@@ -553,14 +602,15 @@ const ICON = {
                   <span><i>Mission · </i>{viewer.mission}</span>
                 </span>
               )}
+              {/* Save and Share are labelled capsules; someone else's photo gets the flag (report). */}
               <span class="v-actions">
-                <span class="round lg glass">
-                  <svg viewBox="0 0 24 24"><path d={ICON.download} /></svg>
+                <span class="v-pill glass">
+                  <svg viewBox="0 0 24 24"><path d={ICON.download} /></svg>Save
                 </span>
-                <span class="round lg glass">
-                  <svg viewBox="0 0 24 24"><path d={ICON.share} /></svg>
+                <span class="v-pill glass">
+                  <svg viewBox="0 0 24 24"><path d={ICON.share} /></svg>Share
                 </span>
-                <span class="round lg glass">
+                <span class="round lg glass bright">
                   <svg viewBox="0 0 24 24"><path d={ICON.flag} /></svg>
                 </span>
               </span>
@@ -573,7 +623,7 @@ const ICON = {
         screen === 'developing' && (
           <div class="s developing">
             <div class="float">
-              <span class="round lg glass">
+              <span class="round lg glass bright">
                 <svg viewBox="0 0 24 24"><path d={ICON.back} /></svg>
               </span>
             </div>
@@ -582,15 +632,19 @@ const ICON = {
               <p class="headline">
                 Nothing to see<br /><em>yet.</em>
               </p>
+              {/* Two units, as `countdownParts()` gives them; under an hour they are minutes and seconds. */}
               <p class="clock">
-                <b>04</b><small>h</small><b>12</b><small>m</small><b data-tick>48</b><small>s</small>
+                <b>42</b><small>m</small><b data-tick>18</b><small>s</small>
               </p>
               <p class="meta">
                 412 photos so far, from 38 people.<br />They appear together when the film is developed.
               </p>
+              {/* A frame per photo that exists, blurred past recognition and dimmed. */}
               <div class="frames">
-                {[0, 1, 2, 3, 4].map((index) => (
-                  <i style={`--n:${index}`} />
+                {devFrames.map((image, index) => (
+                  <span style={`--n:${index}`}>
+                    <Image src={image} alt="" width={12} height={16} fit="cover" quality={40} loading={loading} />
+                  </span>
                 ))}
               </div>
             </div>
@@ -943,7 +997,18 @@ const ICON = {
     display: grid;
     place-items: center;
     flex: none;
-    color: rgba(240, 237, 232, 0.7);
+    /* CircleIconButton: the icon in Colors.textMuted. */
+    color: rgba(240, 237, 232, 0.55);
+  }
+
+  /* GlassButton: the icon in Colors.text. */
+  .round.bright {
+    color: #f0ede8;
+  }
+
+  /* The camera's flash while it is off. */
+  .round.off-tone {
+    color: rgba(240, 237, 232, 0.6);
   }
 
   .round.lg {
@@ -978,9 +1043,10 @@ const ICON = {
     line-height: calc(var(--u) * 37);
   }
 
+  /* Display "xl": Newsreader at 38, line height 1.15. */
   .headline.xl {
-    font-size: calc(var(--u) * 40);
-    line-height: calc(var(--u) * 46);
+    font-size: calc(var(--u) * 38);
+    line-height: calc(var(--u) * 44);
   }
 
   .eyebrow-s {
@@ -1100,15 +1166,12 @@ const ICON = {
     gap: calc(var(--u) * 2);
   }
 
-  .cam-title .eyebrow-s {
-    color: rgba(240, 237, 232, 0.6);
-  }
-
   .until {
     display: flex;
     justify-content: flex-end;
     align-items: baseline;
     gap: calc(var(--u) * 2);
+    /* Level with the close button's middle. */
     padding-top: calc(var(--u) * 12);
   }
 
@@ -1128,8 +1191,9 @@ const ICON = {
     padding-inline: calc(var(--u) * 11);
     margin-top: calc(var(--u) * 6);
     border-radius: 999px;
-    font-size: calc(var(--u) * 12);
+    font-size: calc(var(--u) * 11);
     font-weight: 600;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
 
@@ -1138,24 +1202,29 @@ const ICON = {
     height: calc(var(--u) * 12);
   }
 
-  /* "Next photo: …" at the viewfinder's top edge, under the capsule. */
+  /*
+    "Next photo: …" at the viewfinder's top edge: the camera's status-note
+    style, stretched between 18pt insets, 14pt under the header's slot.
+  */
   .armed {
     position: absolute;
-    top: calc(var(--u) * 196);
-    left: 50%;
-    transform: translateX(-50%);
-    width: max-content;
-    max-width: calc(100% - var(--u) * 36);
+    top: calc(var(--u) * 180);
+    inset-inline: calc(var(--u) * 18);
     display: flex;
     align-items: center;
     gap: calc(var(--u) * 6);
-    padding: calc(var(--u) * 7) calc(var(--u) * 8) calc(var(--u) * 7) calc(var(--u) * 12);
-    border-radius: calc(var(--u) * 16);
+    padding: calc(var(--u) * 7) calc(var(--u) * 6) calc(var(--u) * 7) calc(var(--u) * 12);
+    border-radius: calc(var(--u) * 32);
     background: rgba(0, 0, 0, 0.52);
     box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.09);
     color: rgba(240, 237, 232, 0.8);
-    font-size: calc(var(--u) * 13);
-    line-height: calc(var(--u) * 17);
+    font-size: calc(var(--u) * 12);
+    line-height: calc(var(--u) * 15);
+  }
+
+  .armed span {
+    flex: 1;
+    min-width: 0;
   }
 
   .armed svg {
@@ -1163,10 +1232,9 @@ const ICON = {
     height: calc(var(--u) * 12);
   }
 
-  .armed svg.dim {
+  .armed svg.close {
     width: calc(var(--u) * 14);
     height: calc(var(--u) * 14);
-    opacity: 0.6;
   }
 
   .phone.live .armed {
@@ -1177,12 +1245,12 @@ const ICON = {
     0%,
     6% {
       opacity: 0;
-      transform: translate(-50%, calc(var(--u) * -10));
+      transform: translateY(calc(var(--u) * -10));
     }
     14%,
     100% {
       opacity: 1;
-      transform: translate(-50%, 0);
+      transform: none;
     }
   }
 
@@ -1201,6 +1269,10 @@ const ICON = {
     font-size: calc(var(--u) * 9);
     font-weight: 600;
     color: rgba(240, 237, 232, 0.3);
+  }
+
+  .until small.dim {
+    color: rgba(240, 237, 232, 0.2);
   }
 
   .roll {
@@ -1238,6 +1310,12 @@ const ICON = {
     width: calc(var(--u) * 22);
     height: calc(var(--u) * 22);
     stroke-width: 1.7;
+    color: rgba(240, 237, 232, 0.85);
+  }
+
+  .tile svg.glyph {
+    fill: currentColor;
+    stroke: none;
   }
 
   .zoom {
@@ -1287,7 +1365,7 @@ const ICON = {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: calc(var(--u) * 14) calc(var(--u) * 24) calc(var(--u) * 6);
+    padding: calc(var(--u) * 10) calc(var(--u) * 24) calc(var(--u) * 16);
     flex: none;
   }
 
@@ -1340,10 +1418,21 @@ const ICON = {
   }
 
   /* ── 03 Film ──────────────────────────────────────────────────── */
+  /*
+    AmbientGlow: an off-white light (`Glow.core`), peak at the centre, a third
+    of it at 42%, gone at 74% — `size` is that 74% edge. 03 uses the `format`
+    preset: 560 wide, 0.16, centred at (0.1, -0.26) of the screen.
+  */
   .looks {
     padding-inline: calc(var(--u) * 28);
+    padding-bottom: calc(var(--u) * 86);
     background:
-      radial-gradient(calc(var(--u) * 420) calc(var(--u) * 420) at 10% -8%, rgba(240, 190, 140, 0.17), transparent 70%),
+      radial-gradient(
+          circle calc(var(--u) * 378) at calc(var(--u) * 40) calc(var(--u) * -227),
+          rgba(240, 237, 232, 0.16),
+          rgba(240, 237, 232, 0.053) 42%,
+          rgba(240, 237, 232, 0) 74%
+        ),
       #101010;
   }
 
@@ -1384,7 +1473,7 @@ const ICON = {
   }
 
   .looks .eyebrow-s {
-    margin-top: calc(var(--u) * 36);
+    margin-top: calc(var(--u) * 52);
   }
 
   .looks .headline {
@@ -1394,7 +1483,7 @@ const ICON = {
   .cards {
     flex: 1;
     min-height: 0;
-    margin-top: calc(var(--u) * 30);
+    margin-top: calc(var(--u) * 44);
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
@@ -1406,12 +1495,18 @@ const ICON = {
     border-radius: calc(var(--u) * 18);
     overflow: hidden;
     background: #141316;
-    box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.07);
-    opacity: 0.6;
   }
 
-  .card.on {
-    opacity: 1;
+  /* `LookCardState`: an unchosen look is dimmed lightly, its text steps back, its border is faint. */
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.28);
+  }
+
+  .card.on::before {
+    background: rgba(0, 0, 0, 0);
   }
 
   .card::after {
@@ -1419,20 +1514,22 @@ const ICON = {
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    border: calc(var(--u) * 1.5) solid rgba(240, 237, 232, 0);
+    border: calc(var(--u) * 1) solid rgba(255, 255, 255, 0.07);
   }
 
   .card.on::after {
-    border-color: rgba(240, 237, 232, 0.6);
+    border-color: rgba(255, 255, 255, 0.55);
   }
 
   .card-text {
     position: absolute;
-    inset: auto 0 0 0;
-    padding: calc(var(--u) * 50) calc(var(--u) * 14) calc(var(--u) * 14);
-    background: linear-gradient(rgba(8, 8, 10, 0), rgba(8, 8, 10, 0.55) 50%, rgba(8, 8, 10, 0.9));
-    display: grid;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
     gap: calc(var(--u) * 3);
+    padding: calc(var(--u) * 14);
+    background: linear-gradient(rgba(8, 8, 10, 0) 35%, rgba(8, 8, 10, 0.55) 70%, rgba(8, 8, 10, 0.9));
   }
 
   .card b {
@@ -1440,83 +1537,168 @@ const ICON = {
     font-weight: 400;
     font-size: calc(var(--u) * 19);
     line-height: 1.15;
+    color: rgba(240, 237, 232, 0.72);
   }
 
   .card small {
     font-size: calc(var(--u) * 11);
     line-height: calc(var(--u) * 15);
+    color: rgba(240, 237, 232, 0.5);
+  }
+
+  .card.on b {
+    color: #f0ede8;
+  }
+
+  .card.on small {
     color: rgba(240, 237, 232, 0.8);
   }
 
   .looks .cta {
     margin-top: calc(var(--u) * 20);
-    margin-bottom: calc(var(--u) * 18);
   }
 
   /* The host trying each film in turn. */
-  .phone.live .card {
-    animation: pick 10s linear infinite;
+  .phone.live .card::before {
+    animation: pick-dim 10s linear infinite;
     animation-delay: calc(var(--n) * 2.5s);
   }
 
   .phone.live .card::after {
-    animation: ring 10s linear infinite;
+    animation: pick-ring 10s linear infinite;
     animation-delay: calc(var(--n) * 2.5s);
   }
 
-  .phone.live .card.on,
-  .phone.live .card.on::after {
-    animation-delay: 0s;
+  .phone.live .card b {
+    animation: pick-name 10s linear infinite;
+    animation-delay: calc(var(--n) * 2.5s);
   }
 
-  @keyframes pick {
+  .phone.live .card small {
+    animation: pick-blurb 10s linear infinite;
+    animation-delay: calc(var(--n) * 2.5s);
+  }
+
+  @keyframes pick-dim {
     0%,
     23% {
-      opacity: 1;
+      background: rgba(0, 0, 0, 0);
     }
     27%,
     100% {
-      opacity: 0.6;
+      background: rgba(0, 0, 0, 0.28);
     }
   }
 
-  @keyframes ring {
+  @keyframes pick-ring {
     0%,
     23% {
-      border-color: rgba(240, 237, 232, 0.6);
+      border-color: rgba(255, 255, 255, 0.55);
     }
     27%,
     100% {
-      border-color: rgba(240, 237, 232, 0);
+      border-color: rgba(255, 255, 255, 0.07);
+    }
+  }
+
+  @keyframes pick-name {
+    0%,
+    23% {
+      color: #f0ede8;
+    }
+    27%,
+    100% {
+      color: rgba(240, 237, 232, 0.72);
+    }
+  }
+
+  @keyframes pick-blurb {
+    0%,
+    23% {
+      color: rgba(240, 237, 232, 0.8);
+    }
+    27%,
+    100% {
+      color: rgba(240, 237, 232, 0.5);
     }
   }
 
   /* ── 16 Your Moments ──────────────────────────────────────────── */
+  /* The library's glow (`films`): 520 wide, 0.1, centred above the screen. */
   .moments {
     padding-bottom: 0;
     background:
-      radial-gradient(calc(var(--u) * 440) calc(var(--u) * 440) at 88% -6%, rgba(240, 190, 140, 0.15), transparent 70%),
+      radial-gradient(
+          circle calc(var(--u) * 351) at 50% calc(var(--u) * -166),
+          rgba(240, 237, 232, 0.1),
+          rgba(240, 237, 232, 0.033) 42%,
+          rgba(240, 237, 232, 0) 74%
+        ),
       #101010;
   }
 
   .lib-head {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     gap: calc(var(--u) * 10);
-    padding: calc(var(--u) * 6) calc(var(--u) * 24) calc(var(--u) * 16);
+    padding: 0 calc(var(--u) * 24) calc(var(--u) * 16);
     flex: none;
   }
 
   .lib-head .headline {
     margin-right: auto;
     white-space: nowrap;
-    font-size: calc(var(--u) * 29);
   }
 
+  /* The first card clears the header and the 40pt top edge it dissolves under. */
   .moment-list {
     display: grid;
     gap: calc(var(--u) * 12);
-    padding-inline: calc(var(--u) * 16);
+    padding: calc(var(--u) * 24) calc(var(--u) * 16) 0;
+  }
+
+  .edge-top,
+  .edge-bottom {
+    position: absolute;
+    inset-inline: 0;
+    pointer-events: none;
+  }
+
+  /* `ScrollEdge`: Colors.bg, opaque to clear on a smoothstep. */
+  .edge-top {
+    top: calc(var(--u) * 62);
+    height: calc(var(--u) * 100);
+    background: linear-gradient(
+      rgba(16, 16, 16, 0.97),
+      rgba(16, 16, 16, 0.94) 11%,
+      rgba(16, 16, 16, 0.85) 22%,
+      rgba(16, 16, 16, 0.72) 33%,
+      rgba(16, 16, 16, 0.57) 44%,
+      rgba(16, 16, 16, 0.4) 56%,
+      rgba(16, 16, 16, 0.25) 67%,
+      rgba(16, 16, 16, 0.12) 78%,
+      rgba(16, 16, 16, 0.03) 89%,
+      rgba(16, 16, 16, 0)
+    );
+  }
+
+  .edge-bottom {
+    bottom: 0;
+    height: calc(var(--u) * 106);
+    background: linear-gradient(
+      rgba(16, 16, 16, 0),
+      rgba(16, 16, 16, 0.03) 11%,
+      rgba(16, 16, 16, 0.12) 22%,
+      rgba(16, 16, 16, 0.25) 33%,
+      rgba(16, 16, 16, 0.4) 44%,
+      rgba(16, 16, 16, 0.57) 56%,
+      rgba(16, 16, 16, 0.72) 67%,
+      rgba(16, 16, 16, 0.85) 78%,
+      rgba(16, 16, 16, 0.94) 89%,
+      rgba(16, 16, 16, 0.97)
+    );
   }
 
   .moment {
@@ -1526,6 +1708,12 @@ const ICON = {
     border-radius: calc(var(--u) * 22);
     background: rgba(255, 255, 255, 0.04);
     box-shadow: inset 0 0 0 calc(var(--u) * 0.5) rgba(255, 255, 255, 0.1);
+  }
+
+  /* The title is Display "sm": Newsreader at 30. */
+  .moment-name b {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .moment-head {
@@ -1544,8 +1732,8 @@ const ICON = {
   .moment-name b {
     font-family: var(--serif);
     font-weight: 300;
-    font-size: calc(var(--u) * 22);
-    line-height: calc(var(--u) * 26);
+    font-size: calc(var(--u) * 30);
+    line-height: calc(var(--u) * 35);
     letter-spacing: -0.015em;
     white-space: nowrap;
   }
@@ -1625,7 +1813,15 @@ const ICON = {
   }
 
   .strip .blank {
+    display: grid;
+    place-items: center;
     border: calc(var(--u) * 1) dashed rgba(255, 255, 255, 0.14);
+    color: rgba(240, 237, 232, 0.42);
+  }
+
+  .strip .blank svg {
+    width: calc(var(--u) * 16);
+    height: calc(var(--u) * 16);
   }
 
   .strip .counted :global(img) {
@@ -1744,12 +1940,23 @@ const ICON = {
     background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.5));
   }
 
+  /* `tileCaption`: Newsreader light italic at 16. */
   .grid em {
     position: absolute;
     left: calc(var(--u) * 12);
     bottom: calc(var(--u) * 10);
     font-family: var(--serif);
+    font-weight: 300;
+    font-style: italic;
     font-size: calc(var(--u) * 16);
+  }
+
+  .top-fade {
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(var(--u) * 158);
+    background: linear-gradient(rgba(16, 16, 16, 0.6), rgba(16, 16, 16, 0));
+    pointer-events: none;
   }
 
   /* The reveal: the veils clear one after another, the hero first. */
@@ -1766,25 +1973,39 @@ const ICON = {
   }
 
   /* ── 09 Invite ────────────────────────────────────────────────── */
+  /*
+    The host layout's glow (`invite`): 520 wide, 0.12, centred above the
+    screen. The screen pads 46 above the home indicator's 34.
+  */
   .invite {
     padding-inline: calc(var(--u) * 28);
-    padding-bottom: calc(var(--u) * 46);
+    padding-bottom: calc(var(--u) * 80);
     background:
-      radial-gradient(calc(var(--u) * 460) calc(var(--u) * 460) at 50% 58%, rgba(240, 190, 140, 0.13), transparent 70%),
+      radial-gradient(
+          circle calc(var(--u) * 351) at 50% calc(var(--u) * -166),
+          rgba(240, 237, 232, 0.12),
+          rgba(240, 237, 232, 0.04) 42%,
+          rgba(240, 237, 232, 0) 74%
+        ),
       #101010;
   }
 
   .invite .eyebrow-s {
-    margin-top: calc(var(--u) * 14);
+    margin-top: calc(var(--u) * 52);
   }
 
+  /* Display "lg": Newsreader at 34. */
   .invite .headline {
-    margin-top: calc(var(--u) * 12);
+    margin-top: calc(var(--u) * 10);
+    font-size: calc(var(--u) * 34);
+    line-height: calc(var(--u) * 39);
   }
 
   .invite .meta {
     margin-top: calc(var(--u) * 10);
     color: rgba(240, 237, 232, 0.38);
+    font-size: calc(var(--u) * 14);
+    line-height: calc(var(--u) * 22);
   }
 
   .qr-zone {
@@ -1793,14 +2014,19 @@ const ICON = {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: calc(var(--u) * 32);
+    margin-top: calc(var(--u) * 36);
+  }
+
+  .qr-status {
+    height: calc(var(--u) * 20);
   }
 
   .qr-card {
+    margin-bottom: calc(var(--u) * 32);
     padding: calc(var(--u) * 20);
     border-radius: calc(var(--u) * 24);
     background: #f0ede8;
-    box-shadow: 0 calc(var(--u) * 20) calc(var(--u) * 50) rgba(0, 0, 0, 0.5);
+    box-shadow: 0 calc(var(--u) * 24) calc(var(--u) * 48) rgba(0, 0, 0, 0.6);
   }
 
   .qr-card svg {
@@ -1835,8 +2061,6 @@ const ICON = {
     justify-content: center;
     gap: calc(var(--u) * 8);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.12);
     font-size: calc(var(--u) * 14);
     font-weight: 500;
   }
@@ -1849,23 +2073,21 @@ const ICON = {
   /* ── The album viewer ─────────────────────────────────────────── */
   .viewer {
     padding: 0;
-    background: #000;
+    background: #050506;
   }
 
-  .viewer > :global(img) {
+  .v-photo {
     position: absolute;
-    inset: 0;
+    inset-inline: 0;
+    top: 50%;
+    aspect-ratio: 3 / 4;
+    transform: translateY(-50%);
   }
 
-  .v-shade {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0) 20%, rgba(0, 0, 0, 0) 66%, rgba(0, 0, 0, 0.5));
-  }
-
+  /* The chrome: 12pt inside the safe area, top and bottom. */
   .v-top {
     position: absolute;
-    inset: calc(var(--u) * 66) calc(var(--u) * 16) auto;
+    inset: calc(var(--u) * 74) calc(var(--u) * 12) auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1874,43 +2096,47 @@ const ICON = {
   .v-count {
     display: grid;
     justify-items: center;
-    padding: calc(var(--u) * 6) calc(var(--u) * 16);
-    border-radius: 999px;
-    line-height: 1.2;
+    align-content: center;
+    min-height: calc(var(--u) * 36);
+    padding: calc(var(--u) * 6) calc(var(--u) * 14);
+    border-radius: calc(var(--u) * 18);
+    font-size: calc(var(--u) * 11);
+    font-weight: 600;
+    line-height: calc(var(--u) * 14);
   }
 
   .v-count b {
-    font-size: calc(var(--u) * 13);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
 
   .v-count small {
-    font-size: calc(var(--u) * 11);
-    color: rgba(240, 237, 232, 0.6);
+    font-size: inherit;
+    color: rgba(240, 237, 232, 0.55);
   }
 
   .v-bottom {
     position: absolute;
-    inset: auto calc(var(--u) * 16) calc(var(--u) * 46);
+    inset: auto calc(var(--u) * 12) calc(var(--u) * 46);
     display: grid;
     justify-items: center;
-    gap: calc(var(--u) * 14);
+    gap: calc(var(--u) * 10);
   }
 
   .v-mission {
     display: flex;
     align-items: center;
-    gap: calc(var(--u) * 8);
-    padding: calc(var(--u) * 10) calc(var(--u) * 16);
-    border-radius: calc(var(--u) * 18);
-    font-size: calc(var(--u) * 14);
-    line-height: calc(var(--u) * 19);
+    gap: calc(var(--u) * 6);
+    max-width: 100%;
+    padding: calc(var(--u) * 8) calc(var(--u) * 14);
+    border-radius: calc(var(--u) * 16);
+    font-size: calc(var(--u) * 13);
+    line-height: calc(var(--u) * 21);
   }
 
   .v-mission svg {
-    width: calc(var(--u) * 14);
-    height: calc(var(--u) * 14);
+    width: calc(var(--u) * 12);
+    height: calc(var(--u) * 12);
     color: rgba(240, 237, 232, 0.55);
   }
 
@@ -1921,7 +2147,25 @@ const ICON = {
 
   .v-actions {
     display: flex;
-    gap: calc(var(--u) * 16);
+    align-items: center;
+    gap: calc(var(--u) * 10);
+  }
+
+  /* A GlassButton with a label: a 36pt capsule. */
+  .v-pill {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 7);
+    height: calc(var(--u) * 36);
+    padding-inline: calc(var(--u) * 14);
+    border-radius: 999px;
+    font-size: calc(var(--u) * 11);
+    font-weight: 600;
+  }
+
+  .v-pill svg {
+    width: calc(var(--u) * 18);
+    height: calc(var(--u) * 18);
   }
 
   .phone.live .v-mission {
@@ -1936,41 +2180,72 @@ const ICON = {
   }
 
   /* ── The guest's missions, a sheet over the camera ───────────── */
+  /* `Sheet`: the scrim (Colors.scrim over a light blur), then a solid card. */
   .sheet-dim {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(4, 4, 5, 0.72);
   }
 
   .m-sheet {
     position: absolute;
     inset: auto 0 0;
     display: grid;
-    gap: calc(var(--u) * 6);
-    padding: calc(var(--u) * 12) calc(var(--u) * 20) calc(var(--u) * 44);
-    border-radius: calc(var(--u) * 32) calc(var(--u) * 32) 0 0;
-    background: #19181a;
-    box-shadow: inset 0 calc(var(--u) * 1) 0 rgba(255, 255, 255, 0.08);
+    gap: calc(var(--u) * 14);
+    padding: calc(var(--u) * 14) calc(var(--u) * 28) calc(var(--u) * 54);
+    border-radius: calc(var(--u) * 26) calc(var(--u) * 26) 0 0;
+    background: #141316;
+    box-shadow: inset 0 calc(var(--u) * 1) 0 rgba(255, 255, 255, 0.1);
   }
 
   .grabber {
     justify-self: center;
     width: calc(var(--u) * 36);
-    height: calc(var(--u) * 5);
-    margin-bottom: calc(var(--u) * 14);
+    height: calc(var(--u) * 4);
+    margin-bottom: calc(var(--u) * 10);
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.14);
   }
 
+  .m-block {
+    display: grid;
+    gap: calc(var(--u) * 7);
+  }
+
+  /* "Your missions." with the count beside it in DM Serif (2026-11-19). */
+  .m-title {
+    display: flex;
+    align-items: baseline;
+    gap: calc(var(--u) * 14);
+  }
+
+  .m-title .headline {
+    flex: 1;
+  }
+
+  .m-title b {
+    font-family: var(--numeral);
+    font-weight: 400;
+    font-size: calc(var(--u) * 22);
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .m-title i {
+    font-style: normal;
+    color: rgba(240, 237, 232, 0.32);
+  }
+
+  /* Display "xxs": Newsreader at 24. */
   .headline.xs {
-    font-size: calc(var(--u) * 28);
-    line-height: calc(var(--u) * 33);
+    font-size: calc(var(--u) * 24);
+    line-height: calc(var(--u) * 28);
   }
 
   .m-sub {
-    color: rgba(240, 237, 232, 0.55);
-    font-size: calc(var(--u) * 14);
-    margin-bottom: calc(var(--u) * 10);
+    color: rgba(240, 237, 232, 0.42);
+    font-size: calc(var(--u) * 13);
+    line-height: calc(var(--u) * 21);
   }
 
   .m-rows {
@@ -1984,33 +2259,28 @@ const ICON = {
     gap: calc(var(--u) * 12);
     padding: calc(var(--u) * 14) calc(var(--u) * 16);
     border-radius: calc(var(--u) * 16);
-    background: rgba(255, 255, 255, 0.04);
-    box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.08);
-  }
-
-  .m-row.is-armed {
-    background: rgba(240, 190, 140, 0.1);
-    box-shadow: inset 0 0 0 calc(var(--u) * 1.5) rgba(240, 190, 140, 0.45);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 0 0 calc(var(--u) * 0.5) rgba(255, 255, 255, 0.1);
   }
 
   .m-text {
     flex: 1;
     display: grid;
-    gap: calc(var(--u) * 3);
+    gap: calc(var(--u) * 4);
   }
 
   .m-text small {
-    font-size: calc(var(--u) * 10);
+    font-size: calc(var(--u) * 11);
     font-weight: 600;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: rgba(240, 180, 120, 0.9);
+    color: rgba(240, 237, 232, 0.32);
   }
 
   .m-text b {
     font-weight: 400;
-    font-size: calc(var(--u) * 15);
-    line-height: calc(var(--u) * 21);
+    font-size: calc(var(--u) * 14);
+    line-height: calc(var(--u) * 22);
   }
 
   .m-row.is-done b {
@@ -2021,22 +2291,22 @@ const ICON = {
     display: flex;
     align-items: center;
     gap: calc(var(--u) * 5);
-    font-size: calc(var(--u) * 12);
+    font-size: calc(var(--u) * 11);
     font-weight: 600;
     white-space: nowrap;
   }
 
   .m-trail svg {
-    width: calc(var(--u) * 14);
-    height: calc(var(--u) * 14);
+    width: calc(var(--u) * 16);
+    height: calc(var(--u) * 16);
   }
 
   .m-trail.ok {
-    color: rgba(140, 220, 120, 0.9);
+    color: rgba(140, 220, 120, 0.85);
   }
 
   .m-trail.dim {
-    color: rgba(240, 237, 232, 0.42);
+    color: rgba(240, 237, 232, 0.55);
   }
 
   .phone.live .m-row {
@@ -2045,9 +2315,18 @@ const ICON = {
   }
 
   /* ── album/[id], not developed yet ────────────────────────────── */
+  /* The library's glow shows through: the album's screen is transparent. */
   .developing {
     padding-inline: calc(var(--u) * 28);
     padding-bottom: calc(var(--u) * 46);
+    background:
+      radial-gradient(
+          circle calc(var(--u) * 351) at 50% calc(var(--u) * -166),
+          rgba(240, 237, 232, 0.1),
+          rgba(240, 237, 232, 0.033) 42%,
+          rgba(240, 237, 232, 0) 74%
+        ),
+      #101010;
   }
 
   .developing .float {
@@ -2061,7 +2340,7 @@ const ICON = {
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding-top: calc(var(--u) * 40);
+    padding-top: calc(var(--u) * 56);
   }
 
   .developing .headline {
@@ -2099,33 +2378,33 @@ const ICON = {
 
   .frames {
     align-self: stretch;
-    margin: calc(var(--u) * 40) calc(var(--u) * -28) 0;
+    margin-top: calc(var(--u) * 40);
     display: flex;
     gap: calc(var(--u) * 6);
   }
 
-  .frames i {
+  /* A frame per photo: the picture blurred past recognition, dimmed, in a hairline. */
+  .frames span {
+    position: relative;
     flex: 1;
     aspect-ratio: 3 / 4;
     border-radius: calc(var(--u) * 4);
+    overflow: hidden;
     background: rgba(255, 255, 255, 0.035);
-    box-shadow: inset 0 0 0 calc(var(--u) * 1) rgba(255, 255, 255, 0.1);
   }
 
-  /* Something is happening in there. */
-  .phone.live .frames i {
-    animation: develop 4.5s ease-in-out infinite;
-    animation-delay: calc(var(--n) * 0.45s);
+  .frames span :global(img) {
+    filter: blur(calc(var(--u) * 12));
+    transform: scale(1.6);
   }
 
-  @keyframes develop {
-    0%,
-    60%,
-    100% {
-      background-color: rgba(255, 255, 255, 0.035);
-    }
-    25% {
-      background-color: rgba(240, 190, 140, 0.16);
-    }
+  .frames span::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: rgba(8, 8, 10, 0.35);
+    box-shadow: inset 0 0 0 calc(var(--u) * 0.5) rgba(255, 255, 255, 0.1);
   }
+
 </style>
