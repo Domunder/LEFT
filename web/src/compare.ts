@@ -217,22 +217,26 @@ const LENSE: CompareApp = {
 const SCENE: CompareApp = {
   slug: 'scene',
   name: 'Scene',
-  url: 'https://apps.apple.com/app/id6758879648',
-  bestFor: 'A reveal plus video or an audio guestbook.',
+  url: 'https://scenedisposable.com',
+  bestFor: 'A reveal plus video or an audio guestbook, photos kept for good.',
   facts: {
-    free: 'Up to 5 guests (first 10 events)',
-    paid: '$19.99 (50 guests), $39.99 (100), $59.99 (150)',
+    free: 'Up to 5 guests',
+    paid: '$19.99 (50 guests), $39.99 (100), $79.99 (200), once per event',
     guestApp: 'No: browser',
     roll: 'Set by the host; unlimited +$9.99',
     reveal: 'At the host’s reveal time',
     look: '3 styles: Original, Vintage, B&W',
     video: 'Yes, +$9.99',
     extras: 'Audio guestbook, slideshow',
-    guests: '150, more as add-ons',
-    kept: 'Not stated',
-    platforms: 'iOS, web for guests',
+    guests: 'Unlimited ($99.99)',
+    kept: 'Permanently',
+    platforms: 'iOS, Android, web for guests',
   },
-  sources: [{ label: 'Scene on the App Store', url: 'https://apps.apple.com/app/id6758879648' }],
+  sources: [
+    { label: 'scenedisposable.com/pricing', url: 'https://scenedisposable.com/pricing' },
+    { label: 'scenedisposable.com', url: 'https://scenedisposable.com' },
+    { label: 'Scene on the App Store', url: 'https://apps.apple.com/app/id6758879648' },
+  ],
 };
 
 /** The competitors, most searched first. */
