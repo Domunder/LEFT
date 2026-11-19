@@ -49,12 +49,8 @@ const jsonLd = [
     <div class="wrap head">
       <p class="eyebrow">Compare</p>
       <h1>Disposable camera apps, <em>side by side.</em></h1>
-      <p class="lede">
-        Every app here turns your guests’ phones into one shared camera. They differ in what they cost, whether guests
-        have to install anything, how many photos each guest gets and when the album is revealed. Here are the facts,
-        from each app’s own website and store listing.
-      </p>
-      <p class="checked">Prices and features checked {CHECKED_LABEL}. We make LEFT, so read us with that in mind.</p>
+      <p class="lede">Five apps that turn guests’ phones into one shared camera, from each app’s own site.</p>
+      <p class="checked">Checked {CHECKED_LABEL}. We make LEFT.</p>
     </div>
   </section>
 
@@ -67,19 +63,13 @@ const jsonLd = [
 
   <section class="apps">
     <div class="wrap">
-      <div class="section-head reveal">
-        <p class="eyebrow">The apps</p>
-        <h2>Which one <em>fits your event?</em></h2>
-      </div>
-      <ul class="app-list">
+      <h2 class="list-title reveal">Best for</h2>
+      <ul class="app-list reveal">
         {
           all.map((app) => (
-            <li class="reveal">
+            <li>
               <h3>{app.name}</h3>
-              <p>{app.summary}</p>
-              <p class="fit">
-                <strong>Best for:</strong> {app.bestFor}
-              </p>
+              <p>{app.bestFor}</p>
               {app.page && (
                 <a class="text-link" href={`/compare/${app.slug}/`}>
                   LEFT vs {app.name} →
@@ -145,37 +135,43 @@ const jsonLd = [
     padding-top: 24px;
   }
 
+  .apps {
+    padding-top: 0;
+  }
+
+  .list-title {
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    margin-bottom: 24px;
+  }
+
   .app-list {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 12px;
   }
 
   .app-list li {
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 24px;
-    padding: 28px;
+    border-radius: 20px;
+    padding: 22px;
     display: grid;
-    gap: 12px;
+    gap: 8px;
     align-content: start;
   }
 
   .app-list p {
     color: var(--ink-70);
-  }
-
-  .fit strong {
-    color: var(--ink);
-    font-weight: 500;
+    font-size: 0.95rem;
   }
 
   .app-list .text-link {
     justify-self: start;
     margin-top: 4px;
+    font-size: 0.9rem;
   }
 
   .sources {

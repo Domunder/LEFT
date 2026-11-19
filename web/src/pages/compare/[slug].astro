@@ -49,7 +49,7 @@ const others = APPS.filter((other) => other.page && other.slug !== app.slug);
       <p class="eyebrow"><a href="/compare/">Compare</a> · LEFT vs {app.name}</p>
       <h1>LEFT vs {app.name}: <em>{vs.headline}</em></h1>
       <p class="lede">{vs.lede}</p>
-      <p class="checked">Checked {CHECKED_LABEL} against {app.name}’s own website and store listing. We make LEFT.</p>
+      <p class="checked">Checked {CHECKED_LABEL} on {app.name}’s own site. We make LEFT.</p>
     </div>
   </section>
 
@@ -70,25 +70,6 @@ const others = APPS.filter((other) => other.page && other.slug !== app.slug);
     <div class="wrap">
       <h2 class="table-title reveal">Feature by feature</h2>
       <CompareTable apps={[LEFT_APP, app]} caption={`LEFT and ${app.name} compared`} />
-    </div>
-  </section>
-
-  <section class="diffs">
-    <div class="wrap">
-      <div class="section-head reveal">
-        <p class="eyebrow">The differences</p>
-        <h2>What actually <em>changes at your event.</em></h2>
-      </div>
-      <div class="diff-list">
-        {
-          vs.differences.map((diff) => (
-            <article class="reveal">
-              <h3>{diff.title}</h3>
-              <p>{diff.text}</p>
-            </article>
-          ))
-        }
-      </div>
     </div>
   </section>
 
@@ -197,26 +178,6 @@ const others = APPS.filter((other) => other.page && other.slug !== app.slug);
   .table-title {
     font-size: clamp(1.6rem, 3vw, 2.2rem);
     margin-bottom: 24px;
-  }
-
-  .diff-list {
-    display: grid;
-    gap: 12px;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  }
-
-  .diff-list article {
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 24px;
-    padding: 28px;
-    display: grid;
-    gap: 12px;
-    align-content: start;
-  }
-
-  .diff-list p {
-    color: var(--ink-70);
   }
 
   .more {
