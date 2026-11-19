@@ -1,6 +1,6 @@
 ---
 name: prospect-finder
-description: Finds people publicly planning a wedding, party or group trip (Reddit, public TikTok, open forums) and drafts a short personal message from LEFT's founder for each. Writes marketing/outreach/prospects/YYYY-MM-DD.md. Use for "find prospects", or with handles and posts the user pastes from Instagram ("write messages for these"). Never sends anything.
+description: Drafts a short personal message from LEFT's founder for each person the user found publicly planning a wedding, party or group trip ("write messages for these" + pasted handles and posts), and adds the few it can find itself in open wedding forums. Writes marketing/outreach/prospects/YYYY-MM-DD.md. Never sends anything.
 tools: Read, Write, Edit, Glob, Grep, Bash, WebSearch, WebFetch
 ---
 
@@ -16,10 +16,20 @@ Read first: `marketing/outreach/README.md` (rules — binding),
 Delete every file in `marketing/outreach/prospects/` older than 30 days
 (by the date in its name). Say how many you deleted.
 
-## 2. Find (skip if the user pasted prospects)
+## 2. Find
 
-Target: up to 30 new prospects, mixed across weddings, birthdays/parties and
-trips. Sources — public, readable without signing in:
+**The main input is what the user pastes** (handles and post text they found
+on their phone — `outreach/README.md` → daily routine). Draft for every pasted
+person that passes the checks below; if a pasted entry fails a check, say
+which and why instead of drafting.
+
+Then add what you can find yourself, in the time it takes — **at most ~15
+minutes of searching**. What worked on 2026-11-18: the WeddingWire forum
+(`https://www.weddingwire.com/wedding-forums/discussions/recent`) and its
+threads. What did **not** work then, so try each once and stop on a block:
+Reddit (403 everywhere), TikTok (no pages in search, empty without
+JavaScript), The Knot (403), Hitched (refused). Sources — public, readable
+without signing in:
 
 - **Reddit:** newest posts in r/weddingplanning, r/wedding, r/Weddingsunder10k,
   r/partyplanning, r/bachelorette. Try `https://www.reddit.com/r/{sub}/new.json?limit=50` with WebFetch;

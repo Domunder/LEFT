@@ -10,17 +10,33 @@ launch, then 10 more a month.
 
 ## The daily routine (~20 minutes)
 
-1. Run the `prospect-finder` agent ("find prospects"). It writes
-   `prospects/YYYY-MM-DD.md`: up to 30 people with a public post about an
-   upcoming event, and a draft message for each.
-2. Instagram is searched **by you** (it needs a login): open a few hashtags on
-   your phone (`#engaged2026`, `#weddingplanning2027`, `#30thbirthday`, …), and
-   paste handles + what their post said into the chat ("write messages for
-   these"). The agent drafts them the same way.
-3. Read each draft, change a word so it is yours, send it from your personal
-   account. **20–30 a day at most.**
-4. Tick it in `log.md` (sent / replied / event booked). The agent reads the
-   log so nobody is messaged twice.
+**You find, Claude drafts** (switched 2026-11-19, after the first automatic
+run found 1 prospect: Reddit and TikTok block automated reading, and
+Instagram needs a login).
+
+1. **Find on your phone (~10 min).** Scroll the searches below and copy, for
+   each fitting post: the handle, the platform, and what the post says
+   (a screenshot's text or a short summary is enough).
+2. **Paste it into Claude:** "write messages for these" + your list. The
+   `prospect-finder` agent writes `prospects/YYYY-MM-DD.md` with a draft per
+   person. It also checks the open wedding forums by itself, which adds a
+   few.
+3. **Send (~10 min).** Read each draft, change a word so it is yours, send it
+   from your personal account. **20–30 a day at most.**
+4. **Tick it in `log.md`** (sent / replied / declined / no answer / booked).
+   The agent reads the log so nobody is messaged twice.
+
+### Where to look
+
+| Platform | Search | Good sign |
+|---|---|---|
+| Instagram | `#engaged2026`, `#bride2027`, `#weddingplanning2027`, `#30thbirthday`, `#bachelorette2027`, German: `#verlobt`, `#hochzeit2027`, `#brautpaar2027` | a recent post about their own engagement or planning, with a date or season |
+| TikTok | "wedding guest photos", "disposable cameras wedding", "planning my wedding 2027", "30th birthday plans", "bachelorette trip" | the creator talks about their own upcoming event |
+| Reddit | r/weddingplanning, r/wedding, r/Weddingsunder10k, r/bachelorette — sort by **New**, search "photos", "disposable", "photo booth", "QR" | someone asking what to do about guest photos |
+| Your network | contacts on Instagram, WhatsApp, LinkedIn with an engagement, a big birthday or a trip coming up | anyone you know — the warmest messages of all |
+
+Skip: private accounts, minors, vendors, anything sad or sensitive, people
+who only commented on someone else's post.
 
 ## Rules
 
