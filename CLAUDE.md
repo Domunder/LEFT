@@ -79,7 +79,10 @@ then is code written.
 - **If the design is wrong or incoherent, say so and fix it.** Flag the change;
   never deviate silently.
 - Agents in `.claude/agents/`: `supabase-backend` (schema, RLS, RPCs),
-  `screen-builder` (one screen end to end), `launch-auditor` (read-only audit).
+  `screen-builder` (one screen end to end), `launch-auditor` (read-only audit),
+  and for marketing `trend-researcher`, `content-strategist`, `content-writer`,
+  `prospect-finder`
+  (rules in `marketing/CLAUDE.md`, plan in `marketing/STRATEGY.md`).
 
 ## Spec authority
 

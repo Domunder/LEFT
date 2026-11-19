@@ -1,0 +1,14 @@
+# Rendered posts waiting for approval — regenerated every week
+queue/
+
+# Outreach: people's handles and posts — personal data, never committed
+outreach/prospects/
+outreach/log.md
+
+# API tokens for the publisher
+.env
+.env*.local
+
+# Downloaded stock images (only LICENSES.md is committed)
+stock/*
+!stock/LICENSES.md
