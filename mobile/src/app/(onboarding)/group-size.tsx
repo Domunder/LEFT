@@ -207,14 +207,10 @@ export default function GroupSizeScreen() {
     // starts prefilled with this one's answers.
     reset();
 
-    // With missions on, the host plans them first (Missions → 09 → 10); 10 keeps
-    // its Missions row for edits until the start. 09 reads `eventId`; it falls
-    // back to the newest event only when missing.
-    if (event.missions_per_guest != null) {
-      router.replace({ pathname: '/(host)/missions', params: { eventId: event.id, from: 'create' } });
-    } else {
-      router.replace({ pathname: '/(host)/invite', params: { eventId: event.id } });
-    }
+    // Straight to the QR, missions on or not (2026-11-19, the user): the host
+    // plans them from 10's Missions row while guests join, until the start.
+    // 09 reads `eventId`; it falls back to the newest event only when missing.
+    router.replace({ pathname: '/(host)/invite', params: { eventId: event.id } });
   }
 
   return (

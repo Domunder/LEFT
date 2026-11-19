@@ -703,10 +703,11 @@ Decided by the user — do not re-litigate:
 
 - **Off by default; 1–3 per guest** (`events.missions_per_guest`, null = off),
   switched on 05.1 or on the host's Missions screen (`(host)/missions`, from
-  10). **Switched on at 05.1, creating goes 05.1 → Missions → 09 (QR) → 10**
-  (2026-11-18, the user): `from=create` gives the screen a close X instead of
-  back and a pinned "Continue" to 09; 10 keeps its Missions row for edits,
-  and has a QR button back to 09.
+  10). **Creating goes 05.1 → 09 (QR) → 10, missions on or not** (2026-11-19,
+  the user, replacing 05.1 → Missions → 09 of 2026-11-18): the host plans the
+  missions from 10's Missions row while guests join; 10 has a QR button back
+  to 09. **"Start the Event" asks first** (a system alert: the missions are
+  handed out and locked, names can no longer change).
 - **The planning screen (2026-11-18, the user):** the count is one row with a
   sliders drawer; changing it never touches the list — "Generate N more"
   (`generate_missions()`, migration `20261118000000_missions_generate_move.sql`)

@@ -1,10 +1,10 @@
 /**
  * Missions — the host's list of small photo challenges.
  *
- * Reached from 10's "Missions" row, with `eventId`, and — with `from=create` —
- * straight after 05.1 when the host switched missions on: then there is no back
- * (the event exists), a close X leaves for Moments as on 09, and a pinned
- * "Continue" goes on to 09 (QR) and from there to 10. Not in the prototype: built
+ * Reached from 10's "Missions" row, with `eventId` — only from there: creating
+ * goes 05.1 → 09 (QR) → 10 whether missions are on or not, and the host plans
+ * them from 10 while guests join (2026-11-19, the user; until then the screen
+ * sat between 05.1 and 09). Not in the prototype: built
  * in the language of 20 (grouped hairline cards) and 02 (choice pills).
  *
  * **Laid out like Apple Reminders** (decided 2026-11-18 by the user, after
@@ -45,7 +45,7 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Platform, StyleSheet, Text, View } from 'react-native';
 import { RefreshControl, ScrollView } from 'react-native-gesture-handler';
@@ -60,7 +60,6 @@ import Animated, {
   ReduceMotion,
 } from 'react-native-reanimated';
 
-import { CircleIconButton } from '@/components/ui/circle-back-button';
 import {
   AssignSheet,
   AssigneeChip,
@@ -166,10 +165,7 @@ function describeWriteError(e: unknown): string {
 export default function MissionsScreen() {
   const insets = useSafeAreaInsets();
   const toast = useToast();
-  const router = useRouter();
-  const { eventId, from } = useLocalSearchParams<{ eventId?: string; from?: string }>();
-  /** Opened right after creating the event, as the step before 09. */
-  const fromCreate = from === 'create';
+  const { eventId } = useLocalSearchParams<{ eventId?: string }>();
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
   const [members, setMembers] = useState<EventMember[]>([]);
@@ -316,44 +312,12 @@ export default function MissionsScreen() {
     />
   ) : null;
 
-  // Created by 05.1's `router.replace`: nothing behind to go back to, so a
-  // close X leaves for Moments instead.
   const header = (
     <ScreenHeader
-      back={!fromCreate}
-      right={
-        selectToggle || fromCreate ? (
-          <View style={styles.headerRight}>
-            {selectToggle}
-            {fromCreate ? (
-              <CircleIconButton
-                icon="x"
-                accessibilityLabel="Close, back to your moments"
-                onPress={() => router.replace('/(library)/films')}
-              />
-            ) : null}
-          </View>
-        ) : undefined
-      }
+      right={selectToggle ? <View style={styles.headerRight}>{selectToggle}</View> : undefined}
       style={styles.header}
     />
   );
-
-  // Shown in every state, so a failed load never strands the host mid-setup.
-  const nextId = event?.id ?? eventId;
-  const continueButton = fromCreate ? (
-    <PillButton
-      label="Continue"
-      icon="arrow-right"
-      disabled={pendingPerGuest !== undefined}
-      onPress={() =>
-        router.replace(
-          nextId ? { pathname: '/(host)/invite', params: { eventId: nextId } } : '/(host)/invite'
-        )
-      }
-      style={styles.continue}
-    />
-  ) : null;
 
   // -------------------------------------------------------------------------
   // Loading, error, not the host
@@ -390,7 +354,6 @@ export default function MissionsScreen() {
             </View>
           )}
         </View>
-        {continueButton}
       </Screen>
     );
   }
@@ -606,9 +569,7 @@ export default function MissionsScreen() {
       onPress={confirmDelete}
       style={styles.continue}
     />
-  ) : (
-    continueButton
-  );
+  ) : null;
 
   const unnamedMembers = members.filter((m) => !people.some((p) => p.claimed_by === m.user_id));
 

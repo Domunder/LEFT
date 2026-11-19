@@ -12,7 +12,8 @@
  * "Start the Event" is the one thing that moves `events.status` off 'setup'.
  * Screen 12 waits on exactly that transition. It also deals the missions, which
  * is why their row ("Missions · On · 1 per guest", to `(host)/missions`) sits
- * just above it: the list is locked from that tap on.
+ * just above it: the list is locked from that tap on. So the tap asks first
+ * (2026-11-19, the user): a system alert saying what can no longer change.
  *
  * The ambient glow lives in (host)/_layout.tsx, which is why this is `transparent`.
  */
@@ -20,7 +21,7 @@
 import { Feather } from '@expo/vector-icons';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
 import { CircleIconButton } from '@/components/ui/circle-back-button';
 import { MemberChip } from '@/components/ui/member-chip';
@@ -162,6 +163,22 @@ export default function GroupScreen() {
       setStarting(false);
     }
   }, [event, starting, router]);
+
+  /** The start cannot be undone, and it locks the missions: ask first. */
+  const confirmStart = useCallback(() => {
+    if (!event || starting) return;
+    const missions = event.missions_per_guest != null;
+    Alert.alert(
+      'Start the event?',
+      missions
+        ? "Everyone can take photos from now on. The missions are handed out and can't be changed after this, and guests can no longer change their name."
+        : "Everyone can take photos from now on. This can't be undone.",
+      [
+        { text: 'Not yet', style: 'cancel' },
+        { text: 'Start', onPress: () => void handleStart() },
+      ]
+    );
+  }, [event, starting, handleStart]);
 
   const count = members.length;
   /** `max_members` is a hard cap: `join_event()` refuses the next guest. */
@@ -322,7 +339,7 @@ export default function GroupScreen() {
         label={starting ? 'Starting…' : 'Start the Event'}
         icon="camera"
         disabled={!event || starting}
-        onPress={() => void handleStart()}
+        onPress={confirmStart}
       />
     </Screen>
   );
