@@ -1,0 +1,247 @@
+---
+/** The search pages in src/guides.ts, one route each (/{slug}/). */
+import { Picture } from 'astro:assets';
+import Base from '../layouts/Base.astro';
+import Faq from '../components/Faq.astro';
+import GetApp from '../components/GetApp.astro';
+import { SITE } from '../site';
+import { GUIDES, type Guide } from '../guides';
+
+export function getStaticPaths() {
+  return GUIDES.map((guide) => ({ params: { slug: guide.slug }, props: { guide } }));
+}
+
+type Props = { guide: Guide };
+const { guide } = Astro.props;
+const related = guide.related
+  .map((slug) => GUIDES.find((other) => other.slug === slug))
+  .filter((other): other is Guide => Boolean(other));
+
+const jsonLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'LEFT', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: guide.short, item: `${SITE.url}/${guide.slug}/` },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: guide.faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  },
+];
+---
+
+<Base title={guide.title} description={guide.description} jsonLd={jsonLd}>
+  <section class="hero">
+    <Picture
+      src={guide.photo.src}
+      alt={guide.photo.alt}
+      formats={['avif', 'webp']}
+      widths={[480, 800, 1200, 1920]}
+      sizes="100vw"
+      loading="eager"
+      fetchpriority="high"
+      class={`hero-bg look-${guide.photo.look}`}
+    />
+    <div class="wrap hero-copy">
+      <p class="eyebrow">{guide.eyebrow}</p>
+      <h1>{guide.h1[0]} <em>{guide.h1[1]}</em></h1>
+      <p class="lede">{guide.lede}</p>
+      <a class="pill pill-primary" href="#get">Get LEFT</a>
+    </div>
+  </section>
+
+  <section class="points">
+    <div class="wrap">
+      <ul class="point-list reveal">
+        {
+          guide.points.map((point) => (
+            <li>
+              <h2>{point.title}</h2>
+              <p>{point.text}</p>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <section class="list">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="wrap list-inner reveal">
+      <h2>{guide.list.title}</h2>
+      <ol>
+        {
+          guide.list.items.map((item, index) => (
+            <li>
+              <span class="num" aria-hidden="true">{index + 1}</span>
+              <span>{item}</span>
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </section>
+
+  <Faq items={guide.faq} />
+
+  <section class="related">
+    <div class="wrap related-inner reveal">
+      <p class="eyebrow">Also useful</p>
+      <ul>
+        {related.map((other) => <li><a class="text-link" href={`/${other.slug}/`}>{other.short} →</a></li>)}
+        <li><a class="text-link" href="/compare/">Disposable camera apps compared →</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <GetApp />
+</Base>
+
+<style>
+  .hero {
+    min-height: min(88svh, 820px);
+    display: grid;
+    align-items: end;
+    padding-top: 140px;
+    padding-bottom: clamp(40px, 7vw, 80px);
+    overflow: hidden;
+  }
+
+  .hero :global(picture),
+  .hero :global(.hero-bg) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(6, 6, 8, 0.35), rgba(16, 16, 16, 0.55) 40%, #101010 96%);
+  }
+
+  @media (max-width: 700px) {
+    .hero :global(picture),
+    .hero :global(.hero-bg) {
+      height: 62%;
+    }
+    .hero::after {
+      background: linear-gradient(rgba(6, 6, 8, 0.3), rgba(16, 16, 16, 0.2) 25%, #101010 60%);
+    }
+  }
+
+  .hero-copy {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    gap: 22px;
+    justify-items: start;
+  }
+
+  .hero-copy .lede {
+    color: rgba(240, 237, 232, 0.86);
+  }
+
+  .points {
+    padding-bottom: 0;
+  }
+
+  .point-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+
+  .point-list li {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    padding: 28px;
+    display: grid;
+    gap: 10px;
+    align-content: start;
+  }
+
+  .point-list h2 {
+    font-size: 1.45rem;
+    font-weight: 400;
+  }
+
+  .point-list p {
+    color: var(--ink-70);
+  }
+
+  .list {
+    overflow: hidden;
+  }
+
+  .list .glow {
+    right: -30%;
+    top: -10%;
+  }
+
+  .list-inner {
+    display: grid;
+    gap: 28px;
+    max-width: 760px;
+  }
+
+  .list ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 16px;
+  }
+
+  .list li {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 12px;
+    font-size: 1.05rem;
+    align-items: baseline;
+  }
+
+  .num {
+    font-family: var(--numeral);
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--amber);
+  }
+
+  .related {
+    padding-block: 0;
+  }
+
+  .related-inner {
+    display: grid;
+    gap: 16px;
+    padding: 28px clamp(22px, 4vw, 40px);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--card);
+  }
+
+  .related ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 28px;
+  }
+</style>

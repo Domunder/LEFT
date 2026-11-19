@@ -7,6 +7,7 @@ import '../styles/global.css';
 import { Image } from 'astro:assets';
 import logo from '../assets/left-logo.png';
 import { NAV, SITE } from '../site';
+import { GUIDES } from '../guides';
 // The four faces every page shows above the fold. Preloaded so they are there
 // for the first layout: each one that arrives later re-lays the whole page.
 import newsreader from '@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2?url';
@@ -185,6 +186,9 @@ const year = new Date().getFullYear();
             <li><a href="/compare/pov/">LEFT vs POV</a></li>
             <li><a href="/compare/once/">LEFT vs Once</a></li>
             <li><a href="/compare/lense/">LEFT vs Lense</a></li>
+          </ul>
+          <ul>
+            {GUIDES.map((guide) => <li><a href={`/${guide.slug}/`}>{guide.short}</a></li>)}
           </ul>
           <ul>
             <li><a href="/terms/">Terms</a></li>
