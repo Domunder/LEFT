@@ -243,14 +243,16 @@ struct CameraScreen: View {
 
   // MARK: Shutter bar
 
+  /// The shutter is centred on its own and the side items sit over it, so the
+  /// upload count coming and going never moves it. (An empty `Group` is no
+  /// view at all: its `.frame` vanished with the count and the shutter
+  /// slid right.)
   private var bottomBar: some View {
-    HStack {
-      LastShotTile(url: model.shots.last?.thumb, tilt: tilt) { yourShots = true }
-        .frame(width: CameraTokens.bottomSideWidth, alignment: .leading)
-      Spacer()
+    ZStack {
       Shutter(enabled: canShoot, action: shoot)
-      Spacer()
-      Group {
+      HStack {
+        LastShotTile(url: model.shots.last?.thumb, tilt: tilt) { yourShots = true }
+        Spacer(minLength: 0)
         let pending = model.shots.filter(\.queued).count
         if pending > 0 {
           HStack(spacing: 5) {
@@ -262,8 +264,8 @@ struct CameraScreen: View {
           .accessibilityLabel(pending == 1 ? "1 photo uploading" : "\(pending) photos uploading")
         }
       }
-      .frame(width: CameraTokens.bottomSideWidth, alignment: .trailing)
     }
+    .frame(maxWidth: .infinity)
     .padding(.horizontal, CameraTokens.bottomPaddingX)
     .padding(.top, CameraTokens.bottomPaddingTop)
     .padding(.bottom, CameraTokens.bottomPaddingBottom)

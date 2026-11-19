@@ -72,7 +72,6 @@ enum CameraTokens {
   static let bottomPaddingX: CGFloat = 24
   static let bottomPaddingTop: CGFloat = 10
   static let bottomPaddingBottom: CGFloat = 16
-  static let bottomSideWidth: CGFloat = 96
 
   static let shutterSize: CGFloat = 76
   static let shutterRing: CGFloat = 3
