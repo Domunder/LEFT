@@ -12,10 +12,16 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.leftmoment.app",
+      "appleTeamId": "ZFJBLRVHLD",
       "usesAppleSignIn": true,
       "associatedDomains": [
         "applinks:leftmoment.com"
       ],
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.leftmoment.app"
+        ]
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -93,7 +99,9 @@
         }
       ],
       "./plugins/with-worklets-headers",
-      "expo-sharing"
+      "expo-sharing",
+      "./plugins/with-app-clip",
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true

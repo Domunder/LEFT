@@ -23,6 +23,16 @@ type Props = {
   jsonLd?: object[];
   /** Hide the header's links and CTA (the invite page is one job only). */
   bare?: boolean;
+  /**
+   * A full-screen app page (the web camera): no header, no footer, no scroll
+   * reveal. The page draws all of its own chrome.
+   */
+  app?: boolean;
+  /**
+   * Offer the App Clip: Safari shows its card at the top of the page, and
+   * "Open" starts the native camera without installing the app.
+   */
+  appClip?: boolean;
 };
 
 const {
@@ -32,6 +42,8 @@ const {
   noindex = false,
   jsonLd = [],
   bare = false,
+  app = false,
+  appClip = false,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, SITE.url).href;
@@ -49,6 +61,14 @@ const year = new Date().getFullYear();
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, follow" />}
     <meta name="theme-color" content="#101010" />
+    {
+      appClip && (
+        <meta
+          name="apple-itunes-app"
+          content={`app-id=${SITE.appStoreId}, app-clip-bundle-id=${SITE.appClipBundleId}, app-clip-display=card`}
+        />
+      )
+    }
     {[inter, newsreader, newsreaderItalic, dmSerif].map((href) => (
       <link rel="preload" as="font" type="font/woff2" href={href} crossorigin />
     ))}
@@ -96,7 +116,8 @@ const year = new Date().getFullYear();
         setTimeout(show, 350);
       })();
     </script>
-    <a class="skip" href="#main">Skip to content</a>
+    {!app && <a class="skip" href="#main">Skip to content</a>}
+    {!app && (
     <header class="site-header">
       <nav class="bar glass" aria-label="Main">
         <a class="brand" href="/" aria-label="LEFT, home">
@@ -135,11 +156,13 @@ const year = new Date().getFullYear();
         }
       </nav>
     </header>
+    )}
 
     <main id="main">
       <slot />
     </main>
 
+    {!app && (
     <footer class="site-footer">
       <div class="wrap inner">
         <div class="about">
@@ -165,6 +188,7 @@ const year = new Date().getFullYear();
       </div>
       <p class="wrap legal">© {year} LEFT</p>
     </footer>
+    )}
 
     <script is:inline>
       (() => {

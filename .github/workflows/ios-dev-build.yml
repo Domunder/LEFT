@@ -64,6 +64,13 @@ jobs:
       PROFILE: ${{ inputs.profile || 'development' }}
       # Keep Xcode's logs if the build fails (see the upload step below).
       EAS_LOCAL_BUILD_SKIP_CLEANUP: '1'
+      # EAS syncs each identifier's capabilities through Apple's API, which has
+      # no value for "On Demand Install Capable for App Clip Extensions" — the
+      # clip's Live Activity extension needs it, so the sync failed every build
+      # (2026-11-18). Capabilities are set by hand on developer.apple.com
+      # instead (docs/LAUNCH.md §7a); a new capability on any target must be
+      # switched on there before the next build.
+      EXPO_NO_CAPABILITY_SYNC: '1'
 
     steps:
       - uses: actions/checkout@v4
@@ -109,7 +116,7 @@ jobs:
       - name: Submit to App Store Connect
         if: env.PROFILE == 'production'
         run: |
-          eas submit             --platform ios             --profile production             --path "$RUNNER_TEMP/left.ipa"             --non-interactive
+          eas submit             --platform ios             --profile production             --path "$RUNNER_TEMP/left.ipa"             --non-interactive             --no-wait
 
       - name: Upload to EAS for an install link
         if: env.PROFILE != 'production'

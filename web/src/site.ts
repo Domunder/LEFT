@@ -12,6 +12,13 @@ export const SITE = {
   appStoreUrl: null as string | null,
   /** Play Store listing, e.g. https://play.google.com/store/apps/details?id=com.leftmoment.app */
   playStoreUrl: null as string | null,
+  /** App Store Connect's id for the app (mobile/eas.json → submit.ascAppId). */
+  appStoreId: '6835436615',
+  /**
+   * The App Clip (mobile/targets/clip). Safari shows its card over /j/{CODE}
+   * through the `apple-itunes-app` meta tag (Base.astro → `appClip`).
+   */
+  appClipBundleId: 'com.leftmoment.app.clip',
   /** The app's custom scheme (mobile/app.json → scheme). */
   scheme: 'left',
   contactEmail: 'support@leftmoment.com' as string | null,
@@ -59,7 +66,7 @@ export const HOME_FAQ: Faq[] = [
   },
   {
     q: 'Do guests need an account?',
-    a: 'No. A guest opens the invite link or scans the QR code, types a name, and starts shooting. There is no sign-up, no email and no password. Only the host signs in, with Apple or Google.',
+    a: 'No, and they do not even need the app. A guest opens the invite link or scans the QR code, types a name, and starts shooting — in LEFT or right in the browser. There is no sign-up, no email and no password. Only the host signs in, with Apple or Google.',
   },
   {
     q: 'When can we see the photos?',

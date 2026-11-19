@@ -27,11 +27,11 @@
       "port": 4329
     },
     {
-      "name": "left-web-camera-dev",
+      "name": "left-web-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "--prefix",
-        ".claude/worktrees/web-camera/web",
+        "web",
         "run",
         "dev",
         "--",

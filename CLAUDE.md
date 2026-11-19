@@ -59,7 +59,14 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   HTTP, client half not run on a device: the security review.** See "Security
   review (2026-11-16)" below. **`linkIdentity` was rewritten and has never run
   on a device.**
-- **In progress (2026-11-17, branch `feature/missions`): missions.** Server
+- **Built (2026-11-16), branch `feature/web-camera`, run against the local
+  stack in a desktop browser with a synthetic camera — never on a phone: the
+  web camera.** See "The web camera" below.
+- **Built (2026-11-16), same branch, first compiled on EAS 2026-11-18 (in
+  TestFlight), never run on a device: the App Clip.** A SwiftUI target that a scanned
+  invite opens without installing the app. See "The App Clip" below. **Needs
+  a new native build** (the clip, the App Group, `@bacons/apple-targets`).
+- **In progress (2026-11-17, merged into `feature/web-camera`): missions.** Server
   verified against the local stack with SQL; the migration is on the hosted
   project since 2026-11-18; screens built (typecheck and
   lint clean), **never run on a device**; the mission notifications are not
@@ -186,8 +193,11 @@ mobile/src/
                           storage, roll, tiers, purchases, realtime, invite,
                           event-end, film-status, film-tint, zoom,
                           look-shader, upload-queue, notification-prefs, push,
-                          analytics, my-shots, album, covers, motion
+                          analytics, my-shots, album, covers, motion,
+                          clip-handoff
   types/database.ts       generated — `npm run db:types` at the root
+mobile/targets/clip/      the App Clip (SwiftUI) — see "The App Clip"
+mobile/plugins/           with-worklets-headers, with-app-clip
 supabase/
   migrations/             baseline, price tiers, notifications, service_role
                           grants, retention, photo reports, security hardening
@@ -489,8 +499,9 @@ and upload queue that use it are described above.
   younger than `retention_period()`, or still has objects in the bucket.
 - **"Start the Event" stays** (decided 2026-11-15): the host's tap on 10 moves
   the event from `setup` to `live`; guests wait on 12 until then.
-- **No web album for now** (decided 2026-11-15). Developed albums are seen in
-  the app only.
+- **A browser guest sees the album on the web** (decided 2026-11-16,
+  replacing "no web album" of 2026-11-15) — only through `/j/{CODE}`, only for
+  members, by the same RLS. There is still no public or host web album.
 
 - **Pricing (final, decided 2026-11-15, replacing "free up to 100, one SKU"):** free
   up to 50 guests on a finite roll; `left_small` (US$9.99) for the unlimited
@@ -507,6 +518,182 @@ Statuses: `setup → live → developed`. Clients cannot write `status`, `ends_a
 `roll_size`, `max_members` or `shots_taken`, cannot INSERT events or photos, and
 cannot UPDATE a photo row or DELETE a roster row — `create_event()`,
 `claim_shot()` and `mark_photo_uploaded()` are the doors.
+
+## The web camera (2026-11-16)
+
+- **`leftmoment.com/j/{CODE}` is a camera for guests without the app**
+  (`web/src/pages/j/index.astro`, `web/src/shoot/`): name → (waiting) →
+  camera → developing → album. Phones with the app never see it (universal
+  links). It no longer forwards to a store. Details: `web/README.md`.
+- **Same server doors, no migration:** anonymous sign-in, `join_event()`,
+  `claim_shot()`, the pinned storage paths, `mark_photo_uploaded()`, RLS for
+  the reveal. A door that changes for the app changes in `web/src/shoot/api.ts`
+  too.
+- **The look is a WebGL port of the SkSL** (`web/src/shoot/look-gl.ts`) fed by
+  the app's own recipes (copied by `web/scripts/sync-legal.mjs`). Change the
+  shader in both files.
+- **Upload queue on IndexedDB** (`web/src/shoot/queue.ts`), the app's order and
+  refusal handling. The counter is the server's minus unclaimed queued frames.
+- **No push on the web**: a calendar reminder and a 15 s poll.
+- **Missions on the web (2026-11-17)**, the guest half only, through the same
+  RPCs (`api.ts`): "Are you one of these?" on the join form, the "Missions
+  1/3" capsule and the armed "Next photo: …" in the camera, the intro sheet
+  once per event, "Mission" in Your shots' viewer (re-tag or "Not a
+  mission"), and the caption in the album. The queue tags after the claim
+  (claim → tag → upload) and drops a refused tag, never the photo; writes to
+  a queued entry merge (`update()`), so a re-tag during the upload survives.
+  Run against the local stack with a synthetic camera, online and offline —
+  never on a phone. Hosts still plan missions in the app only.
+- **The App Clip came second** (decided 2026-11-16): a QR-invoked App Clip
+  must stay under 15 MB, which the RN app with Skia and VisionCamera cannot,
+  so it is a small native SwiftUI target — "The App Clip" below. On an iPhone
+  the clip's card appears over `/j/` (the `apple-itunes-app` meta tag,
+  `Base.astro`'s `appClip`); the web camera stays for everyone else.
+- **Not seen on a phone:** real camera resolution in Safari/Chrome, the torch
+  (only Chrome on Android exposes it), the white front flash, save via the
+  share sheet, in-app browsers.
+
+## The App Clip (2026-11-16)
+
+**Compiled on EAS since 2026-11-18, never run.** The user is on Windows; the
+clip builds only on EAS (the GitHub workflow), and nothing in it has run on a
+phone. Its EAS credentials (the clip's own provisioning profile) were set up
+interactively once with `eas credentials`; a CI build cannot create them. Decided with the user: shoot + developing (no album in
+the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
+`@bacons/apple-targets`.
+
+- **Scanning an invite opens a native clip, no install:** name (11) →
+  waiting (12) → camera (13) → the developing state with a countdown and
+  "Get LEFT" (`SKOverlay`). The album is the full app's. A phone *with* the
+  app opens the app (universal link); without either, Safari shows the web
+  camera with the clip's card on top.
+- **SwiftUI and system frameworks only** (`mobile/targets/clip/*.swift`): no
+  React Native, no Supabase SDK, no packages. That is what keeps it far under
+  the 15 MB limit for QR invocation (iOS 17+, the clip's deployment target).
+  Fonts are the app's (Newsreader, Inter, DM Serif — ~1 MB in `Fonts/`).
+  Expected 2–4 MB; App Store Connect shows the real size per build.
+- **How it gets into the build:** `@bacons/apple-targets` reads
+  `targets/clip/expo-target.config.js`, adds the target (product type
+  on-demand-install-capable), the "Embed App Clips" phase and the clip's
+  entitlements (`appclips:leftmoment.com`, the App Group, the parent app id).
+  **`exportJs: false` is load-bearing** — the package bundles React Native
+  into a clip by default. `plugins/with-app-clip.js` then gives the clip the
+  app's version (the package hardcodes 1.0; the store rejects a mismatch),
+  passes `EXPO_PUBLIC_SUPABASE_URL` and the key into its Info.plist (as
+  scheme + host: an unquoted `//` in project.pbxproj reads as a comment), and
+  regenerates the looks. **It must stay listed before `@bacons/apple-targets`
+  in app.json** — mods run in reverse order, and its Xcode action needs the
+  target to exist. `ios.appleTeamId` is set because the package needs it.
+- **`targets/clip/Info.plist` is ours, not generated** (the package writes one
+  only when none exists, with a storyboard the clip does not have).
+  `Assets.xcassets` in that folder *is* generated on every prebuild and is
+  gitignored.
+- **Same server doors as the app and the web camera** (`Server.swift` mirrors
+  `web/src/shoot/api.ts`): anonymous sign-in (`/auth/v1/signup`), refresh,
+  `join_event`, `claim_shot`, uploads to the pinned paths with `x-upsert`,
+  `mark_photo_uploaded`. No migration. A door that changes for the app
+  changes in `Server.swift` too.
+- **The looks are a Metal port of the SkSL** (`LookRenderer.swift`), compiled
+  from source at runtime (`makeLibrary(source:)`) so the target needs no
+  Metal build flags. The recipes, `LENS`, `GRAIN_CELLS` and `PhotoOutput` are
+  generated into `LooksGenerated.swift` from `constants/looks.ts` by
+  `scripts/sync-clip-looks.mjs` — on every prebuild, and committed. **The
+  shader's maths now lives in three places** (SkSL, WebGL, Metal); change all
+  three. The maths runs on sRGB-encoded values, as Skia's does: textures are
+  `unorm`, never `_srgb`.
+- **The viewfinder shows the film** (no grain): AVFoundation BGRA frames →
+  `CVMetalTextureCache` (no copy) → the shader → a `CAMetalLayer`, drawn on
+  the camera's queue. Metal may be used from any thread — the Skia
+  per-thread-context crash of the app's camera does not apply here.
+- **Photos:** 4:3, at most 12 MP (a 48 MP sensor would only be scaled down to
+  the 3000 px print), JPEG, oriented by `RotationCoordinator` (a sideways
+  phone takes a landscape picture), selfies mirrored on the connection as
+  previewed. `Developer` bakes the look: original 3000 px at 0.88, thumbnail
+  640 px at 0.72 — the app's `PhotoOutput`. Back flash is the system flash;
+  the front flash is a white screen for `leadMs` (320 ms).
+- **The app's 2026-11-18 design, ported (same day, the user; written on
+  Windows, never compiled before the next EAS build, never seen):** the
+  viewfinder is full screen to the shutter bar, bottom corners rounded, with
+  the header (name, "17 left" warming over the last three, "Missions 1/3",
+  the "01 d 23 h" countdown → developing) and flash · zoom · flip as glass
+  over it on scrims (`CameraTokens` in `Theme.swift`). **Zoom has the lens
+  stops and the live "1.2×" pill** (`lib/zoom.ts` ported into `Camera.swift`;
+  the start lens is now the wide one on a wide + tele phone too). Prints are
+  centre-cropped to the frame (`Developer.develop(cropAspect:)`). Glass is
+  `.glass(shape)`: Liquid Glass on iOS 26, a material before, solid under
+  Reduce Transparency. Your photos is a full screen like the app's roll;
+  11's names are 02's pills with "None of these", and a pick fills the name
+  field; copy follows the app's vocabulary. No close button and no invite
+  tile in the clip.
+- **Three camera changes of 2026-11-19 (the user, after TestFlight), never
+  compiled:** the clip stays portrait and, like Apple's Camera, only the
+  icons turn upright when the phone is sideways (flash, flip, zoom labels,
+  last-shot tile; the header does not turn) — the shutter never moves. While
+  a mission is armed the "Missions 0/1" capsule is hidden and "Next photo: …"
+  takes its place with a gap under the counter; tapping the note opens the
+  list. Your photos' single frame pages sideways through all frames
+  (`TabView` page style).
+- **Swift sources must be saved as UTF-8.** `LEFTClipActivity.swift` was once
+  saved through a Windows codepage and showed "itâ€™s" on the Lock Screen.
+- **Live Activity (2026-11-18, the user: "stay in the notifications so I can
+  tap and see I have 4 more photos").** `targets/clip-activity`: a widget
+  extension with Live Activities only, embedded **in the clip** (Apple's
+  rule), bundle ID `com.leftmoment.app.clip.activity`, entitlement
+  `com.apple.developer.on-demand-install-capable`. `@bacons/apple-targets`
+  embeds widgets in the main app; `with-app-clip.js` moves the embed and the
+  dependency into the clip on every prebuild. Lock Screen and Dynamic Island
+  show the count, the open missions and a self-ticking countdown; a tap
+  opens the invite URL, i.e. the clip's camera. Started on entering the
+  camera, updated locally on every change (`ClipModel.liveRoll` →
+  `LiveRoll.sync`), ended an hour after the clip sees the film developed.
+  **No push updates** (needs APNs): with the clip closed only the countdown
+  moves; `staleDate` is the event's end. `RollActivityAttributes` is
+  duplicated in both targets (`targets/_shared` would also compile into the
+  RN app) — keep the two files identical. System serif in the extension, not
+  DM Serif (fonts would double in the clip). **Unverified in any way but
+  config resolution: Windows cannot prebuild iOS.**
+- **Upload queue on files in the App Group folder** (`UploadQueue.swift`,
+  `clip-shots/`): the app's order (claim → upload both → mark), its refusal
+  handling, retry on reconnect (`NWPathMonitor`), on foreground and with
+  backoff. The counter is the server's last `shots_left` minus unclaimed and
+  still-developing frames.
+- **Hand-off to the full app: the App Group** `group.com.leftmoment.app`
+  (both targets carry it). The clip keeps its session (access + refresh
+  token, user id) under `left.clip.session` in the group's UserDefaults and
+  re-reads it before every refresh. On the app's first launch
+  `lib/clip-handoff.ts` adopts it with `auth.setSession()` — only when the app
+  has no session of its own — and deletes it; the root layout runs it before
+  its session check. Same user, same roll; the film is in Moments.
+  `ExtensionStorage` (from `@bacons/apple-targets`) is the native reader; in
+  a build without it, its JS is a no-op.
+- **Accepted:** frames still queued in the clip when the app replaces it stay
+  in the App Group folder, undrained by the app. A refresh token the clip can
+  no longer use (revoked, or rotated by the app) ends that identity; the next
+  join is a new member with a fresh roll — the known gap.
+- **Polling, no realtime:** waiting and camera re-read the event every 15 s
+  and on foreground.
+- **Missions (2026-11-18, `Missions.swift`, `YourShots.swift`).** The
+  guest half, as in the app: "Are you one of these?" on 11 (claimed after
+  the join); "Missions 1/3" under the counter opens the list, a tap arms the
+  next frame ("Next photo: …" at the frame's top edge); the queue tags
+  after the claim (claim → tag → upload → mark, a refused tag drops the tag,
+  never the photo). **Your photos** — the tile left of the shutter — is the
+  guest's own frames (queued files, then signed URLs) with "Mission" on a
+  frame to tag it afterwards. Smaller than the app's on purpose: no swiping
+  in the viewer, no pinch, no return to the tile. **No intro sheet** (the
+  user's call). Server calls checked against the local stack over HTTP.
+- **Invite codes have no I, O, 0 or 1** (`[A-HJ-NP-Z2-9]{6,12}`, here and in
+  `lib/invite.ts`): a link with one is "not a LEFT invite". The seed's
+  `DEV123` is such a code. The hosted test event is `DEVTEST` (2026-11-18,
+  missions on, named people Markus and Anna). "Try again" only shows when
+  there is a code to retry — it used to fall through to "Scan an invite".
+- **Testing from TestFlight:** App Store Connect → TestFlight → the build →
+  App Clip Invocations (`https://leftmoment.com/j/DEVTEST`), then open it
+  from the TestFlight app. Local Experiences need the clip installed as a
+  clip (Xcode), which a TestFlight install is not.
+- **The user's steps** (App Group identifier, EAS credentials for the clip,
+  App Clip experiences in App Store Connect, local experience for testing,
+  the size check) are `docs/LAUNCH.md` §7a; device checks in §8.
 
 ## Missions (2026-11-17)
 
@@ -551,7 +738,16 @@ Decided by the user — do not re-litigate:
   second), personal missions first; with fewer missions than guests some get
   none. A late joiner is dealt leftovers by `my_missions()`. No rerolls.
 - **A guest claims a name on 11** (`claim_mission_person`), one name each,
-  first come first served; a host-linked guest picks nothing.
+  first come first served; a host-linked guest picks nothing. **Names first**
+  (2026-11-19, the user, app and clip): the host's names are rows, "Add your
+  name" at the end opens the field, tapping a name closes it again; a picked
+  name becomes the guest's display name. Only names nobody else holds are
+  listed (`mission_people_for_invite()` returns the caller's own as `mine`,
+  migration `20261119000000_mission_names_mine.sql`, on the hosted project
+  since 2026-11-19), and 11 asks again every 10 s so a taken name disappears. While
+  waiting (12) a guest can go back to 11 ("Are you on the list?" / "Change
+  your name") until the start; a late joiner still sees unclaimed names.
+  **Not seen on a device.**
 - **A photo is tagged, never written**: `set_photo_mission()`, one photo ↔ one
   mission, until the film is developed. The upload queue tags after the claim
   as its own step (claim → tag → upload); a refused tag drops the tag, never
@@ -561,7 +757,8 @@ Decided by the user — do not re-litigate:
 - **The reveal holds**: before developing, a guest reads only their own cards
   and their own photos' tags (RLS on `member_missions`, `event_missions`).
 - **Not built:** the mission push notifications (a halfway nudge, the count in
-  the last-hour reminder). **Nothing seen on a device.**
+  the last-hour reminder). The web camera and the App Clip (2026-11-18) have
+  them. **Nothing seen on a device.**
 
 ## Notifications (M4)
 

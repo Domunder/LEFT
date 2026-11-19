@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundleDisplayName</key>
+	<string>LEFT</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>NSAppClip</key>
+	<dict>
+		<key>NSAppClipRequestEphemeralUserNotification</key>
+		<false/>
+		<key>NSAppClipRequestLocationConfirmation</key>
+		<false/>
+	</dict>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>LEFT uses your camera so you can take photos for your event's shared album.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>LEFTSupabaseScheme</key>
+	<string>$(LEFT_SUPABASE_SCHEME)</string>
+	<key>LEFTSupabaseHost</key>
+	<string>$(LEFT_SUPABASE_HOST)</string>
+	<key>LEFTSupabaseKey</key>
+	<string>$(LEFT_SUPABASE_KEY)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Newsreader_300Light.ttf</string>
+		<string>Newsreader_300Light_Italic.ttf</string>
+		<string>Inter_400Regular.ttf</string>
+		<string>Inter_500Medium.ttf</string>
+		<string>DMSerifDisplay_400Regular.ttf</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleLightContent</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
+</dict>
+</plist>

@@ -23,19 +23,33 @@
  * The artboard draws no header and no back button. Kept as drawn: a guest
  * arriving by link has nothing behind them.
  *
- * **Missions: "Are you one of these?"** (2026-11-17, not in the prototype). A
- * host with missions on can list names ("Tom") and write personal missions for
- * them; the guest who is Tom picks the name here (`NamePicker`). Reading the
- * names needs a session, so the anonymous sign-in now also starts when the
+ * **Missions: "Are you one of these?"** (2026-11-17; names first since
+ * 2026-11-19, the user). A host with missions on can list names ("Tom") and
+ * write personal missions for them. When the event has such names, the screen
+ * shows them first, one per row (`NamePicker`), and "Add your name" at the end
+ * opens the field — so a guest reads the list before typing. Tapping a name
+ * again closes the field: the way back for someone who typed, then saw
+ * themselves listed. Only names nobody else holds are listed; the list is asked
+ * again every `MissionsJoin.refreshMs`, so a name someone takes disappears.
+ *
+ * Reading the names needs a session, so the anonymous sign-in starts when the
  * screen opens — idempotent, and Continue waits for that same attempt rather
- * than racing it into a second anonymous user. Nothing about the join depends
- * on the list: if it fails or is empty, the section is simply not drawn and the
- * screen is the artboard's. On Continue, after the join, a chosen name is
- * claimed (`claimName`):
- *   - taken by someone else meanwhile: the guest stays joined, the list is
- *     reloaded and they choose again or continue without (no second join);
- *   - missions already dealt: they keep the cards they have — silently;
+ * than racing it into a second anonymous user. If the names fail to load or
+ * there are none, the screen is the artboard's: the field alone.
+ *
+ * Picking a host's name makes it the guest's name too ("Tom" is what the group
+ * sees). On Continue, after the join, the choice is written (`claimName`; with
+ * no name chosen it gives back any name held):
+ *   - taken by someone else meanwhile: the guest stays joined, the name leaves
+ *     the list and they choose again (no second join);
+ *   - missions already dealt (the event started): they keep the cards they
+ *     have — silently;
  *   - anything else: logged, never in the way of joining.
+ *
+ * **Back from 12** (`change=1`): a guest waiting for the start can come back
+ * here to switch to or from a host's name. Their current name is chosen, a
+ * back button returns without changes, and Continue goes back to 12. Once the
+ * host starts, 12 is gone and so is the way here.
  */
 
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -49,11 +63,12 @@ import {
   View,
 } from 'react-native';
 
+import { CircleBackButton } from '@/components/ui/circle-back-button';
 import { NamePicker } from '@/components/ui/name-picker';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
-import { Colors, Guest, Radii, Spacing } from '@/constants/theme';
+import { Colors, Guest, MissionsJoin, Radii, Spacing } from '@/constants/theme';
 import { FontFamily } from '@/constants/typography';
 import { getSession, resolveDisplayName, setDisplayName, signInAnonymously } from '@/lib/auth';
 import { joinEvent } from '@/lib/events';
@@ -70,25 +85,33 @@ const MAX_NAME_LENGTH = 60;
 
 export default function GuestNameScreen() {
   const router = useRouter();
-  const { code } = useLocalSearchParams<{ code?: string }>();
+  const { code, change } = useLocalSearchParams<{ code?: string; change?: string }>();
+  const changing = change === '1';
 
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /** Names the host listed that nobody has claimed. Empty hides the section. */
+  /** The host's names nobody else holds. Empty (after loading) is the field alone. */
   const [names, setNames] = useState<MissionName[]>([]);
-  /** null is "None of these" — the default, and a fine answer. */
-  const [chosen, setChosen] = useState<MissionName | null>(null);
+  /** False until the first answer, so the field does not flash before the list. */
+  const [namesLoaded, setNamesLoaded] = useState(false);
+  /** The host's name the guest chose; null while they type their own. */
+  const [chosenId, setChosenId] = useState<string | null>(null);
+  /** "Add your name" was tapped: the field shows in its place. */
+  const [typing, setTyping] = useState(false);
 
   /** The sign-in started on open, so Continue waits for it instead of racing it. */
   const signingIn = useRef<Promise<unknown> | null>(null);
   /**
    * Set once join_event succeeded. A name taken in the meantime keeps the guest
-   * on this screen as a member; the next Continue only re-joins if they changed
-   * their name (join_event updates it), never just to retry the claim.
+   * on this screen as a member; the next Continue only re-joins if their name
+   * changed (join_event updates it), never just to retry the claim.
    */
   const joined = useRef<{ eventId: string; name: string } | null>(null);
+
+  const hasNames = names.length > 0;
+  const chosen = names.find((n) => n.id === chosenId) ?? null;
 
   /*
     Reaching this screen without a code cannot be recovered from — there is no
@@ -111,7 +134,6 @@ export default function GuestNameScreen() {
       try {
         const session = await getSession();
         const existing = session?.user ? resolveDisplayName(session.user) : null;
-        // Functional: a chip tapped before this resolved has already filled it.
         if (!cancelled && existing) setName((current) => (current === '' ? existing : current));
       } catch {
         // No session or no credentials — an empty field is the right answer.
@@ -127,49 +149,69 @@ export default function GuestNameScreen() {
   /*
     The names need a session (the RPC refuses an anonymous caller without
     one), so sign in now rather than on Continue. Any failure here only hides
-    the section — Continue signs in again and reports what goes wrong.
+    the list — Continue signs in again and reports what goes wrong. Asked again
+    on an interval, so a name someone else takes leaves the list.
   */
   useEffect(() => {
     if (!code) return;
     let cancelled = false;
+    let first = true;
 
     const ready = signInAnonymously();
     signingIn.current = ready;
 
-    ready
-      .then(() => listUnclaimedNames(code))
-      .then((list) => {
-        if (!cancelled) setNames(list);
-      })
-      .catch((e: unknown) => {
+    async function load() {
+      try {
+        await ready;
+        const list = await listUnclaimedNames(code!);
+        if (cancelled) return;
+        setNames(list);
+        if (first) {
+          const mine = list.find((n) => n.mine);
+          if (mine) setChosenId(mine.id);
+          // Back from 12 with their own name: the field, filled, is their choice.
+          else if (changing && list.length > 0) setTyping(true);
+        } else {
+          setChosenId((current) => {
+            if (current && !list.some((n) => n.id === current)) {
+              setError('Someone else just took that name. Pick another.');
+              return null;
+            }
+            return current;
+          });
+        }
+      } catch (e) {
         if (__DEV__) console.warn('[join] names not loaded', e);
-      });
+      } finally {
+        if (!cancelled) setNamesLoaded(true);
+        first = false;
+      }
+    }
 
+    void load();
+    const timer = setInterval(() => void load(), MissionsJoin.refreshMs);
     return () => {
       cancelled = true;
+      clearInterval(timer);
     };
-  }, [code]);
+  }, [code, changing]);
 
-  /*
-    Picking a name writes it into the field — but only over an empty field or
-    the previous chip's name, never over what the guest typed themselves.
-  */
-  const handleChoose = useCallback(
-    (person: MissionName | null) => {
-      if (person) {
-        const current = name.trim();
-        if (current === '' || (chosen !== null && current === chosen.name)) {
-          setName(person.name);
-        }
-      }
-      setChosen(person);
-      setError(null);
-    },
-    [name, chosen]
-  );
+  const handleChoose = useCallback((person: MissionName) => {
+    setChosenId(person.id);
+    setTyping(false);
+    setError(null);
+  }, []);
+
+  const handleAdd = useCallback(() => {
+    setChosenId(null);
+    setTyping(true);
+    setError(null);
+  }, []);
 
   const trimmed = name.trim();
-  const canContinue = trimmed.length > 0 && !busy;
+  /** The name the group will see: the host's, or what they typed. */
+  const finalName = hasNames && !typing ? (chosen?.name ?? '') : trimmed;
+  const canContinue = namesLoaded && finalName.length > 0 && !busy;
 
   const handleContinue = useCallback(async () => {
     if (!code || !canContinue) return;
@@ -177,7 +219,7 @@ export default function GuestNameScreen() {
     setBusy(true);
     setError(null);
 
-    let eventId = joined.current?.name === trimmed ? joined.current.eventId : null;
+    let eventId = joined.current?.name === finalName ? joined.current.eventId : null;
 
     if (!eventId) {
       try {
@@ -190,10 +232,11 @@ export default function GuestNameScreen() {
 
         // Before the join: add_host_as_member() reads user metadata at insert time,
         // and this guest may host their own event later from the same identity.
-        await setDisplayName(trimmed);
+        await setDisplayName(finalName);
 
-        eventId = await joinEvent(code, trimmed);
-        joined.current = { eventId, name: trimmed };
+        // A member already (back from 12): this only changes their name.
+        eventId = await joinEvent(code, finalName);
+        joined.current = { eventId, name: finalName };
       } catch (e) {
         setError(describeJoinError(e));
         setBusy(false);
@@ -201,15 +244,16 @@ export default function GuestNameScreen() {
       }
     }
 
-    if (chosen) {
+    if (hasNames) {
       try {
-        await claimName(eventId, chosen.id);
+        // null gives back a name held from before (back from 12, now typing).
+        await claimName(eventId, typing ? null : (chosen?.id ?? null));
       } catch (e) {
         if (e instanceof MissionNameTakenError) {
-          // Still a member. Show who is left and let them choose again.
-          const taken = chosen.id;
-          setChosen(null);
-          setError('That name is taken. Pick another.');
+          // Still a member. The name leaves the list; they choose again.
+          const taken = chosenId;
+          setChosenId(null);
+          setError('Someone else just took that name. Pick another.');
           setNames((current) => current.filter((n) => n.id !== taken));
           try {
             setNames(await listUnclaimedNames(code));
@@ -227,9 +271,43 @@ export default function GuestNameScreen() {
       }
     }
 
+    if (changing && router.canGoBack()) {
+      router.back();
+      return;
+    }
     // `replace`, not `push` — there is nothing behind this worth returning to.
     router.replace({ pathname: '/(guest)/waiting', params: { eventId } });
-  }, [code, canContinue, trimmed, chosen, router]);
+  }, [code, canContinue, finalName, hasNames, typing, chosen, chosenId, changing, router]);
+
+  /*
+    Not `TextField`: that component pairs an uppercase label with a 15px
+    serif input at radius 14, and this artboard has no label, an 18px sans
+    input and radius 18. Its own metrics, the same call ShareButton and
+    AuthButton made.
+  */
+  const field = (
+    <View>
+      <TextInput
+        value={name}
+        onChangeText={setName}
+        placeholder="Your name"
+        placeholderTextColor={Colors.textGhost}
+        selectionColor={Colors.text}
+        maxLength={MAX_NAME_LENGTH}
+        autoCapitalize="words"
+        autoComplete="name"
+        returnKeyType="done"
+        editable={!busy}
+        // In the list it was asked for with a tap; alone it is the screen.
+        autoFocus={hasNames}
+        onSubmitEditing={() => void handleContinue()}
+        style={styles.input}
+      />
+      <Caption color={Guest.helper} style={styles.helper}>
+        This is how the group will see you during the event.
+      </Caption>
+    </View>
+  );
 
   return (
     <Screen edges={['bottom']} style={styles.screen}>
@@ -237,9 +315,9 @@ export default function GuestNameScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {/*
-          Scrolls only when it has to — the names under large text, or with the
-          keyboard up. With no names it fits, and does not bounce, as before.
-          Taps reach the chips without first dismissing the keyboard.
+          Scrolls only when it has to — the names, large text, or the keyboard
+          up. With no names it fits, and does not bounce, as before. Taps reach
+          the rows without first dismissing the keyboard.
         */}
         <ScrollView
           style={styles.flex}
@@ -247,44 +325,30 @@ export default function GuestNameScreen() {
           alwaysBounceVertical={false}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <Label style={styles.eyebrow}>Welcome</Label>
+          {changing ? (
+            <View style={styles.back}>
+              <CircleBackButton />
+            </View>
+          ) : null}
 
-          <Display size="xxl" style={styles.headline}>
+          <Label style={styles.eyebrow}>{changing ? 'Your name' : 'Welcome'}</Label>
+
+          <Display size="xxl" style={hasNames ? undefined : styles.headline}>
             What should{'\n'}we <Em>call you?</Em>
           </Display>
 
-          {/*
-            Not `TextField`: that component pairs an uppercase label with a 15px
-            serif input at radius 14, and this artboard has no label, an 18px sans
-            input and radius 18. Its own metrics, the same call ShareButton and
-            AuthButton made.
-          */}
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Your name"
-            placeholderTextColor={Colors.textGhost}
-            selectionColor={Colors.text}
-            maxLength={MAX_NAME_LENGTH}
-            autoCapitalize="words"
-            autoComplete="name"
-            returnKeyType="done"
-            editable={!busy}
-            onSubmitEditing={() => void handleContinue()}
-            style={styles.input}
-          />
-
-          <Caption color={Guest.helper} style={styles.helper}>
-            This is how the group will see you during the event.
-          </Caption>
-
-          {names.length > 0 ? (
+          {hasNames ? (
             <NamePicker
               names={names}
-              selectedId={chosen?.id ?? null}
+              selectedId={chosenId}
+              typing={typing}
               onSelect={handleChoose}
+              onAdd={handleAdd}
+              field={field}
               disabled={busy}
             />
+          ) : namesLoaded ? (
+            field
           ) : null}
 
           {/*
@@ -301,7 +365,7 @@ export default function GuestNameScreen() {
         </ScrollView>
 
         <PillButton
-          label={busy ? 'Joining…' : 'Continue'}
+          label={busy ? (changing ? 'Saving…' : 'Joining…') : 'Continue'}
           disabled={!canContinue}
           onPress={() => void handleContinue()}
         />
@@ -365,6 +429,10 @@ const styles = StyleSheet.create({
     marginBottom: Guest.helperGap,
   },
   helper: {
+    marginBottom: Spacing.md,
+  },
+  back: {
+    alignSelf: 'flex-start',
     marginBottom: Spacing.md,
   },
   error: {
