@@ -76,8 +76,8 @@ enum Looks {
 
 /// `PhotoOutput`: what the camera writes.
 enum PhotoOutput {
-  static let longEdge: Int = 3000
-  static let quality: Double = 0.88
-  static let thumbLongEdge: Int = 640
-  static let thumbQuality: Double = 0.72
+  static let longEdge: Int = 3600
+  static let quality: Double = 0.9
+  static let thumbLongEdge: Int = 1080
+  static let thumbQuality: Double = 0.78
 }

@@ -18,16 +18,14 @@
  */
 
 import {
-  FilterMode,
   ImageFormat,
-  MipmapMode,
   Skia,
   TileMode,
   type SkImage,
   type SkRuntimeEffect,
 } from '@shopify/react-native-skia';
 
-import { GRAIN_CELLS, LENS, LOOK_RECIPES, PhotoOutput } from '@/constants/looks';
+import { GRAIN_CELLS, LENS, LOOK_RECIPES, PhotoOutput, RESAMPLE } from '@/constants/looks';
 import type { FilmLook } from '@/lib/events';
 
 const SOURCE = `
@@ -199,11 +197,13 @@ export function developPhoto(
     const matrix = Skia.Matrix();
     matrix.scale(out.width / cropW, out.height / cropH);
     matrix.translate(-cropX, -cropY);
-    const pixels = source.makeShaderOptions(
+    // Bicubic, not linear + mipmaps: that blended in the half-size level on a
+    // 0.75x shrink and softened the whole print.
+    const pixels = source.makeShaderCubic(
       TileMode.Clamp,
       TileMode.Clamp,
-      FilterMode.Linear,
-      MipmapMode.Linear,
+      RESAMPLE.B,
+      RESAMPLE.C,
       matrix
     );
 
@@ -236,12 +236,12 @@ function encodeScaled(image: SkImage, longEdge: number, quality: number): Uint8A
   try {
     surface
       .getCanvas()
-      .drawImageRectOptions(
+      .drawImageRectCubic(
         image,
         Skia.XYWHRect(0, 0, image.width(), image.height()),
         Skia.XYWHRect(0, 0, size.width, size.height),
-        FilterMode.Linear,
-        MipmapMode.Linear
+        RESAMPLE.B,
+        RESAMPLE.C
       );
     surface.flush();
     const scaled = surface.makeImageSnapshot();

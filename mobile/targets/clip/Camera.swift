@@ -170,6 +170,26 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
       .devices.first
   }
 
+  /// The 4:3 format with 1920x1440 video (or the nearest larger 4:3 one up to
+  /// 4032 wide) that can take a photo of at least 3024x4032; nil keeps the
+  /// `.photo` preset's choice.
+  private static func viewfinderFormat(_ device: AVCaptureDevice) -> AVCaptureDevice.Format? {
+    let candidates = device.formats.filter { format in
+      let dims = CMVideoFormatDescriptionGetDimensions(format.formatDescription)
+      let fourThree = Int(dims.width) * 3 == Int(dims.height) * 4
+      let photo = format.supportedMaxPhotoDimensions.contains { Int($0.width) * Int($0.height) >= 4032 * 3024 }
+      let fps = format.videoSupportedFrameRateRanges.contains { $0.maxFrameRate >= 30 }
+      return fourThree && photo && fps && dims.width >= 1920 && dims.width <= 4032
+    }
+    return candidates.min { a, b in
+      let wa = CMVideoFormatDescriptionGetDimensions(a.formatDescription).width
+      let wb = CMVideoFormatDescriptionGetDimensions(b.formatDescription).width
+      if wa != wb { return wa < wb }
+      // Full range (420f) over video range: the frames are converted to BGRA.
+      return CMFormatDescriptionGetMediaSubType(a.formatDescription) == kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
+    }
+  }
+
   /// On the session queue.
   private func configure(position: AVCaptureDevice.Position) {
     session.beginConfiguration()
@@ -194,7 +214,17 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
     }
     if !session.outputs.contains(photoOutput), session.canAddOutput(photoOutput) {
       session.addOutput(photoOutput)
-      photoOutput.maxPhotoQualityPrioritization = .balanced
+      // iOS's full processing (Deep Fusion, Smart HDR), as the app asks for.
+      photoOutput.maxPhotoQualityPrioritization = .quality
+    }
+
+    // A sharp viewfinder (2026-11-19, the user): pick the 4:3 format whose
+    // video frames are 1920x1440 — about the screen's own pixels — and that
+    // still takes 12 MP photos. `.photo` left the frame size to the system.
+    // The frames go to Metal without a copy, so the size costs little.
+    if let format = Self.viewfinderFormat(device), (try? device.lockForConfiguration()) != nil {
+      device.activeFormat = format
+      device.unlockForConfiguration()
     }
 
     // The largest photo up to 12 MP (3024x4032). A 48 MP frame would only be
@@ -323,7 +353,7 @@ final class CameraController: NSObject, ObservableObject, AVCaptureVideoDataOutp
         settings = AVCapturePhotoSettings()
       }
       settings.maxPhotoDimensions = self.photoOutput.maxPhotoDimensions
-      settings.photoQualityPrioritization = .balanced
+      settings.photoQualityPrioritization = .quality
       if flash, self.activePosition == .back, self.photoOutput.supportedFlashModes.contains(.on) {
         settings.flashMode = .on
       }

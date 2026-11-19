@@ -409,7 +409,9 @@ function Viewfinder({
   const photoOutput = usePhotoOutput({
     containerFormat: 'jpeg',
     quality: CAPTURE_QUALITY,
-    qualityPrioritization: 'balanced',
+    // iOS's full processing (Deep Fusion, Smart HDR): the detail the phone's
+    // own camera shows. 'balanced' gave up some of it for a quicker shutter.
+    qualityPrioritization: 'quality',
   });
   /*
     When the shutter may fire: the session is running *and* has been set up for

@@ -135,10 +135,26 @@ export const GRAIN_CELLS = 720;
 
 /** What the camera writes. */
 export const PhotoOutput = {
-  /** Long edge of the original, in pixels — enough for a print (Phase 2). */
-  longEdge: 3000,
-  quality: 88,
-  /** Long edge of the album grid's thumbnail. */
-  thumbLongEdge: 640,
-  thumbQuality: 72,
+  /**
+   * Long edge of the original, in pixels — enough for a print (Phase 2).
+   * 3600 since 2026-11-19 (was 3000; the user, "the photos look soft"): a
+   * full-screen viewfinder crops the 4032 px capture, and 3000 then threw
+   * away detail the crop had kept.
+   */
+  longEdge: 3600,
+  quality: 90,
+  /**
+   * Long edge of the thumbnail: the grids, the album's hero and the viewer's
+   * first paint. 1080 since 2026-11-19 (was 640, which the full-width hero
+   * blew up almost twofold until the original arrived).
+   */
+  thumbLongEdge: 1080,
+  thumbQuality: 78,
 } as const;
+
+/**
+ * Mitchell–Netravali bicubic (B = C = 1/3) for every resize of a photo.
+ * Linear filtering with mipmaps blended in the half-size level on a 0.75×
+ * shrink and softened the whole print (2026-11-19).
+ */
+export const RESAMPLE = { B: 1 / 3, C: 1 / 3 } as const;
