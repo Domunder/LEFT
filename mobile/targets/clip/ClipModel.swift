@@ -170,13 +170,17 @@ final class ClipModel: ObservableObject {
     busy = true
     defer { busy = false }
     do {
-      let event = try await Server.shared.getEvent(eventId)
+      // Membership first: RLS hides the event from a non-member, so asking
+      // for the event first read "no such event" — "this invite link doesn't
+      // work" — for a guest whose roster row is gone (2026-11-19: the old
+      // guest was deleted, the clip still remembered the event).
       guard let member = try await Server.shared.getMyMember(eventId: eventId) else {
         // Not a member under this identity (a new one after a lost session).
         memberships.removeObject(forKey: "left.clip.event.\(code)")
         phase = .name(code: code)
         return
       }
+      let event = try await Server.shared.getEvent(eventId)
       serverLeft = event.rollSize.map { max(0, $0 - member.shotsTaken) }
       memberName = member.displayName
       await recount(event)

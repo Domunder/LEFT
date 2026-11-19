@@ -672,6 +672,10 @@ the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
   join is a new member with a fresh roll — the known gap.
 - **Polling, no realtime:** waiting and camera re-read the event every 15 s
   and on foreground.
+- **On reopening, the clip asks for its roster row before the event**
+  (`ClipModel.load`): RLS hides the event from a non-member, so a guest whose
+  row is gone (deleted account) saw "This invite link doesn’t work any more"
+  instead of 11 (2026-11-19, build 15).
 - **Missions (2026-11-18, `Missions.swift`, `YourShots.swift`).** The
   guest half, as in the app: "Are you one of these?" on 11 (claimed after
   the join); "Missions 1/3" under the counter opens the list, a tap arms the
