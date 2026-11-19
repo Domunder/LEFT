@@ -1,0 +1,308 @@
+diff --git a/node_modules/react-native-vision-camera/ios/Hybrid Objects/HybridFrameRenderer.swift b/node_modules/react-native-vision-camera/ios/Hybrid Objects/HybridFrameRenderer.swift
+index 0d71c44..32fc17e 100644
+--- a/node_modules/react-native-vision-camera/ios/Hybrid Objects/HybridFrameRenderer.swift	
++++ b/node_modules/react-native-vision-camera/ios/Hybrid Objects/HybridFrameRenderer.swift	
+@@ -3,29 +3,294 @@
+ /// VisionCamera
+ /// Copyright © 2025 Marc Rousavy @ Margelo
+ ///
++/// PATCHED for LEFT (patches/react-native-vision-camera+5.2.4.patch,
++/// 2026-11-19): instead of showing frames as they are, the renderer draws each
++/// one through the film's look with Metal — the App Clip's shader
++/// (`targets/clip/LookRenderer.swift`), at the size the view has on screen. No
++/// pixel is copied: the camera's buffer becomes a texture through a
++/// `CVMetalTextureCache`. Metal may be used from the camera's thread (unlike
++/// Skia's per-thread GPU context, which crashed the old viewfinder).
++///
++/// The look comes from the App Group's UserDefaults (`left.viewfinder.look`,
++/// a JSON object written by `components/ui/film-camera.tsx` through
++/// `ExtensionStorage`): the spec's one method is `renderFrame`, and changing
++/// the spec would mean regenerating Nitro's bindings in this patch.
++///
+ 
+ import AVFoundation
++import CoreVideo
+ import Foundation
++import Metal
+ import NitroModules
++import QuartzCore
++import UIKit
+ 
+ final class HybridFrameRenderer: HybridFrameRendererSpec, NativeFrameRenderer {
+-  let layer = AVSampleBufferDisplayLayer()
++  let layer = CAMetalLayer()
++  private var lookRaw: String?
++  private var look = LeftLook.neutral
++  private let defaults = UserDefaults(suiteName: "group.com.leftmoment.app")
++
++  override init() {
++    super.init()
++    layer.device = LeftLookPipeline.shared?.device
++    layer.pixelFormat = .bgra8Unorm
++    layer.framebufferOnly = true
++    layer.isOpaque = true
++    layer.backgroundColor = UIColor.black.cgColor
++    let layer = self.layer
++    DispatchQueue.main.async { layer.contentsScale = UIScreen.main.scale }
++  }
+ 
+   func renderFrame(frame: any HybridFrameSpec) throws {
+     guard let hybridFrame = frame as? any NativeFrame else {
+       throw RuntimeError.error(withMessage: "Frame \(frame) is not of type `NativeFrame`!")
+     }
+-    guard let sampleBuffer = hybridFrame.sampleBuffer else {
+-      throw RuntimeError.error(
+-        withMessage: "Frame \(hybridFrame) does not have a valid `.sampleBuffer`!")
++    guard let sampleBuffer = hybridFrame.sampleBuffer,
++          let pixels = CMSampleBufferGetImageBuffer(sampleBuffer)
++    else {
++      throw RuntimeError.error(withMessage: "Frame \(hybridFrame) has no pixel buffer!")
+     }
++    guard let pipeline = LeftLookPipeline.shared else {
++      throw RuntimeError.error(withMessage: "Metal is not available")
++    }
++    refreshLook()
++
++    let bounds = layer.bounds.size
++    let scale = layer.contentsScale
++    let width = Int((bounds.width * scale).rounded())
++    let height = Int((bounds.height * scale).rounded())
++    guard width > 0, height > 0 else { return }
++    let size = CGSize(width: width, height: height)
++    if layer.drawableSize != size { layer.drawableSize = size }
++
++    guard let source = pipeline.texture(from: pixels),
++          let drawable = layer.nextDrawable(),
++          let buffer = pipeline.queue.makeCommandBuffer()
++    else { return }
++
++    let crop = LeftLookPipeline.fillCrop(
++      sourceW: CVPixelBufferGetWidth(pixels), sourceH: CVPixelBufferGetHeight(pixels),
++      targetW: width, targetH: height)
++    let uniforms = look.uniforms(width: width, height: height, crop: crop)
++    pipeline.encode(buffer, source: source.texture, target: drawable.texture, uniforms: uniforms)
++    buffer.present(drawable)
++    // The camera's buffer must outlive the GPU's read of it.
++    let held = source.cvTexture
++    buffer.addCompletedHandler { _ in _ = held; _ = pixels }
++    buffer.commit()
++  }
++
++  /// Re-parsed only when the stored string changes.
++  private func refreshLook() {
++    let raw = defaults?.string(forKey: "left.viewfinder.look")
++    guard raw != lookRaw else { return }
++    lookRaw = raw
++    look = raw.flatMap(LeftLook.init(json:)) ?? .neutral
++  }
++}
++
++/// `liveLookUniforms()` from `lib/look-shader.ts`, as JSON.
++private struct LeftLook {
++  var saturation: Float = 1
++  var gain: SIMD3<Float> = [1, 1, 1]
++  var contrast: Float = 1
++  var shadowTint: SIMD3<Float> = [0, 0, 0]
++  var highlightTint: SIMD3<Float> = [0, 0, 0]
++  var fade: Float = 0
++  var vignette: Float = 0
++  var fringe: Float = 0
++
++  static let neutral = LeftLook()
+ 
+-    self.layer.enqueue(sampleBuffer)
+-    if self.layer.requiresFlushToResumeDecoding {
+-      self.layer.flush()
++  init() {}
++
++  init?(json: String) {
++    guard let data = json.data(using: .utf8),
++          let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
++    else { return nil }
++    func number(_ key: String, _ fallback: Float) -> Float {
++      (object[key] as? NSNumber).map { $0.floatValue } ?? fallback
++    }
++    func rgb(_ key: String, _ fallback: SIMD3<Float>) -> SIMD3<Float> {
++      guard let values = object[key] as? [NSNumber], values.count == 3 else { return fallback }
++      return SIMD3(values[0].floatValue, values[1].floatValue, values[2].floatValue)
+     }
+-    if self.layer.status == .failed {
+-      throw RuntimeError.error(withMessage: "Failed to render Frame!")
++    saturation = number("saturation", 1)
++    gain = rgb("gain", [1, 1, 1])
++    contrast = number("contrast", 1)
++    shadowTint = rgb("shadowTint", [0, 0, 0])
++    highlightTint = rgb("highlightTint", [0, 0, 0])
++    fade = number("fade", 0)
++    vignette = number("vignette", 0)
++    fringe = number("fringe", 0)
++  }
++
++  /// No grain: the viewfinder shows the colour; grain belongs to the print.
++  func uniforms(width: Int, height: Int, crop: SIMD4<Float>) -> LeftLookUniforms {
++    LeftLookUniforms(
++      size: [Float(width), Float(height), 720, fringe],
++      crop: crop,
++      gain: SIMD4(gain, saturation),
++      shadowTint: SIMD4(shadowTint, contrast),
++      highlightTint: SIMD4(highlightTint, fade),
++      extra: [0, vignette, 0, 0])
++  }
++}
++
++/// Matches `Uniforms` in the shader: six float4s.
++private struct LeftLookUniforms {
++  var size: SIMD4<Float>
++  var crop: SIMD4<Float>
++  var gain: SIMD4<Float>
++  var shadowTint: SIMD4<Float>
++  var highlightTint: SIMD4<Float>
++  var extra: SIMD4<Float>
++}
++
++private struct LeftSourceTexture {
++  let texture: MTLTexture
++  let cvTexture: CVMetalTexture
++}
++
++/// The compiled pipeline, built once; usable from any thread.
++private final class LeftLookPipeline {
++  static let shared: LeftLookPipeline? = try? LeftLookPipeline()
++
++  let device: MTLDevice
++  let queue: MTLCommandQueue
++  private let pipeline: MTLRenderPipelineState
++  private let textureCache: CVMetalTextureCache
++
++  private init() throws {
++    guard let device = MTLCreateSystemDefaultDevice(), let queue = device.makeCommandQueue() else {
++      throw RuntimeError.error(withMessage: "No Metal device")
+     }
++    let library = try device.makeLibrary(source: LEFT_LOOK_SOURCE, options: nil)
++    let descriptor = MTLRenderPipelineDescriptor()
++    descriptor.vertexFunction = library.makeFunction(name: "look_vertex")
++    descriptor.fragmentFunction = library.makeFunction(name: "look_fragment")
++    descriptor.colorAttachments[0].pixelFormat = .bgra8Unorm
++    pipeline = try device.makeRenderPipelineState(descriptor: descriptor)
++    var cache: CVMetalTextureCache?
++    CVMetalTextureCacheCreate(nil, nil, device, nil, &cache)
++    guard let cache else { throw RuntimeError.error(withMessage: "No Metal texture cache") }
++    self.device = device
++    self.queue = queue
++    self.textureCache = cache
+   }
++
++  func encode(_ buffer: MTLCommandBuffer, source: MTLTexture, target: MTLTexture, uniforms: LeftLookUniforms) {
++    let pass = MTLRenderPassDescriptor()
++    pass.colorAttachments[0].texture = target
++    pass.colorAttachments[0].loadAction = .dontCare
++    pass.colorAttachments[0].storeAction = .store
++    guard let encoder = buffer.makeRenderCommandEncoder(descriptor: pass) else { return }
++    var u = uniforms
++    encoder.setRenderPipelineState(pipeline)
++    encoder.setFragmentTexture(source, index: 0)
++    encoder.setFragmentBytes(&u, length: MemoryLayout<LeftLookUniforms>.stride, index: 0)
++    encoder.drawPrimitives(type: .triangle, vertexStart: 0, vertexCount: 3)
++    encoder.endEncoding()
++  }
++
++  /// A BGRA camera buffer as a texture, without copying it.
++  func texture(from pixelBuffer: CVPixelBuffer) -> LeftSourceTexture? {
++    guard CVPixelBufferGetPixelFormatType(pixelBuffer) == kCVPixelFormatType_32BGRA else { return nil }
++    var cvTexture: CVMetalTexture?
++    CVMetalTextureCacheCreateTextureFromImage(
++      nil, textureCache, pixelBuffer, nil, .bgra8Unorm,
++      CVPixelBufferGetWidth(pixelBuffer), CVPixelBufferGetHeight(pixelBuffer), 0, &cvTexture)
++    guard let cvTexture, let texture = CVMetalTextureGetTexture(cvTexture) else { return nil }
++    return LeftSourceTexture(texture: texture, cvTexture: cvTexture)
++  }
++
++  /// Aspect-fill: the centred part of the source the target shows, in texture space.
++  static func fillCrop(sourceW: Int, sourceH: Int, targetW: Int, targetH: Int) -> SIMD4<Float> {
++    let source = Float(sourceW) / Float(max(sourceH, 1))
++    let target = Float(targetW) / Float(max(targetH, 1))
++    if source > target {
++      let w = target / source
++      return [(1 - w) / 2, 0, w, 1]
++    } else {
++      let h = source / target
++      return [0, (1 - h) / 2, 1, h]
++    }
++  }
++}
++
++// The look — a copy of the App Clip's shader (`targets/clip/LookRenderer.swift`),
++// itself a port of `lib/look-shader.ts`. Change the maths in all of them.
++private let LEFT_LOOK_SOURCE = """
++#include <metal_stdlib>
++using namespace metal;
++
++struct Uniforms {
++  float4 size;           // xy: output size in pixels, z: grain cells, w: fringe
++  float4 crop;           // the source rectangle in texture space: x, y, w, h
++  float4 gain;           // xyz: gain, w: saturation
++  float4 shadowTint;     // xyz: shadow tint, w: contrast
++  float4 highlightTint;  // xyz: highlight tint, w: fade
++  float4 extra;          // x: grain, y: vignette
++};
++
++struct VOut {
++  float4 position [[position]];
++  float2 uv;
++};
++
++// One triangle over the whole target; uv (0,0) is the top-left, as Skia's xy.
++vertex VOut look_vertex(uint vid [[vertex_id]]) {
++  float2 p = float2((vid << 1) & 2, vid & 2);
++  VOut out;
++  out.position = float4(p.x * 2.0 - 1.0, 1.0 - p.y * 2.0, 0.0, 1.0);
++  out.uv = p;
++  return out;
++}
++
++constant float3 LUMA = float3(0.2126, 0.7152, 0.0722);
++
++static float4 eval(texture2d<float> image, sampler s, float2 p, float2 size, float4 crop) {
++  float2 uv = clamp(p / size, 0.0, 1.0);
++  return image.sample(s, crop.xy + uv * crop.zw);
++}
++
++static float hash(float2 p) {
++  float3 p3 = fract(float3(p.xyx) * 0.1031);
++  p3 += dot(p3, p3.yzx + 33.33);
++  return fract((p3.x + p3.y) * p3.z);
++}
++
++fragment float4 look_fragment(VOut in [[stage_in]],
++                              texture2d<float> image [[texture(0)]],
++                              constant Uniforms& u [[buffer(0)]]) {
++  constexpr sampler s(address::clamp_to_edge, filter::linear);
++  float2 size = u.size.xy;
++  float2 xy = in.uv * size;
++  float4 src = eval(image, s, xy, size, u.crop);
++
++  // The plastic lens: red and blue land slightly apart, more so off-centre.
++  float2 off = (xy - size * 0.5) * u.size.w;
++  float3 c = float3(eval(image, s, xy + off, size, u.crop).r, src.g, eval(image, s, xy - off, size, u.crop).b);
++
++  float l = dot(c, LUMA);
++  c = mix(float3(l), c, u.gain.w);
++  c *= u.gain.xyz;
++  c = (c - 0.5) * u.shadowTint.w + 0.5;
++
++  float tone = clamp(dot(c, LUMA), 0.0, 1.0);
++  c += u.shadowTint.xyz * (1.0 - tone) * (1.0 - tone);
++  c += u.highlightTint.xyz * tone * tone;
++
++  c = u.highlightTint.w + c * (1.0 - u.highlightTint.w);
++
++  float2 v = xy / size - 0.5;
++  c *= 1.0 - u.extra.y * smoothstep(0.1, 0.5, dot(v, v));
++
++  float cell = max(size.x, size.y) / u.size.z;
++  float n = hash(floor(xy / cell)) - 0.5;
++  c += n * u.extra.x * (1.0 - 0.6 * tone);
++
++  return float4(clamp(c, 0.0, 1.0), 1.0);
+ }
++"""

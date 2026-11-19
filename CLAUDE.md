@@ -218,19 +218,33 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
 - **One shader, two callers.** `lib/look-shader.ts` holds the only SkSL; a look
   is a recipe in `constants/looks.ts` (`LOOK_RECIPES`). `LookPreview` draws it on
   03's cards over `assets/images/look-sample.jpg`, `developPhoto()` runs it
-  offscreen over a capture and encodes original (long edge 3000) + thumbnail
-  (640). Change a look in the recipe and both follow. Recipes are provisional.
+  offscreen over a capture and encodes original (long edge 3600, JPEG 90) +
+  thumbnail (1080, JPEG 78). Change a look in the recipe and both follow.
+  Recipes are provisional.
+- **Sharpness (2026-11-19, the user: "the photos look soft").** Every resize of
+  a photo is bicubic (`RESAMPLE`, Mitchell): linear filtering with mipmaps
+  blended in the half-size level on the 0.75x shrink and softened every print.
+  The capture asks for `qualityPrioritization: 'quality'` (Deep Fusion, Smart
+  HDR), in the clip too. Originals went from 3000 to 3600 px, thumbnails from
+  640 to 1080. **Not seen on a device.**
 - **The looks are colour schemes, not effects** (decided 2026-11-15): warm
   (Golden), cool (Chrome), washed out (Faded), black and white (Mono) — muted
   and clean, with only a trace of grain, vignette and lens fringing (`LENS`) in
   the print. **The viewfinder draws no grain at all**, only the colour.
-- **The viewfinder shows the film, exactly.** The camera is
-  `react-native-vision-camera` 5; the viewfinder is our own
-  `components/ui/film-camera.tsx` (`FilmCamera`). The frame output delivers
-  small BGRA frames, the frame worklet copies each into a CPU image and hands
-  it to the JS thread, and a `<Canvas>` draws it through the same shader as the
-  JPEG (uniforms from `liveLookUniforms()`) — the same tree as `LookPreview`.
-  Mono's viewfinder is black and white.
+- **The viewfinder shows the film, natively, at screen resolution**
+  (2026-11-19, the user, replacing the Skia viewfinder of 2026-11-15, which
+  copied 1024x768 frames through JS and looked soft full screen). The camera
+  is `react-native-vision-camera` 5; `components/ui/film-camera.tsx` hands
+  each frame (`FHD_4_3`, capped at preview size) to VisionCamera's
+  `FrameRenderer` and disposes it, and `<NativeFrameRendererView>` shows it.
+  **LEFT patches that renderer** (`mobile/patches/react-native-vision-camera+5.2.4.patch`,
+  applied by `patch-package` on `postinstall`): it draws each frame through
+  the clip's Metal shader into a `CAMetalLayer`, aspect-fill, the camera's
+  buffer as a texture without a copy. The look reaches it through the App
+  Group's UserDefaults (`left.viewfinder.look`, JSON of `liveLookUniforms()`,
+  written with `ExtensionStorage`) because the renderer's spec has only
+  `renderFrame`. **A VisionCamera upgrade must carry the patch over.** Mono's
+  viewfinder is black and white. **Compiled only on EAS, never seen.**
 - **No Skia GPU call on the camera thread — ever.** `SkiaCamera` (from
   `react-native-vision-camera-skia`) shades frames on the GPU on the camera's
   GCD queue and crashed the app about 20 s after the camera opened
@@ -283,18 +297,10 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   (portrait-locked app); the photo output follows the phone
   (`useOrientation('device')`), so a sideways phone takes a landscape picture.
   Selfies are saved mirrored, as previewed.
-- **A frame's pixels are freed by the garbage collector, not by `dispose()`**
-  (a no-op in Skia 2.2.12; not re-checked on 2.14), and a JS heap only counts an image's megabytes if
-  the image was *made* in it. So `film-camera.tsx` sends the raw `SkData`
-  across and makes an image in each runtime it passes (JS thread: a throwaway,
-  to be charged; UI thread: the one drawn). Handing one image across runtimes
-  leaks about 90 MB/s until some heap happens to collect. **Watch the memory
-  gauge on the first device run.**
-- **Keep the preview frames small.** Every frame is copied once (about 3 MB at
-  768x1024) and uploaded to the GPU on draw. Hence `HD_4_3`,
-  `enablePreviewSizedOutputBuffers` and 30 fps in `film-camera.tsx`, and the
-  camera skips frames while the JS or UI thread is behind (`MAX_IN_FLIGHT`).
-  `[camera] frame` logs the real frame size in dev.
+- **Metal is fine on the camera thread; Skia is not.** The patched renderer
+  draws on VisionCamera's frame queue — Metal devices, queues and pipelines
+  are thread-safe, unlike Skia's per-thread GPU context. `[camera] frame`
+  logs the real frame size in dev.
 - **Photos are captured at 4:3, up to 3024x4032**, as JPEG (`usePhotoOutput`).
 - **`GrainOverlay`'s tiled image does not repeat reliably over a large area**
   (seen as one tile top-left over the viewfinder). Nothing uses it any more;
@@ -598,9 +604,12 @@ the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
   Metal build flags. The recipes, `LENS`, `GRAIN_CELLS` and `PhotoOutput` are
   generated into `LooksGenerated.swift` from `constants/looks.ts` by
   `scripts/sync-clip-looks.mjs` — on every prebuild, and committed. **The
-  shader's maths now lives in three places** (SkSL, WebGL, Metal); change all
-  three. The maths runs on sRGB-encoded values, as Skia's does: textures are
+  shader's maths now lives in four places** (SkSL, WebGL, the clip's Metal,
+  and the same Metal in the VisionCamera patch); change all four. The maths runs on sRGB-encoded values, as Skia's does: textures are
   `unorm`, never `_srgb`.
+- **The viewfinder is 1920x1440** (2026-11-19): `viewfinderFormat()` in
+  `Camera.swift` picks the 4:3 format with those video frames that still takes
+  12 MP photos, instead of leaving it to the `.photo` preset. **Not seen.**
 - **The viewfinder shows the film** (no grain): AVFoundation BGRA frames →
   `CVMetalTextureCache` (no copy) → the shader → a `CAMetalLayer`, drawn on
   the camera's queue. Metal may be used from any thread — the Skia
