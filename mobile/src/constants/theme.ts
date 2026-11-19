@@ -1028,6 +1028,16 @@ export const Camera = {
     /** From this many shots down the numeral warms, as a film counter's last frames do. */
     lowAt: 3,
     lowColor: 'rgba(240,180,120,0.95)',
+    /**
+     * A changed digit rolls: the old one rises out, the new one rises in from
+     * below — the clip's `.numericText()` transition, with its spring
+     * (response 0.3, critically damped). Only the digits that change move.
+     */
+    roll: {
+      spring: { dampingRatio: 1, duration: 300 },
+      /** How far a digit travels, as a fraction of the line height. */
+      travel: 0.55,
+    },
   },
 
   /** The viewfinder — full width and height down to the shutter bar, bottom corners rounded. */

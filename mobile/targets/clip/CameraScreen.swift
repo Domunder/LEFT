@@ -299,7 +299,7 @@ struct CameraScreen: View {
         case let .success(data):
           develop(data)
         case .failure:
-          model.shotQueued(false)
+          model.shotQueued(nil)
           error = "That one didn’t save. Try again."
         }
       }
@@ -330,11 +330,11 @@ struct CameraScreen: View {
           width: photo.width, height: photo.height, claimed: false, uploaded: false,
           missionId: missionId, missionDirty: missionId == nil ? nil : true, tagAttempts: nil
         )
-        try await UploadQueue.shared.enqueue(shot, photo: photo)
-        await MainActor.run { model.shotQueued(true) }
+        let count = try await UploadQueue.shared.enqueue(shot, photo: photo)
+        await MainActor.run { model.shotQueued(count) }
       } catch {
         await MainActor.run {
-          model.shotQueued(false)
+          model.shotQueued(nil)
           errorText.wrappedValue = "That one didn’t save. Try again."
         }
       }

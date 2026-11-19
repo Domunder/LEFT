@@ -667,7 +667,14 @@ the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
   `clip-shots/`): the app's order (claim → upload both → mark), its refusal
   handling, retry on reconnect (`NWPathMonitor`), on foreground and with
   backoff. The counter is the server's last `shots_left` minus unclaimed and
-  still-developing frames.
+  still-developing frames. **Every change to it happens in one step**
+  (2026-11-19: it rolled 15 → 14, back to 15 and to 14 again, because the
+  frame left "developing" before the queue was re-read): `enqueue()` returns
+  the new `UnclaimedCount`, the claim and refusal notifications carry it next
+  to `shots_left`, and its `revision` keeps an older count from winning.
+  The app's `RollCounter` rolls its digits the way the clip's
+  `.numericText()` does (slide and fade, no blur). **Neither seen on a
+  device.**
 - **Hand-off to the full app: the App Group** `group.com.leftmoment.app`
   (both targets carry it). The clip keeps its session (access + refresh
   token, user id) under `left.clip.session` in the group's UserDefaults and

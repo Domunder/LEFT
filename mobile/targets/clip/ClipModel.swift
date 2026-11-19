@@ -30,6 +30,8 @@ final class ClipModel: ObservableObject {
   /// Frames taken but not yet claimed: in the queue, or still developing.
   @Published private(set) var unclaimed = 0
   @Published private(set) var developingNow = 0
+  /// The queue's revision of `unclaimed` (`UnclaimedCount`).
+  private var countRevision = -1
 
   // Missions — the guest half, as in the app's camera and Your shots.
   /// The guest's cards, with tags still in the queue applied.
@@ -352,7 +354,20 @@ final class ClipModel: ObservableObject {
 
   private func recount(_ event: EventInfo) async {
     guard let userId = await Server.shared.userId else { return }
-    unclaimed = await UploadQueue.shared.unclaimed(eventId: event.id, userId: userId)
+    apply(await UploadQueue.shared.unclaimed(eventId: event.id, userId: userId))
+  }
+
+  /// Take the queue's count unless a newer one is already shown.
+  private func apply(_ count: UnclaimedCount) {
+    guard count.revision >= countRevision else { return }
+    countRevision = count.revision
+    unclaimed = count.count
+  }
+
+  private func unclaimedCount(in note: Notification) -> UnclaimedCount? {
+    guard let count = note.userInfo?["unclaimed"] as? Int,
+          let revision = note.userInfo?["revision"] as? Int else { return nil }
+    return UnclaimedCount(count: count, revision: revision)
   }
 
   /// The shutter fired: count the frame before it is developed and queued.
@@ -360,12 +375,15 @@ final class ClipModel: ObservableObject {
     developingNow += 1
   }
 
-  /// The frame is in the queue (or was lost while developing).
-  func shotQueued(_ ok: Bool) {
+  /// The frame is in the queue (with the queue's count), or was lost while
+  /// developing (nil). The frame moves from "developing" to "unclaimed" in
+  /// one step: re-reading the queue afterwards let the counter go back up for
+  /// a moment and roll down a second time (2026-11-19, the user).
+  func shotQueued(_ count: UnclaimedCount?) {
     developingNow = max(0, developingNow - 1)
+    if let count { apply(count) }
     guard let event else { return }
     Task {
-      await recount(event)
       await applyQueueTags()
       await loadShots()
     }
@@ -373,8 +391,15 @@ final class ClipModel: ObservableObject {
 
   private func claimed(_ note: Notification) {
     guard let event, note.userInfo?["eventId"] as? String == event.id else { return }
+    // The server's count and the queue's, in the same step: a claimed frame
+    // leaves `unclaimed` exactly when the server starts counting it.
     if event.rollSize != nil, let left = note.userInfo?["shotsLeft"] as? Int {
       serverLeft = left
+    }
+    if let count = unclaimedCount(in: note) {
+      apply(count)
+      if case .camera = phase, rollUsedUp(event) { phase = .developing(event) }
+      return
     }
     Task {
       await recount(event)
@@ -386,6 +411,7 @@ final class ClipModel: ObservableObject {
     guard let event, note.userInfo?["eventId"] as? String == event.id else { return }
     let reason = note.userInfo?["reason"] as? String
     if reason == "roll_empty" { serverLeft = 0 }
+    if let count = unclaimedCount(in: note) { apply(count) }
     Task {
       await recount(event)
       if reason == "event_closed" { await refresh() }

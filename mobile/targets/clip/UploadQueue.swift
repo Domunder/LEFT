@@ -41,12 +41,22 @@ struct LocalShot {
 }
 
 extension Notification.Name {
-  /// `userInfo`: "eventId", and "shotsLeft" (an Int, absent for unlimited).
+  /// `userInfo`: "eventId", "unclaimed" and "revision" (an `UnclaimedCount`),
+  /// and "shotsLeft" (an Int, absent for unlimited).
   static let shotClaimed = Notification.Name("left.clip.shotClaimed")
-  /// `userInfo`: "id", "eventId", and "reason" when the server refused it.
+  /// `userInfo`: "id", "eventId", and when the server refused it "reason",
+  /// "unclaimed" and "revision".
   static let shotFinished = Notification.Name("left.clip.shotFinished")
   /// A queued frame's mission tag reached the server, or was dropped. `userInfo`: "eventId".
   static let shotTagged = Notification.Name("left.clip.shotTagged")
+}
+
+/// What the counter subtracts from the server's count. `revision` grows with
+/// every change to the queue, so an older count never overwrites a newer one:
+/// the shutter's, the claim's and a re-read can reach the model in any order.
+struct UnclaimedCount: Sendable {
+  let count: Int
+  let revision: Int
 }
 
 /// A refused tag is retried this often before it is dropped (never the photo).
@@ -57,6 +67,7 @@ actor UploadQueue {
 
   private let folder = ClipConfig.sharedFolder.appendingPathComponent("clip-shots", isDirectory: true)
   private var draining = false
+  private var revision = 0
   private var again = false
   private var backoff: Double = 2
   private var retry: Task<Void, Never>?
@@ -95,17 +106,33 @@ actor UploadQueue {
 
   /// Write a developed frame. The JPEGs land before the entry, so an entry
   /// always has its files.
-  func enqueue(_ shot: QueuedShot, photo: DevelopedPhoto) throws {
+  /// Returns the count with the new frame in it, for the shutter to hand the
+  /// model in the same step that drops its "developing" frame.
+  func enqueue(_ shot: QueuedShot, photo: DevelopedPhoto) throws -> UnclaimedCount {
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     try photo.original.write(to: url(shot.id, ".jpg"), options: .atomic)
     try photo.thumb.write(to: url(shot.id, "_thumb.jpg"), options: .atomic)
     try write(shot)
+    revision += 1
+    let count = unclaimed(eventId: shot.eventId, userId: shot.userId)
     Task { await self.drain() }
+    return count
   }
 
   /// Frames not yet claimed — what the counter subtracts from the server's.
-  func unclaimed(eventId: String, userId: String) -> Int {
+  func unclaimed(eventId: String, userId: String) -> UnclaimedCount {
+    UnclaimedCount(count: countUnclaimed(eventId: eventId, userId: userId), revision: revision)
+  }
+
+  private func countUnclaimed(eventId: String, userId: String) -> Int {
     all().filter { $0.eventId == eventId && $0.userId == userId && !$0.claimed }.count
+  }
+
+  /// A claim or a refusal changed the count: the notification carries the new
+  /// one, so the model sets it together with the server's (no re-read between).
+  private func countInfo(_ shot: QueuedShot) -> [String: Any] {
+    revision += 1
+    return ["unclaimed": countUnclaimed(eventId: shot.eventId, userId: shot.userId), "revision": revision]
   }
 
   /// The guest's frames still in the queue, oldest first, with their files.
@@ -180,13 +207,17 @@ actor UploadQueue {
         let left = try await server.claimShot(eventId: shot.eventId, photoId: shot.id, takenAt: shot.takenAt)
         shot.claimed = true
         try write(shot)
-        var info: [String: Any] = ["eventId": shot.eventId]
+        var info = countInfo(shot)
+        info["eventId"] = shot.eventId
         if let left { info["shotsLeft"] = left }
         post(.shotClaimed, info)
       } catch let refusal as ClipError where refusal == .rollEmpty || refusal == .eventClosed {
         remove(shot.id)
-        post(.shotFinished, ["id": shot.id, "eventId": shot.eventId,
-                             "reason": refusal == .rollEmpty ? "roll_empty" : "event_closed"])
+        var info = countInfo(shot)
+        info["id"] = shot.id
+        info["eventId"] = shot.eventId
+        info["reason"] = refusal == .rollEmpty ? "roll_empty" : "event_closed"
+        post(.shotFinished, info)
         return
       }
     }
