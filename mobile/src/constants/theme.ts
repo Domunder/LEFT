@@ -2006,6 +2006,8 @@ export const MissionsCamera = {
   sheet: {
     /** Title -> copy -> list -> button. */
     gap: 14,
+    /** The "0/1" beside "Your missions." — DM Serif, like the camera's counter. */
+    countSize: 22,
     rowGap: 8,
     rowPaddingY: 14,
     rowPaddingX: 16,

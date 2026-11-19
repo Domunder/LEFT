@@ -35,15 +35,13 @@ import { Colors, MissionsCamera as M, Press, SheetMotion } from "@/constants/the
 import { Typography } from "@/constants/typography";
 import type { Mission } from "@/lib/missions";
 
-const plural = (n: number) => (n === 1 ? "1 for you" : `${n} for you`);
-
-/** The intro's copy, shown once per event (`left:missions-intro:{eventId}`). */
-export function missionsIntroCopy(count: number): string {
-  return (
-    `${plural(count)} from the host. Pick one, then take the photo. ` +
-    "Nobody sees them until the film is developed."
-  );
-}
+/**
+ * The intro's copy, shown once per event (`left:missions-intro:{eventId}`).
+ * The count is not in the sentence: it stands beside the title as "0/1"
+ * (2026-11-19, the user).
+ */
+export const MISSIONS_INTRO_COPY =
+  "Pick one, then take the photo. Nobody sees them until the film is developed.";
 
 // --- the frame ---------------------------------------------------------------
 
@@ -256,12 +254,21 @@ export function MissionListSheet({
   return (
     <SheetOverlay onClose={onClose}>
       <View style={styles.block}>
-        <Display size="xxs">
-          Your <Em>missions.</Em>
-        </Display>
+        <View style={styles.titleRow}>
+          <Display size="xxs" style={styles.title}>
+            Your <Em>missions.</Em>
+          </Display>
+          <Text
+            style={styles.count}
+            accessibilityLabel={`${done} of ${missions.length} done`}
+          >
+            {done}
+            <Text style={styles.countTotal}>/{missions.length}</Text>
+          </Text>
+        </View>
         <Body small>
           {intro
-            ? missionsIntroCopy(missions.length)
+            ? MISSIONS_INTRO_COPY
             : done === missions.length
               ? "All done. Photos stay hidden until the film is developed."
               : "Pick one, then take the photo."}
@@ -399,6 +406,22 @@ export function MissionPickerSheet({
 const styles = StyleSheet.create({
   block: {
     gap: M.sheet.gap / 2,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: M.sheet.gap,
+  },
+  title: {
+    flex: 1,
+  },
+  count: {
+    ...Typography.numeric,
+    fontSize: M.sheet.countSize,
+    color: Colors.text,
+  },
+  countTotal: {
+    color: Colors.textFaint,
   },
   keyboard: {
     flex: 1,
