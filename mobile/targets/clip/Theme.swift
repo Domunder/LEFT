@@ -35,8 +35,9 @@ enum CameraTokens {
   /// Both side slots, equal so the counter sits on the centre line.
   static let headerSideWidth: CGFloat = 76
   static let countdownTop: CGFloat = 12
-  /// Under the safe area: where "Next photo" starts, below name, counter and capsule.
-  static let armedOffset: CGFloat = 104
+  /// Under the safe area: where "Next photo" starts. The capsule is hidden while
+  /// a mission is armed, so the note takes its place, a clear gap under the counter.
+  static let armedOffset: CGFloat = 90
 
   static let scrimTop: [Color] = [.black.opacity(0.45), .black.opacity(0)]
   static let scrimTopHeight: CGFloat = 130

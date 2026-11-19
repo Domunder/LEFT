@@ -9,9 +9,10 @@ import UIKit
   nothing here can widen it.
 
   Smaller than the app's on purpose (the clip must stay light): a contact
-  sheet, and a tap opens the frame on its own with "Mission · …" and the
-  "Mission" action. No swiping between frames, no pinch, no shared-element
-  return — the app's `PhotoViewer` is the full version.
+  sheet, and a tap opens the frame with "Mission · …" and the "Mission"
+  action; a swipe sideways goes to the next or previous frame (2026-11-19, the
+  user). No pinch, no shared-element return — the app's `PhotoViewer` is the
+  full version.
 */
 struct YourShotsSheet: View {
   let event: EventInfo
@@ -89,23 +90,31 @@ struct YourShotsSheet: View {
     .presentationBackground(Theme.bg)
     .task { await model.loadShots() }
     .fullScreenCover(item: $open) { shot in
-      ShotDetail(shot: shot, event: event)
+      ShotDetail(start: shot.id, event: event)
         .environmentObject(model)
     }
   }
 }
 
-/// One frame, on its own: the picture, "Mission · …", and "Mission".
+/// The frames, one at a time and in the grid's order (newest first): swipe
+/// sideways between them; "Mission · …" and "Mission" follow the frame shown.
 private struct ShotDetail: View {
-  let shot: ShotItem
   let event: EventInfo
   @EnvironmentObject private var model: ClipModel
   @Environment(\.dismiss) private var dismiss
   @State private var picking = false
+  @State private var current: String
+
+  init(start: String, event: EventInfo) {
+    self.event = event
+    _current = State(initialValue: start)
+  }
 
   private var canTag: Bool { !model.missions.isEmpty && !event.isDeveloped() }
+  private var shots: [ShotItem] { model.shots.reversed() }
 
   var body: some View {
+    let shot = shots.first { $0.id == current } ?? shots.first
     VStack(spacing: 0) {
       HStack {
         Button { dismiss() } label: {
@@ -121,16 +130,28 @@ private struct ShotDetail: View {
       }
       .padding(.horizontal, 16)
 
-      Spacer(minLength: 12)
-      // The thumbnail first, the original over it once it has loaded.
-      ZStack {
-        ShotImage(url: shot.thumb).scaledToFit()
-        ShotImage(url: shot.full, placeholder: false).scaledToFit()
+      TabView(selection: $current) {
+        ForEach(shots) { item in
+          // The thumbnail first, the original over it once it has loaded.
+          ZStack {
+            ShotImage(url: item.thumb).scaledToFit()
+            ShotImage(url: item.full, placeholder: false).scaledToFit()
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .padding(.vertical, 12)
+          .tag(item.id)
+        }
       }
-      Spacer(minLength: 12)
+      .tabViewStyle(.page(indexDisplayMode: .never))
+      .accessibilityLabel(shots.firstIndex { $0.id == current }.map { "Photo \($0 + 1) of \(shots.count)" } ?? "Photo")
+      .accessibilityAdjustableAction { direction in
+        guard let index = shots.firstIndex(where: { $0.id == current }) else { return }
+        let next = direction == .increment ? index + 1 : index - 1
+        if shots.indices.contains(next) { current = shots[next].id }
+      }
 
       VStack(spacing: 14) {
-        if let mission = model.mission(for: shot.id) {
+        if let shot, let mission = model.mission(for: shot.id) {
           HStack(alignment: .firstTextBaseline, spacing: 6) {
             Image(systemName: "scope").font(.system(size: 12))
             (Text("Mission · ").foregroundStyle(Theme.textMuted) + Text(mission.body).foregroundStyle(Theme.text))
@@ -153,14 +174,14 @@ private struct ShotDetail: View {
               .glass(Capsule(), interactive: true)
           }
           .buttonStyle(PressScaleStyle())
-          .accessibilityLabel(model.mission(for: shot.id).map { "Mission: \($0.body). Change it." } ?? "Mark this photo for a mission")
+          .accessibilityLabel(shot.flatMap { model.mission(for: $0.id) }.map { "Mission: \($0.body). Change it." } ?? "Mark this photo for a mission")
         }
       }
       .padding(.bottom, 16)
     }
     .background(Color.black.ignoresSafeArea())
     .sheet(isPresented: $picking) {
-      MissionPicker(photoId: shot.id) { picking = false }
+      MissionPicker(photoId: current) { picking = false }
         .environmentObject(model)
     }
   }

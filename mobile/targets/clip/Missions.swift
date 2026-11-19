@@ -50,18 +50,29 @@ struct MissionCapsule: View {
 /// "Next photo: …" at the viewfinder's top edge, with an × to let it go.
 struct ArmedNote: View {
   let text: String
+  /// The capsule is hidden while a mission is armed; the note opens the list instead.
+  let open: () -> Void
   let clear: () -> Void
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
     HStack(spacing: 6) {
-      Image(systemName: "scope")
-        .font(.system(size: 12, weight: .medium))
-        .foregroundStyle(Theme.text)
-      (Text("Next photo: ").foregroundStyle(Theme.textMuted) + Text(text).foregroundStyle(Theme.text))
-        .font(Fonts.body(13))
-        .lineLimit(2)
+      Button(action: open) {
+        HStack(spacing: 6) {
+          Image(systemName: "scope")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundStyle(Theme.text)
+          (Text("Next photo: ").foregroundStyle(Theme.textMuted) + Text(text).foregroundStyle(Theme.text))
+            .font(Fonts.body(13))
+            .lineLimit(2)
+            .multilineTextAlignment(.leading)
+        }
+        .contentShape(Rectangle())
+      }
+      .buttonStyle(.plain)
+      .accessibilityLabel("Next photo: \(text)")
+      .accessibilityHint("Shows your missions")
       Button(action: clear) {
         Image(systemName: "xmark")
           .font(.system(size: 11, weight: .semibold))
@@ -284,100 +295,78 @@ private struct PlainRow<Trailing: View>: View {
 
 // MARK: 11 — "Are you one of these?"
 
-/// The names the host listed for personal missions (`name-picker.tsx`): 02's
-/// choice pills, solid off-white when chosen, a hairline outline when not.
-/// "None of these" is a real choice and the default, so the group is a set of
-/// radio buttons. Picking a name fills the name field (`NameScreen`).
-struct NamePicker: View {
+/// The names the host listed for personal missions (`name-picker.tsx`).
+/// **Names first** (2026-11-19, the user): one per row, so a guest reads the
+/// list before typing, and "Add your name" closes it — tapping it shows the
+/// name field (`field`) in its place; tapping a name hides it again, the way
+/// back for someone who typed and then saw themselves listed. Rows are 02's
+/// choice pills, full width: solid off-white when chosen, a hairline outline
+/// when not. Only names nobody else holds are listed.
+struct NameList<Field: View>: View {
   @EnvironmentObject private var model: ClipModel
-  var onPick: (MissionName?) -> Void = { _ in }
+  let onAdd: () -> Void
+  @ViewBuilder let field: () -> Field
 
   var body: some View {
-    if !model.names.isEmpty {
-      VStack(alignment: .leading, spacing: 0) {
-        Text("Are you one of these?")
-          .font(Fonts.body(16))
-          .foregroundStyle(Theme.text)
-        Text("The host planned something for you.")
-          .font(Fonts.body(13))
-          .foregroundStyle(Theme.textFaint)
-          .padding(.top, 4)
-        FlowLayout(spacing: 8) {
-          ForEach(model.names) { name in
-            chip(name.name, selected: model.pickedName == name.id) {
-              model.pickedName = name.id
-              onPick(name)
-            }
+    VStack(alignment: .leading, spacing: 0) {
+      Text("Are you one of these?")
+        .font(Fonts.body(16))
+        .foregroundStyle(Theme.text)
+      Text("The host planned something for you.")
+        .font(Fonts.body(13))
+        .foregroundStyle(Theme.textFaint)
+        .padding(.top, 4)
+      VStack(spacing: 8) {
+        ForEach(model.names) { name in
+          row(name.name, selected: !model.typingName && model.pickedName == name.id) {
+            model.pickedName = name.id
+            model.typingName = false
+            model.nameError = nil
           }
-          chip("None of these", selected: model.pickedName == nil) {
-            model.pickedName = nil
-            onPick(nil)
-          }
+          .accessibilityAddTraits(.isButton)
+          .transition(.opacity)
         }
-        .padding(.top, 14)
+        if model.typingName {
+          field().transition(.opacity)
+        } else {
+          row("Add your name", selected: false, add: true) {
+            model.pickedName = nil
+            model.typingName = true
+            model.nameError = nil
+            onAdd()
+          }
+          .accessibilityLabel("Not on the list. Add your name")
+        }
       }
-      .transition(.opacity)
+      .padding(.top, 18)
     }
+    .animation(.easeInOut(duration: 0.2), value: model.typingName)
+    .animation(.easeInOut(duration: 0.2), value: model.names)
+    .transition(.opacity)
   }
 
-  private func chip(_ label: String, selected: Bool, action: @escaping () -> Void) -> some View {
-    Button(action: action) {
-      Text(label)
-        .font(Fonts.medium(15))
-        .foregroundStyle(selected ? Theme.onLight : Theme.text)
-        .multilineTextAlignment(.leading)
-        .padding(.vertical, 11)
-        .padding(.horizontal, 16)
-        .background(selected ? Theme.text : .clear, in: Capsule())
-        .overlay(Capsule().stroke(selected ? Theme.text : Theme.hairlineStrong, lineWidth: 1))
+  private func row(_ label: String, selected: Bool, add: Bool = false, action: @escaping () -> Void) -> some View {
+    let color = selected ? Theme.onLight : add ? Theme.textMuted : Theme.text
+    return Button(action: action) {
+      HStack(spacing: 8) {
+        if add { Image(systemName: "plus").font(.system(size: 15, weight: .medium)) }
+        Text(label)
+          .font(Fonts.medium(15))
+          .multilineTextAlignment(.leading)
+          .frame(maxWidth: .infinity, alignment: .leading)
+        if selected { Image(systemName: "checkmark").font(.system(size: 14, weight: .semibold)) }
+      }
+      .foregroundStyle(color)
+      .padding(.vertical, 15)
+      .padding(.horizontal, 20)
+      .background(selected ? Theme.text : .clear, in: Capsule())
+      .overlay(Capsule().stroke(selected ? Theme.text : Theme.hairlineStrong, lineWidth: 1))
+      .contentShape(Capsule())
     }
-    .buttonStyle(PressScaleStyle(scale: 0.96))
+    .buttonStyle(PressScaleStyle(scale: 0.97))
     .disabled(model.busy)
     .accessibilityLabel(label)
-    .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
-  }
-}
-
-/// Chips that wrap onto the next line.
-private struct FlowLayout: Layout {
-  var spacing: CGFloat
-
-  func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-    let rows = arrange(width: proposal.width ?? .infinity, subviews: subviews)
-    let height = rows.last.map { $0.y + $0.height } ?? 0
-    return CGSize(width: proposal.width ?? rows.map(\.width).max() ?? 0, height: height)
-  }
-
-  func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-    for row in arrange(width: bounds.width, subviews: subviews) {
-      var x = bounds.minX
-      for index in row.indices {
-        let size = subviews[index].sizeThatFits(.unspecified)
-        subviews[index].place(at: CGPoint(x: x, y: bounds.minY + row.y), proposal: ProposedViewSize(size))
-        x += size.width + spacing
-      }
-    }
-  }
-
-  private struct Row { var indices: [Int] = []; var width: CGFloat = 0; var height: CGFloat = 0; var y: CGFloat = 0 }
-
-  private func arrange(width: CGFloat, subviews: Subviews) -> [Row] {
-    var rows: [Row] = [Row()]
-    for (index, view) in subviews.enumerated() {
-      let size = view.sizeThatFits(.unspecified)
-      var row = rows[rows.count - 1]
-      let needed = row.indices.isEmpty ? size.width : row.width + spacing + size.width
-      if needed > width, !row.indices.isEmpty {
-        let y = row.y + row.height + spacing
-        rows.append(Row(indices: [index], width: size.width, height: size.height, y: y))
-        continue
-      }
-      row.indices.append(index)
-      row.width = needed
-      row.height = max(row.height, size.height)
-      rows[rows.count - 1] = row
-    }
-    return rows
+    .accessibilityAddTraits(selected ? .isSelected : [])
   }
 }
 

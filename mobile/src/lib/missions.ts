@@ -117,15 +117,21 @@ export async function listPhotoMissions(eventId: string): Promise<Map<string, st
 // Joining: picking your name
 // ---------------------------------------------------------------------------
 
-export type MissionName = { id: string; name: string };
+/** `mine`: the caller holds this name already (back on 11 from the waiting screen). */
+export type MissionName = { id: string; name: string; mine: boolean };
 
-/** The names the host listed that nobody has claimed yet, for the join screen. */
+/**
+ * The names the host listed that nobody else holds, for the join screen —
+ * the caller's own included, marked `mine`. Someone else's claimed name is
+ * not listed at all.
+ */
 export async function listUnclaimedNames(inviteCode: string): Promise<MissionName[]> {
   const { data, error } = await getSupabase().rpc('mission_people_for_invite', {
     p_invite_code: inviteCode,
   });
   if (error) throw error;
-  return (data ?? []).map((row) => ({ id: row.person_id, name: row.name }));
+  // `mine === true`: a server from before 20261119000000 has no `mine` column.
+  return (data ?? []).map((row) => ({ id: row.person_id, name: row.name, mine: row.mine === true }));
 }
 
 /** "That's me." `personId` null gives your name back. */

@@ -622,6 +622,16 @@ the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
   11's names are 02's pills with "None of these", and a pick fills the name
   field; copy follows the app's vocabulary. No close button and no invite
   tile in the clip.
+- **Three camera changes of 2026-11-19 (the user, after TestFlight), never
+  compiled:** the clip stays portrait and, like Apple's Camera, only the
+  icons turn upright when the phone is sideways (flash, flip, zoom labels,
+  last-shot tile; the header does not turn) — the shutter never moves. While
+  a mission is armed the "Missions 0/1" capsule is hidden and "Next photo: …"
+  takes its place with a gap under the counter; tapping the note opens the
+  list. Your photos' single frame pages sideways through all frames
+  (`TabView` page style).
+- **Swift sources must be saved as UTF-8.** `LEFTClipActivity.swift` was once
+  saved through a Windows codepage and showed "itâ€™s" on the Lock Screen.
 - **Live Activity (2026-11-18, the user: "stay in the notifications so I can
   tap and see I have 4 more photos").** `targets/clip-activity`: a widget
   extension with Live Activities only, embedded **in the clip** (Apple's
@@ -725,7 +735,16 @@ Decided by the user — do not re-litigate:
   second), personal missions first; with fewer missions than guests some get
   none. A late joiner is dealt leftovers by `my_missions()`. No rerolls.
 - **A guest claims a name on 11** (`claim_mission_person`), one name each,
-  first come first served; a host-linked guest picks nothing.
+  first come first served; a host-linked guest picks nothing. **Names first**
+  (2026-11-19, the user, app and clip): the host's names are rows, "Add your
+  name" at the end opens the field, tapping a name closes it again; a picked
+  name becomes the guest's display name. Only names nobody else holds are
+  listed (`mission_people_for_invite()` returns the caller's own as `mine`,
+  migration `20261119000000_mission_names_mine.sql`, on the hosted project
+  since 2026-11-19), and 11 asks again every 10 s so a taken name disappears. While
+  waiting (12) a guest can go back to 11 ("Are you on the list?" / "Change
+  your name") until the start; a late joiner still sees unclaimed names.
+  **Not seen on a device.**
 - **A photo is tagged, never written**: `set_photo_mission()`, one photo ↔ one
   mission, until the film is developed. The upload queue tags after the claim
   as its own step (claim → tag → upload); a refused tag drops the tag, never

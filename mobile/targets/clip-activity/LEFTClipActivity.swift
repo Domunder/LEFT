@@ -9,7 +9,7 @@ import WidgetKit
   Lock Screen: the event's name, "4 left" in the counter's serif, the open
   missions and the time to the reveal. Dynamic Island: the count and the
   timer. A tap opens the clip on the event's camera. Only Live Activities may
-  live in a clip's widget extension â€” no Home Screen widget here.
+  live in a clip's widget extension — no Home Screen widget here.
 
   The app's fonts are not bundled in this extension (it would double the
   fonts' weight in the clip's 15 MB); the system serif stands in for DM Serif.
@@ -66,11 +66,11 @@ struct RollLiveActivity: Widget {
         Image(systemName: "camera.aperture")
           .foregroundStyle(Palette.text)
       } compactTrailing: {
-        Text(context.state.shotsLeft.map { "\($0)" } ?? "âˆž")
+        Text(context.state.shotsLeft.map { "\($0)" } ?? "∞")
           .font(.system(size: 15, weight: .semibold, design: .serif).monospacedDigit())
           .foregroundStyle(low(context.state) ? Palette.low : Palette.text)
       } minimal: {
-        Text(context.state.shotsLeft.map { "\($0)" } ?? "âˆž")
+        Text(context.state.shotsLeft.map { "\($0)" } ?? "∞")
           .font(.system(size: 14, weight: .semibold, design: .serif).monospacedDigit())
           .foregroundStyle(low(context.state) ? Palette.low : Palette.text)
       }
@@ -116,7 +116,7 @@ private struct LockScreenView: View {
             .font(.system(size: 15, weight: .medium).monospacedDigit())
             .foregroundStyle(stale ? Palette.faint : Palette.muted)
             .multilineTextAlignment(.trailing)
-          Text("until itâ€™s developed")
+          Text("until it’s developed")
             .font(.system(size: 11))
             .foregroundStyle(Palette.faint)
         }
@@ -128,18 +128,18 @@ private struct LockScreenView: View {
   }
 }
 
-/// "4 left" â€” warming over the last three, as on the camera.
+/// "4 left" — warming over the last three, as on the camera.
 private struct Count: View {
   let state: RollActivityAttributes.ContentState
   let size: CGFloat
 
   var body: some View {
     HStack(alignment: .firstTextBaseline, spacing: 6) {
-      Text(state.shotsLeft.map { "\($0)" } ?? "âˆž")
+      Text(state.shotsLeft.map { "\($0)" } ?? "∞")
         .font(.system(size: size, weight: .regular, design: .serif).monospacedDigit())
         .foregroundStyle(low(state) ? Palette.low : Palette.text)
         .contentTransition(.numericText())
-      Text(state.shotsLeft == 0 ? "left Â· roll used up" : "left")
+      Text(state.shotsLeft == 0 ? "left · roll used up" : "left")
         .font(.system(size: 14))
         .foregroundStyle(Palette.muted)
     }
@@ -157,12 +157,12 @@ private struct RevealTimer: View {
     if attributes.endsAt > .now {
       Text(timerInterval: Date.now...attributes.endsAt, countsDown: true)
     } else {
-      Text("Developingâ€¦")
+      Text("Developing…")
     }
   }
 }
 
-/// "Missions 1/3" â€” only when the guest was dealt some.
+/// "Missions 1/3" — only when the guest was dealt some.
 private struct Missions: View {
   let state: RollActivityAttributes.ContentState
 

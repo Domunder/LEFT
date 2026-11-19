@@ -36,9 +36,18 @@ final class ClipModel: ObservableObject {
   @Published private(set) var missions: [Mission] = []
   /// The mission the next shot is for.
   @Published var armedId: String?
-  /// 11's "Are you one of these?": names the host listed, and the guest's pick.
+  /// 11's "Are you one of these?": names the host listed that nobody else
+  /// holds, and the guest's pick. Also read on 12 for "Are you on the list?".
   @Published private(set) var names: [MissionName] = []
   @Published var pickedName: String?
+  /// 11's "Add your name" was tapped: the field instead of a host's name.
+  @Published var typingName = false
+  /// False until 11 has its first answer, so the field does not flash before the list.
+  @Published private(set) var namesLoaded = false
+  /// Back on 11 from 12 to switch to or from a host's name (2026-11-19, the user).
+  @Published private(set) var changingName = false
+  /// The name the group sees now, for 11's field when changing it.
+  @Published private(set) var memberName: String?
   /// Your shots: uploaded frames and those still in the queue.
   @Published private(set) var shots: [ShotItem] = []
 
@@ -169,6 +178,7 @@ final class ClipModel: ObservableObject {
         return
       }
       serverLeft = event.rollSize.map { max(0, $0 - member.shotsTaken) }
+      memberName = member.displayName
       await recount(event)
       route(event)
     } catch {
@@ -178,7 +188,9 @@ final class ClipModel: ObservableObject {
 
   // MARK: 11
 
-  func join(name: String) {
+  /// `personId`: the host's name the guest chose; nil when they typed their
+  /// own, which gives back a name they held (when the event has names at all).
+  func join(name: String, personId: String?) {
     guard case let .name(code) = phase, !busy else { return }
     let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
     guard (1...ClipConfig.maxNameLength).contains(trimmed.count) else { return }
@@ -192,18 +204,22 @@ final class ClipModel: ObservableObject {
         try? await Server.shared.setDisplayName(trimmed)
         let eventId = try await Server.shared.joinEvent(code: code, name: trimmed)
         memberships.set(eventId, forKey: "left.clip.event.\(code)")
-        if let picked = pickedName {
+        if !names.isEmpty {
           do {
-            try await Server.shared.claimMissionName(eventId: eventId, personId: picked)
+            try await Server.shared.claimMissionName(eventId: eventId, personId: personId)
           } catch ClipError.missionNameTaken {
-            // Stay on 11 with the names as they are now. The join stands;
-            // Continue joins again, which changes nothing.
+            // Stay on 11; the name leaves the list. The join stands; Continue
+            // joins again, which changes nothing.
+            names.removeAll { $0.id == personId }
             pickedName = nil
             nameError = messageFor(ClipError.missionNameTaken)
             await loadNames()
             return
+          } catch {
+            // Never in the way of joining.
           }
         }
+        changingName = false
         busy = false
         await load(eventId: eventId, code: code)
       } catch {
@@ -212,17 +228,59 @@ final class ClipModel: ObservableObject {
     }
   }
 
-  /// 11's names. Needs a signed-in guest, so the anonymous sign-in happens
-  /// here rather than on Continue — as on the web camera.
+  /// 11 opens: its first answer decides what is chosen.
+  func beginNames() {
+    namesLoaded = false
+  }
+
+  /// 11's names, asked again every few seconds so a name someone else takes
+  /// disappears; 12 asks too, for its link. Needs a signed-in guest, so the
+  /// anonymous sign-in happens here rather than on Continue — as on the web camera.
   func loadNames() async {
-    guard case let .name(code) = phase else { return }
+    guard let code else { return }
+    let first = !namesLoaded
     do {
       _ = try await Server.shared.ensureGuest()
       names = try await Server.shared.missionNames(code: code)
     } catch {
-      names = []
+      // A failed refresh keeps the list it had; a failed first load is the field alone.
+      if first { names = [] }
     }
-    if let picked = pickedName, !names.contains(where: { $0.id == picked }) { pickedName = nil }
+    guard case .name = phase else { return }
+    namesLoaded = true
+    if first {
+      if let mine = names.first(where: \.isMine) {
+        pickedName = mine.id
+        typingName = false
+      } else {
+        pickedName = nil
+        // Back from 12 under their own name: the field, filled, is their choice.
+        typingName = changingName && !names.isEmpty
+      }
+    } else if let picked = pickedName, !names.contains(where: { $0.id == picked }) {
+      pickedName = nil
+      nameError = messageFor(ClipError.missionNameTaken)
+    }
+  }
+
+  /// 12 → 11, to switch to or from a host's name. Only while waiting: once
+  /// the event starts the missions are dealt and nothing moves.
+  func changeName() {
+    guard case .waiting = phase, let code else { return }
+    nameError = nil
+    changingName = true
+    namesLoaded = false
+    phase = .name(code: code)
+  }
+
+  /// 11's back button when changing: back to 12 as it was.
+  func cancelChangeName() {
+    guard changingName, case let .name(code) = phase,
+          let eventId = memberships.string(forKey: "left.clip.event.\(code)")
+    else { return }
+    changingName = false
+    nameError = nil
+    Task { await load(eventId: eventId, code: code) }
   }
 
   // MARK: Routing

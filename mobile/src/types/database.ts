@@ -620,6 +620,7 @@ export type Database = {
       mission_people_for_invite: {
         Args: { p_invite_code: string }
         Returns: {
+          mine: boolean
           name: string
           person_id: string
         }[]

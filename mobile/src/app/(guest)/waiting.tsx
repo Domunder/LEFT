@@ -8,9 +8,15 @@
  *
  * The wait is the point, so the screen says who is being waited on. A bare
  * spinner would leave a guest wondering whether the app had stalled.
+ *
+ * **"Are you on the host's list?"** (2026-11-19, the user): when the host
+ * listed names for personal missions, a guest can go back to 11 from here to
+ * switch to one of them — or away from one — until the event starts. The link
+ * shows while 11 would have something to offer: names nobody else holds, or
+ * the one this guest holds.
  */
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, {
@@ -21,9 +27,10 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { Body, Display, Em, Label } from '@/components/ui/typography';
-import { Colors, Guest, Waiting } from '@/constants/theme';
+import { Colors, Guest, MissionsJoin, Spacing, Waiting } from '@/constants/theme';
 import {
   getEvent,
   isDeveloped,
@@ -31,6 +38,7 @@ import {
   subscribeToEventStatus,
   type Event,
 } from '@/lib/events';
+import { listUnclaimedNames, type MissionName } from '@/lib/missions';
 import { askForPushOnce } from '@/lib/push';
 
 export default function WaitingScreen() {
@@ -39,6 +47,8 @@ export default function WaitingScreen() {
 
   const [event, setEvent] = useState<Event | null>(null);
   const [hostName, setHostName] = useState<string | null>(null);
+  /** The host's names this guest could switch to (or holds). Empty hides the link. */
+  const [names, setNames] = useState<MissionName[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,6 +101,31 @@ export default function WaitingScreen() {
     if (waiting) askForPushOnce();
   }, [waiting]);
 
+  /*
+    Asked again whenever the screen comes back into view (from 11) and on an
+    interval, so the link leaves once nobody's name is left to pick.
+  */
+  const inviteCode = waiting && event?.missions_per_guest != null ? event.invite_code : null;
+  const focused = useIsFocused();
+  useEffect(() => {
+    if (!inviteCode || !focused) return;
+    let cancelled = false;
+    const load = () =>
+      listUnclaimedNames(inviteCode)
+        .then((list) => {
+          if (!cancelled) setNames(list);
+        })
+        .catch(() => undefined);
+    void load();
+    const timer = setInterval(load, MissionsJoin.refreshMs);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [inviteCode, focused]);
+
+  const mine = names.find((n) => n.mine);
+
   useEffect(() => {
     if (!liveEventId) return;
     return subscribeToEventStatus(liveEventId, (status) => {
@@ -126,6 +161,25 @@ export default function WaitingScreen() {
           </Body>
         </View>
 
+        {inviteCode && names.length > 0 ? (
+          <View style={styles.names}>
+            <Body small color={Colors.textDim} style={styles.namesCopy}>
+              {mine
+                ? `You are ${mine.name} on the host's list.`
+                : 'The host planned something for some of you by name.'}
+            </Body>
+            <PillButton
+              variant="secondary"
+              label={mine ? 'Change your name' : 'Are you on the list?'}
+              onPress={() =>
+                router.push({
+                  pathname: '/(guest)/name',
+                  params: { code: inviteCode, change: '1' },
+                })
+              }
+            />
+          </View>
+        ) : null}
       </ScrollView>
     </Screen>
   );
@@ -190,6 +244,14 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
+  },
+  // Under the card, at the foot of the page: the wait is still the screen.
+  names: {
+    marginTop: 'auto',
+    paddingTop: Waiting.headlineGap,
+  },
+  namesCopy: {
+    marginBottom: Spacing.md,
   },
   ping: {
     width: Waiting.pingSize,

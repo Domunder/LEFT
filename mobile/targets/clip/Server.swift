@@ -112,14 +112,19 @@ struct Mission: Decodable, Identifiable, Equatable {
   }
 }
 
-/// A name the host listed for personal missions that nobody has claimed yet.
+/// A name the host listed for personal missions that nobody else holds.
+/// `mine`: the guest holds it already (back on 11 from the waiting screen);
+/// absent on a server from before 20261119000000.
 struct MissionName: Decodable, Identifiable, Equatable {
   let id: String
   let name: String
+  let mine: Bool?
+
+  var isMine: Bool { mine == true }
 
   enum CodingKeys: String, CodingKey {
     case id = "person_id"
-    case name
+    case name, mine
   }
 }
 
@@ -414,18 +419,19 @@ actor Server {
     _ = try await send("rest/v1/rpc/set_photo_mission", method: "POST", json: body)
   }
 
-  /// The names the host listed for personal missions that nobody has claimed yet.
+  /// The names the host listed for personal missions that nobody else holds, the guest's own included.
   func missionNames(code: String) async throws -> [MissionName] {
     let data = try await send("rest/v1/rpc/mission_people_for_invite", method: "POST", json: ["p_invite_code": code])
     return try JSONDecoder().decode([MissionName].self, from: data)
   }
 
-  /// "That's me." Refused with `taken`; `already_dealt` is ignored, as in the app.
-  func claimMissionName(eventId: String, personId: String) async throws {
+  /// "That's me." nil gives back a name held. Refused with `taken`;
+  /// `already_dealt` is ignored, as in the app.
+  func claimMissionName(eventId: String, personId: String?) async throws {
     do {
       _ = try await send("rest/v1/rpc/claim_mission_person", method: "POST", json: [
         "p_event_id": eventId,
-        "p_person_id": personId,
+        "p_person_id": personId.map { $0 as Any } ?? NSNull(),
       ])
     } catch let error as ClipError {
       if error.hint == "taken" { throw ClipError.missionNameTaken }

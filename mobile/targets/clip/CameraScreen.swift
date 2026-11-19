@@ -29,6 +29,9 @@ struct CameraScreen: View {
   @State private var yourShots = false
   /// The viewfinder's size, for the print's crop.
   @State private var frameSize: CGSize = .zero
+  /// How far the controls' icons turn to stay upright. The screen itself stays
+  /// portrait (as Apple's Camera does): only the icons follow the phone.
+  @State private var tilt: Angle = .zero
 
   private var canShoot: Bool {
     camera.ready && !capturing && model.shotsLeft != 0
@@ -62,8 +65,16 @@ struct CameraScreen: View {
     .onAppear {
       camera.viewfinder.setLook(event.look)
       camera.start()
+      UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+      followTilt()
     }
-    .onDisappear { camera.stop() }
+    .onDisappear {
+      camera.stop()
+      UIDevice.current.endGeneratingDeviceOrientationNotifications()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
+      followTilt()
+    }
     .onChange(of: scenePhase) { _, phase in
       if phase == .active { camera.start() } else if phase == .background { camera.stop() }
     }
@@ -94,7 +105,7 @@ struct CameraScreen: View {
         .padding(.top, top + CameraTokens.headerPaddingTop)
 
       if let armed = model.missions.first(where: { $0.id == model.armedId }) {
-        ArmedNote(text: armed.body) {
+        ArmedNote(text: armed.body, open: { missionList = true }) {
           withAnimation(reduceMotion ? .easeInOut(duration: 0.18) : .spring(response: 0.35, dampingFraction: 1)) {
             model.arm(nil)
           }
@@ -143,6 +154,21 @@ struct CameraScreen: View {
 
   private var noteText: String? { error }
 
+  /// Face up, face down and upside down keep the last angle, as the system camera does.
+  private func followTilt() {
+    let angle: Angle
+    switch UIDevice.current.orientation {
+    case .portrait: angle = .zero
+    case .landscapeLeft: angle = .degrees(90)
+    case .landscapeRight: angle = .degrees(-90)
+    default: return
+    }
+    guard angle != tilt else { return }
+    withAnimation(reduceMotion ? .easeInOut(duration: 0.18) : .spring(response: 0.4, dampingFraction: 1)) {
+      tilt = angle
+    }
+  }
+
   // MARK: Header
 
   private var header: some View {
@@ -157,12 +183,14 @@ struct CameraScreen: View {
           .foregroundStyle(Theme.textMuted)
           .lineLimit(1)
         RollCounter(left: model.shotsLeft)
-        if !model.missions.isEmpty {
+        // While a mission is armed the note below stands in for the capsule.
+        if !model.missions.isEmpty, model.armedId == nil {
           MissionCapsule(
             done: model.missions.filter { $0.photoId != nil }.count,
             total: model.missions.count
           ) { missionList = true }
           .padding(.top, 6)
+          .transition(.opacity)
         }
       }
       .frame(maxWidth: .infinity)
@@ -192,18 +220,19 @@ struct CameraScreen: View {
       GlassControl(
         symbol: flash ? "bolt.fill" : "bolt.slash",
         tint: flash ? Theme.text : CameraTokens.flashOff,
-        label: flash ? "Flash on" : "Flash off"
+        label: flash ? "Flash on" : "Flash off",
+        tilt: tilt
       ) { flash.toggle() }
       .opacity(camera.hasFlash ? 1 : 0)
       .disabled(!camera.hasFlash)
 
       Spacer()
       if !camera.stops.isEmpty || !camera.liveZoom.isEmpty {
-        ZoomSelector(camera: camera)
+        ZoomSelector(camera: camera, tilt: tilt)
       }
       Spacer()
 
-      GlassControl(symbol: "arrow.triangle.2.circlepath", tint: Theme.text, label: "Switch camera") {
+      GlassControl(symbol: "arrow.triangle.2.circlepath", tint: Theme.text, label: "Switch camera", tilt: tilt) {
         camera.flip()
       }
     }
@@ -216,7 +245,7 @@ struct CameraScreen: View {
 
   private var bottomBar: some View {
     HStack {
-      LastShotTile(url: model.shots.last?.thumb) { yourShots = true }
+      LastShotTile(url: model.shots.last?.thumb, tilt: tilt) { yourShots = true }
         .frame(width: CameraTokens.bottomSideWidth, alignment: .leading)
       Spacer()
       Shutter(enabled: canShoot, action: shoot)
@@ -364,6 +393,7 @@ private struct Countdown: View {
 /// after a pinch — one lit pill with the live zoom; a tap on it goes back to 1×.
 private struct ZoomSelector: View {
   @ObservedObject var camera: CameraController
+  let tilt: Angle
 
   var body: some View {
     HStack(spacing: CameraTokens.zoomGap) {
@@ -392,6 +422,7 @@ private struct ZoomSelector: View {
       Text(text)
         .font(Fonts.medium(CameraTokens.zoomFontSize))
         .monospacedDigit()
+        .rotationEffect(tilt)
         .foregroundStyle(selected ? Theme.text : CameraTokens.zoomText)
         .frame(minWidth: CameraTokens.zoomPillMinWidth, minHeight: CameraTokens.zoomPillHeight)
         .background(selected ? CameraTokens.zoomSelectedBg : .clear, in: Capsule())
@@ -408,6 +439,7 @@ private struct GlassControl: View {
   let symbol: String
   let tint: Color
   let label: String
+  let tilt: Angle
   let action: () -> Void
 
   var body: some View {
@@ -415,6 +447,7 @@ private struct GlassControl: View {
       Image(systemName: symbol)
         .font(.system(size: 17, weight: .regular))
         .foregroundStyle(tint)
+        .rotationEffect(tilt)
         .frame(width: CameraTokens.controlSize, height: CameraTokens.controlSize)
         .glass(Circle(), interactive: true)
     }
@@ -426,6 +459,7 @@ private struct GlassControl: View {
 /// The last photo taken; opens Your photos.
 private struct LastShotTile: View {
   let url: URL?
+  let tilt: Angle
   let action: () -> Void
 
   var body: some View {
@@ -444,6 +478,7 @@ private struct LastShotTile: View {
         }
       }
       .frame(width: CameraTokens.tileSize, height: CameraTokens.tileSize)
+      .rotationEffect(tilt)
       .glass(RoundedRectangle(cornerRadius: CameraTokens.tileRadius, style: .continuous), interactive: true)
       .clipShape(RoundedRectangle(cornerRadius: CameraTokens.tileRadius, style: .continuous))
     }

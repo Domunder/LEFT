@@ -1759,22 +1759,29 @@ export const MissionsSetup = {
 
 /**
  * 11 · Guest name — "Are you one of these?", the names a host listed for
- * personal missions (`NamePicker`). Not in the prototype: built from 02's
- * choice pills so it reads as part of the same page.
+ * personal missions (`NamePicker`). Not in the prototype. Since 2026-11-19
+ * (the user) the names come first, one per row, and "Add your name" closes
+ * the list — rows drawn like 02's choice pills, full width.
  */
 export const MissionsJoin = {
-  /** The helper line -> the question. */
-  sectionTop: 10,
+  /** Headline -> the question (the field's `Guest.headlineGap` is too deep for a list). */
+  sectionTop: 36,
   /** Question -> "The host planned something for you." */
   subGap: 4,
-  /** Sub-line -> the chips. */
-  chipsTop: 14,
-  /** Between chips, both ways — they wrap under large text. */
-  chipGap: 8,
-  /** Chips -> the error line. */
+  /** Sub-line -> the first row. */
+  rowsTop: 18,
+  /** Between rows. */
+  rowGap: 8,
+  rowPaddingY: 15,
+  rowPaddingX: 20,
+  /** The check on a chosen row, the plus on "Add your name". */
+  iconSize: 17,
+  /** The rows -> the error line. */
   sectionBottom: 14,
   /** The section fading in once the names have loaded; opacity only. */
   fadeMs: 220,
+  /** How often 11 asks again, so a name someone else took disappears. */
+  refreshMs: 10_000,
 } as const;
 
 /**

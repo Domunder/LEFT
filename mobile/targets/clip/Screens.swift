@@ -46,52 +46,64 @@ struct RootView: View {
 
 // MARK: 11 — Name
 
+/// The app's `(guest)/name.tsx`. With names the host listed for personal
+/// missions, the names come first and "Add your name" opens the field
+/// (`NameList`); without, the field alone. Picking a host's name makes it the
+/// guest's name. Reached again from 12 (`changingName`) until the start.
 struct NameScreen: View {
   @EnvironmentObject private var model: ClipModel
   @State private var name = ""
-  /// The name the last chip wrote into the field.
-  @State private var lastPicked: String?
   @FocusState private var focused: Bool
 
   private var trimmed: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
-  private var canContinue: Bool { !trimmed.isEmpty && !model.busy }
+  private var hasNames: Bool { !model.names.isEmpty }
+  private var chosen: MissionName? { model.names.first { $0.id == model.pickedName } }
+  /// The name the group will see: the host's, or what they typed.
+  private var finalName: String { hasNames && !model.typingName ? (chosen?.name ?? "") : trimmed }
+  private var canContinue: Bool { model.namesLoaded && !finalName.isEmpty && !model.busy }
 
   var body: some View {
     VStack(spacing: 0) {
-      // Scrolls only when it has to: names under large text, or the keyboard up.
+      // Scrolls only when it has to: the names, large text, or the keyboard up.
       ScrollView {
         fields
       }
       .scrollBounceBehavior(.basedOnSize)
       .scrollDismissesKeyboard(.never)
 
-      Button(model.busy ? "Joining…" : "Continue") { model.join(name: trimmed) }
+      Button(model.busy ? (model.changingName ? "Saving…" : "Joining…") : "Continue", action: submit)
         .buttonStyle(PillButtonStyle())
         .disabled(!canContinue)
         .padding(.top, 8)
         .padding(.bottom, 12)
     }
     .padding(.horizontal, Theme.gutter)
-    .onAppear { focused = true }
-    .task { await model.loadNames() }
-    .animation(.easeInOut(duration: 0.2), value: model.names)
+    .onAppear {
+      if model.changingName, let current = model.memberName { name = current }
+    }
+    .task {
+      // Asked again every few seconds, so a name someone else takes disappears.
+      model.beginNames()
+      while !Task.isCancelled {
+        await model.loadNames()
+        try? await Task.sleep(nanoseconds: 10_000_000_000)
+      }
+    }
+    .onChange(of: model.namesLoaded) { _, loaded in
+      // The field alone is the screen: focus it, as before.
+      if loaded, !hasNames { focused = true }
+    }
+    .animation(.easeInOut(duration: 0.2), value: model.namesLoaded)
   }
 
-  /// Picking a name writes it into the field — only over an empty field or the
-  /// previous chip's name, never over what the guest typed themselves.
-  private func picked(_ person: MissionName?) {
-    model.nameError = nil
-    defer { lastPicked = person?.name }
-    guard let person else { return }
-    let current = trimmed
-    if current.isEmpty || current == lastPicked { name = person.name }
+  private func submit() {
+    guard canContinue else { return }
+    let personId = hasNames && !model.typingName ? chosen?.id : nil
+    model.join(name: finalName, personId: personId)
   }
 
-  private var fields: some View {
+  private var field: some View {
     VStack(alignment: .leading, spacing: 0) {
-      Eyebrow(text: "Welcome").padding(.top, 48)
-      Headline(plain: "What should\nwe ", emphasis: "call you?", size: 44).padding(.top, 14)
-
       TextField("", text: $name, prompt: Text("Your name").foregroundColor(Theme.textGhost))
         .font(Fonts.body(18))
         .foregroundStyle(Theme.text)
@@ -101,7 +113,7 @@ struct NameScreen: View {
         .autocorrectionDisabled()
         .submitLabel(.done)
         .focused($focused)
-        .onSubmit { model.join(name: trimmed) }
+        .onSubmit(submit)
         .onChange(of: name) { _, value in
           if value.count > ClipConfig.maxNameLength { name = String(value.prefix(ClipConfig.maxNameLength)) }
         }
@@ -109,15 +121,40 @@ struct NameScreen: View {
         .frame(height: 58)
         .background(Theme.field, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .disabled(model.busy)
-        .padding(.top, 36)
 
       Text("This is how the group will see you during the event.")
         .font(Fonts.body(13))
         .foregroundStyle(Theme.textDim)
         .padding(.top, 12)
+    }
+  }
 
-      NamePicker(onPick: picked)
-        .padding(.top, 28)
+  private var fields: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      if model.changingName {
+        Button { model.cancelChangeName() } label: {
+          Image(systemName: "chevron.left")
+            .font(.system(size: 16, weight: .medium))
+            .foregroundStyle(Theme.text)
+            .frame(width: 44, height: 44)
+            .background(Theme.field, in: Circle())
+            .overlay(Circle().stroke(Theme.hairline, lineWidth: 1))
+        }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityLabel("Back")
+        .padding(.top, 16)
+      }
+
+      Eyebrow(text: model.changingName ? "Your name" : "Welcome")
+        .padding(.top, model.changingName ? 20 : 48)
+      Headline(plain: "What should\nwe ", emphasis: "call you?", size: 44).padding(.top, 14)
+
+      if hasNames {
+        NameList(onAdd: { focused = true }) { field }
+          .padding(.top, 36)
+      } else if model.namesLoaded {
+        field.padding(.top, 36)
+      }
 
       // Reserved whether or not there is an error, so nothing jumps.
       Text(model.nameError ?? " ")
@@ -134,7 +171,12 @@ struct NameScreen: View {
 
 struct WaitingScreen: View {
   let event: EventInfo
+  @EnvironmentObject private var model: ClipModel
   @State private var pulse = false
+
+  /// "Are you on the list?" (2026-11-19, the user): back to 11 to switch to
+  /// or from a host's name, while there is one to pick and until the start.
+  private var mine: MissionName? { model.names.first(where: \.isMine) }
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -154,11 +196,29 @@ struct WaitingScreen: View {
         Spacer()
       }
       .padding(.bottom, 48)
+      if !model.names.isEmpty {
+        Text(mine.map { "You are \($0.name) on the host’s list." }
+          ?? "The host planned something for some of you by name.")
+          .font(Fonts.body(14))
+          .foregroundStyle(Theme.textDim)
+          .padding(.bottom, 12)
+        Button(mine == nil ? "Are you on the list?" : "Change your name") { model.changeName() }
+          .buttonStyle(PillButtonStyle(light: false))
+          .padding(.bottom, 12)
+          .transition(.opacity)
+      }
     }
     .padding(.horizontal, Theme.gutter)
+    .animation(.easeInOut(duration: 0.2), value: model.names)
     .onAppear {
       guard !UIAccessibility.isReduceMotionEnabled else { return }
       withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) { pulse = true }
+    }
+    .task {
+      while !Task.isCancelled {
+        await model.loadNames()
+        try? await Task.sleep(nanoseconds: 10_000_000_000)
+      }
     }
   }
 }
