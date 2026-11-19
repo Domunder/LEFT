@@ -683,8 +683,13 @@ the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
   after the claim (claim → tag → upload → mark, a refused tag drops the tag,
   never the photo). **Your photos** — the tile left of the shutter — is the
   guest's own frames (queued files, then signed URLs) with "Mission" on a
-  frame to tag it afterwards. Smaller than the app's on purpose: no swiping
-  in the viewer, no pinch, no return to the tile. **No intro sheet** (the
+  frame to tag it afterwards. **Its viewer is the app's `PhotoViewer`**
+  (2026-11-19, the user, for the release): full screen, swipe sideways,
+  pinch and double-tap zoom (a `UIScrollView` per page), a tap hides the
+  chrome, glass ✕ and "3 / 12", the caption and "Mission" at the bottom. It
+  opens from its tile and closes into the current photo's tile with drag
+  down — the iOS 18 zoom transition; on iOS 17 a plain cover with its own
+  drag down. **Never compiled before the next EAS build.** **No intro sheet** (the
   user's call). Server calls checked against the local stack over HTTP.
 - **Invite codes have no I, O, 0 or 1** (`[A-HJ-NP-Z2-9]{6,12}`, here and in
   `lib/invite.ts`): a link with one is "not a LEFT invite". The seed's
