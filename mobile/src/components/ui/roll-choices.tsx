@@ -7,7 +7,8 @@
  *
  * The unlimited card is the only paid one. It does not carry a price tag — the
  * line under the row and the button say what the current choice costs, in one
- * place, so a card never has to.
+ * place, so a card never has to. The numeral stands alone — no "photos" under
+ * it (2026-11-19, the user).
  */
 
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
@@ -68,11 +69,6 @@ function RollCard({ roll, selected, onPress }: RollCardProps) {
     [selected]
   );
 
-  const unit = useAnimatedStyle(
-    () => ({ color: withTiming(at(LengthChoiceState.perPerson, selected), TIMING) }),
-    [selected]
-  );
-
   return (
     <AnimatedPressable
       accessibilityRole="radio"
@@ -81,7 +77,6 @@ function RollCard({ roll, selected, onPress }: RollCardProps) {
       onPress={onPress}
       style={[styles.card, shell]}>
       <Animated.Text style={[styles.numeral, numeral]}>{rollNumeral(roll)}</Animated.Text>
-      <Animated.Text style={[styles.unit, unit]}>photos</Animated.Text>
     </AnimatedPressable>
   );
 }
@@ -96,7 +91,6 @@ const styles = StyleSheet.create({
   card: {
     flex: 1,
     alignItems: 'center',
-    gap: RollChoice.lineGap,
     paddingVertical: RollChoice.paddingY,
     paddingHorizontal: RollChoice.paddingX,
     borderRadius: RollChoice.radius,
@@ -105,9 +99,5 @@ const styles = StyleSheet.create({
   numeral: {
     ...Typography.numeric,
     fontSize: RollChoice.numeralSize,
-  },
-  unit: {
-    ...Typography.caption,
-    fontSize: RollChoice.unitSize,
   },
 });

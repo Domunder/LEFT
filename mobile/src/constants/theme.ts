@@ -702,8 +702,6 @@ export const RollChoice = {
   gap: 6,
   /** The numeral. DM Serif; "36" has to fit a ~46px card. */
   numeralSize: 21,
-  /** "shots" under it. */
-  unitSize: 10,
 } as const;
 
 /**
