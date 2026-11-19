@@ -281,8 +281,13 @@ export function PhotoViewer({
 
   // --- gestures -----------------------------------------------------------
 
-  /** 0 undecided · 1 paging · 2 dragging away · 3 panning a zoomed photo */
+  /**
+   * 0 undecided · 1 paging · 2 dragging away · 3 panning a zoomed photo ·
+   * 4 dragged in from the left edge — the system's "back", which closes
+   * (2026-11-19, the user).
+   */
   const mode = useSharedValue(0);
+  const fromEdge = useSharedValue(false);
   // Where the gesture in progress started. Shared values, because each gesture
   // callback is its own worklet and a captured object would be a private copy.
   const startOffset = useSharedValue(0);
@@ -304,9 +309,10 @@ export function PhotoViewer({
 
     const pan = Gesture.Pan()
       .maxPointers(1)
-      .onBegin(() => {
+      .onBegin((e) => {
         'worklet';
         if (closing.value) return;
+        fromEdge.value = e.absoluteX <= T.edgeWidth;
         // Catch whatever is still moving and carry on from there.
         cancelAnimation(offset);
         cancelAnimation(zoomX);
@@ -328,7 +334,12 @@ export function PhotoViewer({
             startY.value = zoomY.value - e.translationY;
           } else if (Math.abs(e.translationX) > T.slop || Math.abs(e.translationY) > T.slop) {
             const sideways = Math.abs(e.translationX) > Math.abs(e.translationY);
-            mode.value = sideways || e.translationY < 0 ? 1 : 2;
+            mode.value =
+              fromEdge.value && sideways && e.translationX > 0
+                ? 4
+                : sideways || e.translationY < 0
+                  ? 1
+                  : 2;
             // Start from here, so the photo does not jump by the slop.
             slopX.value = e.translationX;
             slopY.value = e.translationY;
@@ -352,6 +363,12 @@ export function PhotoViewer({
           const travel = Math.max(0, dy) / height;
           moveX.value = startX.value + e.translationX - slopX.value;
           moveY.value = startY.value + (dy > 0 ? dy : clampWithRubber(dy, 0, 0, height, T.rubber));
+          moveScale.value = 1 - travel * (1 - T.dismissMinScale);
+          backdrop.value = 1 - Math.min(1, travel * 2);
+        } else if (mode.value === 4) {
+          const dx = Math.max(0, e.translationX - slopX.value);
+          const travel = dx / width;
+          moveX.value = startX.value + dx;
           moveScale.value = 1 - travel * (1 - T.dismissMinScale);
           backdrop.value = 1 - Math.min(1, travel * 2);
         } else {
@@ -389,6 +406,15 @@ export function PhotoViewer({
             // Thrown back: this one may overshoot, the finger gave it momentum.
             moveX.value = withSpring(0, { ...Springs.momentum, velocity: e.velocityX });
             moveY.value = withSpring(0, { ...Springs.momentum, velocity: e.velocityY });
+            moveScale.value = withSpring(1, Springs.settle);
+            backdrop.value = withTiming(1, { duration: T.fadeMs });
+          }
+        } else if (mode.value === 4) {
+          const landing = moveX.value + project(e.velocityX, T.deceleration);
+          if (landing > T.dismissDistance) {
+            close(e.velocityX, e.velocityY);
+          } else {
+            moveX.value = withSpring(0, { ...Springs.momentum, velocity: e.velocityX });
             moveScale.value = withSpring(1, Springs.settle);
             backdrop.value = withTiming(1, { duration: T.fadeMs });
           }

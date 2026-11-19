@@ -52,10 +52,10 @@ import type { FilmLook } from '@/lib/events';
 import { liveLookUniforms } from '@/lib/look-shader';
 
 /**
- * The frames the viewfinder is drawn from: 4:3 like the photo, about the
- * screen's own pixels, and capped at the preview's size
- * (`enablePreviewSizedOutputBuffers`) — next to a 12 MP photo output the
- * session could otherwise settle on far larger frames than the screen shows.
+ * The frames the viewfinder is drawn from: 4:3 like the photo, 1440x1920 —
+ * the App Clip's size, which looked right on a device. Not capped at the
+ * "preview size" any more (2026-11-19, the user: still softer than the
+ * clip): that cap let the system pick smaller frames than the screen has.
  */
 const PREVIEW_RESOLUTION = CommonResolutions.FHD_4_3;
 const PREVIEW_CONSTRAINTS: Constraint[] = [{ fps: 30 }];
@@ -168,7 +168,7 @@ export function FilmCamera({
     pixelFormat: 'rgb',
     // Upright, and mirrored on the front camera, before the frame gets here.
     enablePhysicalBufferRotation: true,
-    enablePreviewSizedOutputBuffers: true,
+    enablePreviewSizedOutputBuffers: false,
     dropFramesWhileBusy: true,
     allowDeferredStart: false,
     onFrame: handleFrame,

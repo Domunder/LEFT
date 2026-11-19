@@ -235,7 +235,8 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   (2026-11-19, the user, replacing the Skia viewfinder of 2026-11-15, which
   copied 1024x768 frames through JS and looked soft full screen). The camera
   is `react-native-vision-camera` 5; `components/ui/film-camera.tsx` hands
-  each frame (`FHD_4_3`, capped at preview size) to VisionCamera's
+  each frame (`FHD_4_3`, 1440x1920 like the clip; the preview-size cap was
+  dropped the same day, it gave softer frames) to VisionCamera's
   `FrameRenderer` and disposes it, and `<NativeFrameRendererView>` shows it.
   **LEFT patches that renderer** (`mobile/patches/react-native-vision-camera+5.2.4.patch`,
   applied by `patch-package` on `postinstall`): it draws each frame through
@@ -244,7 +245,8 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   Group's UserDefaults (`left.viewfinder.look`, JSON of `liveLookUniforms()`,
   written with `ExtensionStorage`) because the renderer's spec has only
   `renderFrame`. **A VisionCamera upgrade must carry the patch over.** Mono's
-  viewfinder is black and white. **Compiled only on EAS, never seen.**
+  viewfinder is black and white. Seen on a device 2026-11-19 (build 18):
+  "way better".
 - **No Skia GPU call on the camera thread — ever.** `SkiaCamera` (from
   `react-native-vision-camera-skia`) shades frames on the GPU on the camera's
   GCD queue and crashed the app about 20 s after the camera opened
@@ -679,6 +681,11 @@ the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
   in the App Group folder, undrained by the app. A refresh token the clip can
   no longer use (revoked, or rotated by the app) ends that identity; the next
   join is a new member with a fresh roll — the known gap.
+- **Back swipes (2026-11-19, the user):** a drag in from the left edge closes
+  the viewer (app: mode 4 in `PhotoViewer`, with the screen's own swipe-back
+  off while a photo is open; clip: `EdgeSwipeBack`) and, in the clip, takes
+  Your photos back to the camera (a full-screen cover has no back swipe of
+  its own). **Not seen on a device.**
 - **Polling, no realtime:** waiting and camera re-read the event every 15 s
   and on foreground.
 - **On reopening, the clip asks for its roster row before the event**

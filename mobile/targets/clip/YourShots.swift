@@ -88,7 +88,10 @@ struct YourShotsSheet: View {
       }
     }
     .background(Theme.bg.ignoresSafeArea())
-    .presentationBackground(Theme.bg)
+    // A swipe in from the left edge goes back to the camera, which shows
+    // through behind the sliding page (2026-11-19, the user).
+    .modifier(EdgeSwipeBack(slideOut: true) { dismiss() })
+    .presentationBackground(.clear)
     .task { await model.loadShots() }
     .fullScreenCover(item: $open) { shot in
       PhotoViewer(start: shot.id, event: event, zoom: zoom)
@@ -186,6 +189,8 @@ private struct PhotoViewer: View {
       .allowsHitTesting(chrome)
     }
     .statusBarHidden(!chrome)
+    // In from the left edge: back to the grid, like the system's back swipe.
+    .modifier(EdgeSwipeBack(slideOut: false) { dismiss() })
     .zoomDestination(id: current, in: zoom)
     .sheet(isPresented: $picking) {
       MissionPicker(photoId: current) { picking = false }
@@ -312,6 +317,57 @@ private struct DragToClose: ViewModifier {
         including: enabled ? .all : .subviews
       )
     }
+  }
+}
+
+/// The system's back swipe for a full-screen cover, which has none: a drag
+/// that starts at the left edge moves the page with the finger; let go far
+/// enough (or with a flick) and it goes back, otherwise it springs home.
+/// `slideOut`: finish by sliding off to the right instead of the cover's own
+/// close animation (the viewer keeps its zoom back into the tile).
+private struct EdgeSwipeBack: ViewModifier {
+  let slideOut: Bool
+  let back: () -> Void
+  @State private var dx: CGFloat = 0
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  private static let edge: CGFloat = 24
+  private static let distance: CGFloat = 140
+
+  func body(content: Content) -> some View {
+    content
+      .offset(x: dx)
+      .overlay(alignment: .leading) {
+        Color.clear
+          .frame(width: Self.edge)
+          .frame(maxHeight: .infinity)
+          .contentShape(Rectangle())
+          .gesture(
+            DragGesture(minimumDistance: 8, coordinateSpace: .global)
+              .onChanged { value in dx = max(0, value.translation.width) }
+              .onEnded { value in
+                guard value.predictedEndTranslation.width > Self.distance else {
+                  withAnimation(reduceMotion ? .easeOut(duration: 0.18) : .spring(response: 0.35, dampingFraction: 1)) {
+                    dx = 0
+                  }
+                  return
+                }
+                if slideOut {
+                  let width = UIScreen.main.bounds.width
+                  withAnimation(.easeOut(duration: 0.22)) {
+                    dx = width
+                  } completion: {
+                    var quiet = Transaction()
+                    quiet.disablesAnimations = true
+                    withTransaction(quiet) { back() }
+                  }
+                } else {
+                  back()
+                }
+              }
+          )
+          .accessibilityHidden(true)
+      }
   }
 }
 

@@ -32,7 +32,7 @@
 import { Image, type ImageSource } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, type FlatList, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -654,6 +654,12 @@ export default function AlbumScreen() {
       <View style={[styles.chrome, { top: insets.top + T.chromeInset }]} pointerEvents="box-none">
         <GlassButton icon="chevron-left" accessibilityLabel="Back" onPress={leave} />
       </View>
+
+      {/*
+        While a photo is open, a swipe in from the left edge closes the photo
+        (the viewer's own "back"), not this screen.
+      */}
+      <Stack.Screen options={{ gestureEnabled: !open }} />
 
       {open && viewerPhotos.length > 0 ? (
         <PhotoViewer

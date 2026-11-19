@@ -1568,8 +1568,10 @@ export const Viewer = {
   doubleTapZoom: 2.5,
   /** Finger travel before a drag picks its axis. */
   slop: 10,
-  /** Projected travel past which a drag down closes the viewer. */
+  /** Projected travel past which a drag down (or in from the edge) closes the viewer. */
   dismissDistance: 140,
+  /** A drag starting this close to the left edge is "back": it closes the viewer. */
+  edgeWidth: 24,
   /** How far the photo shrinks while it is dragged down. */
   dismissMinScale: 0.72,
   /** `rubberband()`'s constant. */

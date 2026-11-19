@@ -22,7 +22,7 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
@@ -297,6 +297,12 @@ export default function RollScreen() {
           </ScrollEdged>
         )}
       </Screen>
+
+      {/*
+        While a photo is open, a swipe in from the left edge closes the photo
+        (the viewer's own "back"), not this screen.
+      */}
+      <Stack.Screen options={{ gestureEnabled: !open }} />
 
       {open && photos.length > 0 ? (
         <PhotoViewer
