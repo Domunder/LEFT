@@ -312,10 +312,11 @@ export default function MissionsScreen() {
     />
   ) : null;
 
+  // Pinned above the list, never scrolled with it: the list's top edge fades
+  // out under the header, not over its buttons (2026-11-19, the user).
   const header = (
     <ScreenHeader
       right={selectToggle ? <View style={styles.headerRight}>{selectToggle}</View> : undefined}
-      style={styles.header}
     />
   );
 
@@ -326,7 +327,7 @@ export default function MissionsScreen() {
   if (state.kind !== 'ready' || !data || !event) {
     return (
       <Screen transparent>
-        {header}
+        <View style={styles.header}>{header}</View>
         <Intro />
         <View style={styles.centerState}>
           {state.kind === 'error' ? (
@@ -361,7 +362,7 @@ export default function MissionsScreen() {
   if (data.userId !== event.host_id) {
     return (
       <Screen transparent>
-        {header}
+        <View style={styles.header}>{header}</View>
         <Intro />
         <View style={styles.centerState}>
           <Body small color={Colors.textDim} style={styles.centerText}>
@@ -577,7 +578,8 @@ export default function MissionsScreen() {
     <View style={styles.root}>
       {/* Something pinned at the bottom: then the bottom inset is the screen's. */}
       <Screen transparent edges={bottom ? ['top', 'bottom'] : ['top']}>
-        <ScrollEdged bottomInset={bottom ? 0 : insets.bottom} >
+        {header}
+        <ScrollEdged bottomInset={bottom ? 0 : insets.bottom}>
         <ScrollView
           contentContainerStyle={[styles.content, { paddingBottom: Math.max(T.paddingBottom, Edge.bottom) }]}
           showsVerticalScrollIndicator={false}
@@ -592,7 +594,6 @@ export default function MissionsScreen() {
               tintColor={Colors.textMuted}
             />
           }>
-          {header}
           <Intro
             right={
               !locked ? (
@@ -876,8 +877,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
+    // Clear of the top edge's fade at rest; the gap under the header as well.
+    paddingTop: Math.max(T.backGap, Edge.top),
     paddingBottom: T.paddingBottom,
   },
+  /** The loading and error states' header, which has no list under it. */
   header: {
     marginBottom: T.backGap,
   },
