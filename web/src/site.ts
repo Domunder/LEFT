@@ -1,15 +1,14 @@
 /**
  * Everything about the site that is not copy: names, links, prices.
  *
- * PLACEHOLDERS — fill these when the app is listed. While a store URL is
- * `null` the buttons say "Coming soon" and `/j/{CODE}` does not redirect.
+ * While a store URL is `null` its button says "Coming soon".
  */
 export const SITE = {
   name: 'LEFT',
   url: 'https://leftmoment.com',
   tagline: 'The disposable camera for events',
-  /** App Store listing, e.g. https://apps.apple.com/app/id0000000000 */
-  appStoreUrl: null as string | null,
+  /** App Store listing, without a country so Apple sends each visitor to their own store. */
+  appStoreUrl: 'https://apps.apple.com/app/id6835436615' as string | null,
   /** Play Store listing, e.g. https://play.google.com/store/apps/details?id=com.leftmoment.app */
   playStoreUrl: null as string | null,
   /** App Store Connect's id for the app (mobile/eas.json → submit.ascAppId). */

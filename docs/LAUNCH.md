@@ -307,45 +307,43 @@ Danach
 
 **Subtitle (30):** `One roll each. Reveal together`
 
-**Promotional text (170):**
-`Give every guest a roll of film. No sign-up, just a link. The photos stay hidden until the party is over — then everyone sees them at once.`
+**Promotional text (170):** (165 Zeichen, Stand 2026-11-19 mit Missionen)
+`Give every guest a roll of film and a secret mission. No sign-up, just a link or a QR code. The photos stay hidden until it’s over — then everyone sees them at once.`
 
 **Keywords (100):**
-`disposable camera,wedding,party,event,photo sharing,guests,film,album,QR,retro,birthday,analog`
+`guest,album,film,qr,birthday,reveal,retro,vintage,analog,shared,group,roll,bachelorette,reunion,trip`
 
 **Description:**
 
 ```
 LEFT turns every guest's phone into a disposable camera.
 
-Create an event, share a link or a QR code, and each guest gets the same
-limited roll of photos. No account, no sign-up — a name is enough. Nobody sees
-anything until the event ends. Then the whole film is developed at once and
-the group gets one shared album.
+Create an event, share a link or a QR code, and every guest gets the same limited roll of photos. No account, no sign-up — a name is enough. Nobody sees anything until the event ends. Then the whole film is developed at once, and the group gets one shared album.
 
 HOW IT WORKS
 • Create your event and pick a film look: Golden, Chrome, Faded or Mono
 • Choose the roll: 5, 10, 16, 24 or 36 photos per guest — or unlimited
 • Invite by link or QR code. Guests join in seconds, without an account
-• Everyone shoots. The counter shows what is left
+• Everyone shoots. The counter shows how many photos are left
 • When the event ends, the photos are developed for everyone at the same time
 
+MISSIONS
+Turn them on and every guest gets one to three secret photo missions — "a toast, just as the glasses meet", "a photo with someone you have never met". Write your own, name people who should get a personal one, or use ours. Missions are free on every event, and in the album each photo shows the mission it answered.
+
 WHY A LIMITED ROLL
-Because 24 photos get chosen. People look up, wait for the moment, and take
-the picture that matters — like with the disposable cameras on the tables at
-a wedding, without collecting and developing them.
+Because 24 photos get chosen. People look up, wait for the moment, and take the picture that matters — like the disposable cameras on the tables at a wedding, without collecting and developing them.
 
 MADE FOR
-Weddings, birthdays, parties, trips, graduations, company events.
+Weddings, birthdays, parties, bachelorettes, trips, graduations, reunions and company events.
 
 FAIR PRICING
-Free for up to 50 guests. Bigger groups or an unlimited roll are a one-time
-payment per event — no subscription.
+Free for up to 50 guests. Bigger groups or an unlimited roll are a one-time payment per event — no subscription.
 
 PRIVATE BY DESIGN
-Photos are visible only to the members of the event, and only once it is
-developed. Events and their photos are deleted after six months — save what
-you want to keep.
+Photos are visible only to the members of the event, and only once it is developed. The host can remove any photo, and every member can report one. Events and their photos are deleted after six months — save what you want to keep.
+
+Terms: https://leftmoment.com/terms/
+Privacy: https://leftmoment.com/privacy/
 ```
 
 **Google Play short description (80):**

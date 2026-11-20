@@ -36,6 +36,7 @@ const chrome = [
 ].find((candidate) => candidate && existsSync(candidate));
 if (!chrome) throw new Error('No Chrome found. Set CHROME_PATH to a Chrome or Edge executable.');
 
+const ONLY = process.env.STORE_ONLY; // e.g. STORE_ONLY=clip renders just that picture
 const NAMES = ['camera', 'missions', 'album', 'mission-photo', 'invite', 'film', 'developing', 'moments'];
 /** Viewport in points and device pixels per point: width * scale is the file's size. */
 const SETS = [
@@ -49,6 +50,7 @@ const origin = `http://localhost:${server.address.port}`;
 const browser = await puppeteer.launch({ executablePath: chrome, headless: true });
 
 async function capture(id, { width, height, scale }, file) {
+  if (ONLY && id !== ONLY) return;
   const page = await browser.newPage();
   await page.setViewport({ width, height, deviceScaleFactor: scale });
   await page.goto(`${origin}/store-shot/${id}/`, { waitUntil: 'networkidle0' });
@@ -73,6 +75,8 @@ try {
   // The App Store's product-page header and search-result picture.
   await capture('header', { width: 1920, height: 823, scale: 2 }, path.join(out, 'ios', 'header-3840x1646.png'));
   await capture('search', { width: 1920, height: 1280, scale: 2 }, path.join(out, 'ios', 'search-results-3840x2560.png'));
+  // The App Clip card's header: what a guest sees after scanning an invite.
+  await capture('clip', { width: 1500, height: 1000, scale: 1.2 }, path.join(out, 'ios', 'app-clip-header-1800x1200.png'));
 
   for (const [file, size] of [['ios/app-icon-1024.png', 1024], ['android/icon-512.png', 512]]) {
     await sharp(icon).resize(size, size).flatten({ background: BG }).removeAlpha().png().toFile(path.join(out, file));
