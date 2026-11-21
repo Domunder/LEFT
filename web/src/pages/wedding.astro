@@ -2,6 +2,7 @@
 import { Picture } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import Phone from '../components/Phone.astro';
+import { lenaTom } from '../store/lena-tom';
 import StoreButtons from '../components/StoreButtons.astro';
 import Pricing from '../components/Pricing.astro';
 import Faq from '../components/Faq.astro';
@@ -14,7 +15,6 @@ import weddingFriends from '../assets/photos/wedding-friends.jpg';
 import dinnerCandle from '../assets/photos/dinner-candle.jpg';
 import weddingMono from '../assets/photos/wedding-mono.jpg';
 import weddingChampagne from '../assets/photos/wedding-champagne.jpg';
-import weddingNight from '../assets/photos/wedding-night.jpg';
 
 const title = 'Wedding disposable camera app — LEFT for weddings';
 const description =
@@ -171,9 +171,9 @@ const jsonLd = [
         />
         <Phone
           screen="album"
-          photo={weddingNight}
+          photo={lenaTom(8)}
           class="tilt-right"
-          label="The developed wedding album in LEFT: 412 photos from 38 guests"
+          label="The developed wedding album in LEFT: Lena and Tom, 22 photos from 6 guests"
         />
       </div>
       <div class="setup-copy reveal">

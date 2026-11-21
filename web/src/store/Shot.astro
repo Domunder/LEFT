@@ -21,28 +21,13 @@ import Phone from '../components/Phone.astro';
 import logo from '../assets/left-logo.png';
 import weddingFriends from '../assets/photos/wedding-friends.jpg';
 import weddingDance from '../assets/photos/wedding-dance.jpg';
-import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
-import weddingMono from '../assets/photos/wedding-mono.jpg';
 import partyFlash from '../assets/photos/party-flash.jpg';
-import partyWine from '../assets/photos/party-wine.jpg';
 import birthdayCandle from '../assets/photos/birthday-candle.jpg';
-import dinnerCandle from '../assets/photos/dinner-candle.jpg';
-import tripTrunk from '../assets/photos/trip-trunk.jpg';
-import tripVan from '../assets/photos/trip-van.jpg';
 import sample1 from '../assets/photos/sample-1.jpg';
 import sample2 from '../assets/photos/sample-2.jpg';
-import sample3 from '../assets/photos/sample-3.jpg';
-import sample4 from '../assets/photos/sample-4.jpg';
-import sample5 from '../assets/photos/sample-5.jpg';
 import sample6 from '../assets/photos/sample-6.jpg';
 import partyToast from '../assets/photos/party-toast.jpg';
-import partyConfetti from '../assets/photos/party-confetti.jpg';
 import friendsLaugh from '../assets/photos/friends-laugh.jpg';
-import tripSunset from '../assets/photos/trip-sunset.jpg';
-import tripSurf from '../assets/photos/trip-surf.jpg';
-import tripFriends from '../assets/photos/trip-friends.jpg';
-import weddingChampagne from '../assets/photos/wedding-champagne.jpg';
-import weddingNight from '../assets/photos/wedding-night.jpg';
 import partyDance from '../assets/photos/party-dance.jpg';
 import partyFloor from '../assets/photos/party-floor.jpg';
 import grandpaDance from '../assets/photos/grandpa-dance.jpg';
@@ -51,46 +36,14 @@ import tripCar from '../assets/photos/trip-car.jpg';
 import weddingToast from '../assets/photos/wedding-toast.jpg';
 import inviteCard from '../assets/photos/invite-card.jpg';
 import type { ImageMetadata } from 'astro';
+import { lenaTom } from './lena-tom';
 
 /**
  * No photo appears twice across the eight screenshots (the film picker shows
- * its one photo in the four looks — that is the point of that screen), and
- * every moment's strip is full (the user, 2026-11-18).
+ * its one photo in the four looks — that is the point of that screen; a print
+ * may echo its own phone). The album and Moments show the demo wedding
+ * "Lena & Tom" as the hosted project holds it (./lena-tom.ts, 2026-11-21).
  */
-const PRINTS = [
-  { src: weddingChampagne, by: 'Tom' },
-  { src: weddingNight, by: 'Aylin' },
-];
-const MOMENTS = [
-  {
-    title: 'Road trip',
-    photos: 96,
-    people: 7,
-    status: 'Developed',
-    live: false,
-    more: 93,
-    strip: [tripTrunk, tripVan, tripSunset, tripSurf],
-  },
-  {
-    title: 'Lena’s 30th',
-    photos: 57,
-    people: 14,
-    status: '01d 04h left',
-    live: true,
-    more: 0,
-    strip: [birthdayCandle, partyConfetti, partyWine, dinnerCandle],
-  },
-  {
-    title: 'Summer ’26',
-    photos: 128,
-    people: 21,
-    status: 'Developed',
-    live: false,
-    more: 125,
-    strip: [sample3, sample4, sample5, tripFriends],
-  },
-];
-
 /**
  * The eight screenshots, in listing order (docs/LAUNCH.md §10). The headline
  * stands at the top; under it a composition (2026-11-19, the user: "not
@@ -108,6 +61,7 @@ const MOMENTS = [
  */
 type PhoneSpec = {
   screen: 'camera' | 'looks' | 'moments' | 'album' | 'invite' | 'developing' | 'missions' | 'viewer';
+  title?: string;
   photo?: ImageMetadata;
   tile?: ImageMetadata;
   mission?: { done: number; total: number; armed?: string };
@@ -129,7 +83,8 @@ type PrintSpec = {
   z?: number;
   by?: string;
   mission?: string;
-  look?: 'golden' | 'chrome' | 'faded' | 'mono';
+  /** `none`: already graded (the Lena & Tom prints). */
+  look?: 'golden' | 'chrome' | 'faded' | 'mono' | 'none';
   veiled?: boolean;
   android?: { x?: number; y?: number; w?: number; r?: number };
 };
@@ -154,11 +109,11 @@ const SHOTS: ShotSpec[] = [
   {
     lines: ['The whole night,', 'developed together.'],
     glow: '50% 20%',
-    phones: [{ screen: 'album', photo: weddingCrowd, x: 14, y: 26, w: 72, r: -3 }],
+    phones: [{ screen: 'album', x: 14, y: 26, w: 72, r: -3 }],
     prints: [
-      { src: partyDance, x: 2, y: 6, w: 34, r: -12, z: 2, by: 'Marc' },
-      { src: sample6, x: 36, y: -2, w: 30, r: 4, z: 1, by: 'Sofia' },
-      { src: weddingMono, x: 66, y: 8, w: 32, r: 13, z: 2, by: 'Tom', look: 'mono' },
+      { src: lenaTom(18), x: 2, y: 6, w: 34, r: -12, z: 2, by: 'Jonas', look: 'none' },
+      { src: lenaTom(13), x: 36, y: -2, w: 30, r: 4, z: 1, by: 'Mia', look: 'none' },
+      { src: lenaTom(10), x: 66, y: 8, w: 32, r: 13, z: 2, by: 'Lukas', look: 'none' },
     ],
   },
   {
@@ -182,7 +137,7 @@ const SHOTS: ShotSpec[] = [
     lines: ['One scan.', 'Everyone’s in.'],
     glow: '50% 10%',
     phones: [
-      { screen: 'camera', photo: sample2, tile: tripCar, x: 44, y: 4, w: 62, r: 10, z: 0 },
+      { screen: 'camera', title: 'Lena & Tom', photo: sample2, tile: tripCar, x: 44, y: 4, w: 62, r: 10, z: 0 },
       { screen: 'invite', x: 3, y: 14, w: 70, r: -6, z: 1 },
     ],
     prints: [],
@@ -208,10 +163,10 @@ const SHOTS: ShotSpec[] = [
   {
     lines: ['Every event,', 'one album.'],
     glow: '20% 25%',
-    phones: [{ screen: 'moments', x: 22, y: 10, w: 74, r: 5 }],
+    phones: [{ screen: 'moments', x: 14, y: 34, w: 72, r: 3 }],
     prints: [
-      { src: tripSunset, x: 1, y: 8, w: 34, r: -9, z: 2, by: 'Road trip' },
-      { src: birthdayCandle, x: 4, y: 62, w: 30, r: 6, z: 2, by: 'Lena’s 30th' },
+      { src: lenaTom(6), x: 0, y: -3, w: 29, r: -10, z: 2, by: 'Lena & Tom', look: 'none' },
+      { src: birthdayCandle, x: 70, y: -1, w: 28, r: 9, z: 2, by: 'Lena’s 30th' },
     ],
   },
 ];
@@ -257,12 +212,11 @@ const DETAIL = 1.2;
               <div class="ph" style={place(device === 'android' ? { ...spec, ...spec.android } : spec)}>
                 <Phone
                   screen={spec.screen}
+                  title={spec.title}
                   photo={spec.photo}
                   mission={spec.mission}
                   viewer={spec.viewer}
                   tile={spec.tile ?? sample1}
-                  prints={PRINTS}
-                  moments={MOMENTS}
                   device={device}
                   label=""
                   eager
@@ -281,7 +235,7 @@ const DETAIL = 1.2;
                     fit="cover"
                     quality={86}
                     loading="eager"
-                    class={`look-${print.look ?? 'golden'}`}
+                    class={print.look === 'none' ? undefined : `look-${print.look ?? 'golden'}`}
                   />
                 </span>
                 {print.by && <figcaption>{print.by}</figcaption>}
@@ -315,7 +269,7 @@ const DETAIL = 1.2;
             </h1>
             <p class="sub">The disposable camera for events</p>
           </div>
-          <Phone screen="album" photo={weddingMono} prints={PRINTS} device="iphone" label="" eager detail={DETAIL} class="right" />
+          <Phone screen="album" photo={lenaTom(17)} device="iphone" label="" eager detail={DETAIL} class="right" />
         </main>
       )
     }
@@ -335,7 +289,7 @@ const DETAIL = 1.2;
             <p class="sub">The disposable camera for events</p>
           </div>
           <div class="phones">
-            <Phone screen="album" photo={partyFlash} prints={PRINTS} device="android" label="" eager detail={DETAIL} class="back" />
+            <Phone screen="album" photo={lenaTom(6)} device="android" label="" eager detail={DETAIL} class="back" />
             <Phone screen="camera" photo={weddingDance} tile={sample2} device="android" label="" eager detail={DETAIL} class="front" />
           </div>
         </main>

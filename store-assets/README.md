@@ -33,6 +33,14 @@ a promo video.
   stores expect screenshots that show the app as it is (Apple 2.3.3). Compare
   each with the real screen on a device; where they differ, fix the mock in
   `web/src/components/Phone.astro` and render again.
+- **The album, Moments and the invite show "Lena & Tom"** (2026-11-21), the
+  demo wedding on the hosted project (invite `K7WQ2HXD`): the same 22 photos
+  in the album's order, graded with its golden look by
+  `node web/scripts/store-photos.mjs` into `web/src/assets/photos/lena-tom/`
+  (list in `web/src/store/lena-tom.ts`). Each screen's header uses a
+  different photo of the couple; in the app one event image heads all three
+  — on the hosted event that is the kiss on the hill (album photo 5, set
+  2026-11-21 at `photos/{event}/cover.jpg`).
 - **The photos are the website's Unsplash pictures** (`web/CREDITS.md`).
   `docs/LAUNCH.md` §10 asks for own photos with the consent of the people in
   them. Swap the files in `web/src/assets/photos/` and render again.

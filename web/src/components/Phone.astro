@@ -21,12 +21,8 @@
 import { Image } from 'astro:assets';
 import type { ImageMetadata } from 'astro';
 import weddingDance from '../assets/photos/wedding-dance.jpg';
-import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
-import weddingMono from '../assets/photos/wedding-mono.jpg';
-import partyWine from '../assets/photos/party-wine.jpg';
 import birthdayCandle from '../assets/photos/birthday-candle.jpg';
 import dinnerCandle from '../assets/photos/dinner-candle.jpg';
-import sample2 from '../assets/photos/sample-2.jpg';
 import sample3 from '../assets/photos/sample-3.jpg';
 import partyToast from '../assets/photos/party-toast.jpg';
 import partyDance from '../assets/photos/party-dance.jpg';
@@ -36,16 +32,14 @@ import dinnerTable from '../assets/photos/dinner-table.jpg';
 import tripSunset from '../assets/photos/trip-sunset.jpg';
 import weddingToast from '../assets/photos/wedding-toast.jpg';
 import weddingChampagne from '../assets/photos/wedding-champagne.jpg';
-import weddingNight from '../assets/photos/wedding-night.jpg';
-import partyFloor from '../assets/photos/party-floor.jpg';
 import tripCar from '../assets/photos/trip-car.jpg';
 import tripFriends from '../assets/photos/trip-friends.jpg';
-import tripSurf from '../assets/photos/trip-surf.jpg';
 import tripVan from '../assets/photos/trip-van.jpg';
 import { iPhone17Pro as device } from '@mockifydev/react';
 // A relative path: the package's `exports` only names its entry point.
 import frame from '../../node_modules/@mockifydev/react/assets/devices/iPhone 17 Pro - Silver.png';
 import QRCode from 'qrcode';
+import { LENA_TOM, LENA_TOM_COVER, LENA_TOM_INVITE, LENA_TOM_SPOTLIGHT, isGraded } from '../store/lena-tom';
 import { LOOKS, SITE } from '../site';
 
 type Props = {
@@ -72,8 +66,12 @@ type Props = {
   tile?: ImageMetadata;
   /** The album's prints under the hero. */
   prints?: Print[];
-  /** The cards on Moments. */
+  /** The rows on Moments, under the spotlight. */
   moments?: Moment[];
+  /** The moment at the top of Moments. */
+  spotlight?: Spotlight;
+  /** The album's two counts (the hero's "22 PHOTOS | 6 PEOPLE"). */
+  albumStats?: { photos: number; people: number };
   /**
    * Missions on the camera: the "Missions 1/3" capsule under the counter, and
    * with `armed` the "Next photo: …" note at the viewfinder's top edge.
@@ -89,16 +87,27 @@ type Props = {
 type MissionItem = { body: string; state: 'done' | 'armed' | 'open'; personal?: boolean };
 
 type Print = { src: ImageMetadata; by: string };
+/** A row on Moments: name, counts, when, and a stack of up to three prints. */
 type Moment = {
   title: string;
   photos: number;
   people: number;
-  status: string;
-  live: boolean;
-  /** Photos beyond the strip: the last tile is blurred and reads "+N". */
+  /** "October", or "01d 04h left" for a running one. */
+  when: string;
+  live?: boolean;
+  /** Front print first. */
+  stack: ImageMetadata[];
+  /** Photos beyond the stack: the glass "+N" badge. */
   more: number;
-  /** `null` is an empty frame. */
-  strip: (ImageMetadata | null)[];
+};
+/** The moment in the spotlight at the top of Moments (`MomentHero`). */
+type Spotlight = {
+  title: string;
+  /** The event image, in the look. */
+  photo: ImageMetadata;
+  status: 'Developed' | 'Live now';
+  photos: number;
+  people: number;
 };
 
 const {
@@ -164,60 +173,50 @@ const geometry = [
   `--sr:${pct(radius / screenWidth)} / ${pct(radius / screenHeight)}`,
 ].join(';');
 
-/** The album's prints under the hero, two to a row, each with who took it. */
-const prints: Print[] = Astro.props.prints ?? [
-  { src: weddingToast, by: 'Lena' },
-  { src: sample3, by: 'Tom' },
-  { src: dinnerCandle, by: 'Aylin' },
-  { src: weddingChampagne, by: 'Marc' },
-];
+/**
+ * The album's prints under the hero, three to a row, each with who took it.
+ * By default the demo event "Lena & Tom" as the database holds it
+ * (src/store/lena-tom.ts).
+ */
+const prints: Print[] = Astro.props.prints ?? LENA_TOM;
+const albumPhoto = screen === 'album' && !Astro.props.photo ? LENA_TOM_COVER : photo;
+/** The album and the invite belong to the Lena & Tom moment unless a caller names another. */
+const albumTitle = (screen === 'album' || screen === 'invite') && !Astro.props.title ? 'Lena & Tom' : title;
+const albumStats = Astro.props.albumStats ?? (Astro.props.prints ? { photos: 412, people: 38 } : { photos: LENA_TOM.length, people: 6 });
+/** A picture already graded with the look (the Lena & Tom set) gets no CSS stand-in for it. */
+const lookClass = (image: ImageMetadata) => (isGraded(image) ? undefined : 'look-golden');
 
 /**
  * The developing state's five frames: with 412 photos taken, every frame holds
  * one, blurred (the app puts the viewer's own frames and stand-ins there).
  */
-const devFrames = [photo, ...prints.map((print) => print.src), weddingCrowd, partyFloor, tripSunset, dinnerTable].slice(0, 5);
+const devFrames = [photo, weddingToast, sample3, dinnerCandle, weddingChampagne];
 
-/** Your Moments: the last tile of a strip stands for the rest of the album. */
+/** Moments: the spotlight, then every other moment as a row. */
+const spotlight: Spotlight = Astro.props.spotlight ?? {
+  title: 'Lena & Tom',
+  photo: LENA_TOM_SPOTLIGHT,
+  status: 'Developed',
+  photos: LENA_TOM.length,
+  people: 6,
+};
 const moments: Moment[] = Astro.props.moments ?? [
-  {
-    title,
-    photos: 412,
-    people: 38,
-    status: 'Developed',
-    live: false,
-    more: 409,
-    strip: [weddingCrowd, weddingMono, weddingNight, partyFloor],
-  },
-  {
-    title: 'Lena’s 30th',
-    photos: 57,
-    people: 14,
-    status: '1d 4h left',
-    live: true,
-    more: 0,
-    // Not developed yet: only your own frames.
-    strip: [birthdayCandle, partyConfetti, partyToast, partyWine],
-  },
-  {
-    title: 'Lisbon',
-    photos: 96,
-    people: 7,
-    status: 'Developed',
-    live: false,
-    more: 93,
-    strip: [tripSunset, tripCar, tripFriends, tripSurf],
-  },
-  {
-    title: 'Housewarming',
-    photos: 128,
-    people: 21,
-    status: 'Developed',
-    live: false,
-    more: 125,
-    strip: [dinnerTable, partyDance, sample2, tripVan],
-  },
+  { title: 'Lena’s 30th', photos: 57, people: 14, when: 'August', stack: [birthdayCandle, partyConfetti, partyToast], more: 54 },
+  { title: 'Lisbon', photos: 96, people: 7, when: 'July', stack: [tripSunset, tripCar, tripFriends], more: 93 },
+  { title: 'Housewarming', photos: 128, people: 21, when: 'June', stack: [dinnerTable, partyDance, tripVan], more: 125 },
 ];
+/** `Films.row.stack.prints`: back left, back right, front. */
+const STACK = [
+  { w: 64, h: 84, l: 4, t: 10, r: -9 },
+  { w: 64, h: 84, l: 50, t: 6, r: 8 },
+  { w: 68, h: 88, l: 26, t: 4, r: -1 },
+];
+const stackSlots = (images: ImageMetadata[]) =>
+  images.length >= 3
+    ? [{ ...STACK[0], src: images[2] }, { ...STACK[1], src: images[1] }, { ...STACK[2], src: images[0] }]
+    : images.length === 2
+      ? [{ ...STACK[1], src: images[1] }, { ...STACK[2], src: images[0] }]
+      : [{ ...STACK[2], src: images[0] }];
 
 /** Feather icons (24 grid, stroked), the set the app uses. */
 const ICON = {
@@ -242,6 +241,7 @@ const ICON = {
   check: 'M20 6L9 17l-5-5',
   link: 'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71',
   share: 'M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13',
+  more: 'M12 13a1 1 0 100-2 1 1 0 000 2zM19 13a1 1 0 100-2 1 1 0 000 2zM5 13a1 1 0 100-2 1 1 0 000 2z',
   flag: 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7',
   zapOff: 'M12.41 6.75L13 2l-2.43 2.92M18.57 12.91L21 10h-5.34M8 8l-5 6h9l-1 8 5-6M1 1l22 22',
 };
@@ -249,14 +249,6 @@ const ICON = {
 /** MaterialCommunityIcons' `qrcode` — the invite tile's glyph (filled, not a Feather stroke). */
 const QR_GLYPH =
   'M3 11h2v2H3v-2m8-6h2v4h-2V5m-2 6h4v4h-2v-2H9v-2m6 0h2v2h2v-2h2v2h-2v2h2v4h-2v2h-2v-2h-4v2h-2v-4h4v-2h2v-2h-2v-2m4 8v-4h-2v4h2M15 3h6v6h-6V3m2 2v2h2V5h-2M3 3h6v6H3V3m2 2v2h2V5H5m-2 10h6v6H3v-6m2 2v2h2v-2H5z';
-
-/**
- * A running moment's capsule reads as `statusLabel()` writes it: both
- * numbers padded to two digits ("01d 04h left"), so a caller's "1d 4h left"
- * is brought into that form.
- */
-const statusText = (status: string) =>
-  status.replace(/^(\d+)([dhms]) (\d+)([dhms]) left$/, (_, a, u, b, v) => `${a.padStart(2, '0')}${u} ${b.padStart(2, '0')}${v} left`);
 
 /** The mission the next photo is armed for, in the sheet's list. */
 const armedInList = missionList.find((item) => item.state === 'armed')?.body;
@@ -425,6 +417,27 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
       {
         screen === 'moments' && (
           <div class="s moments">
+            {/* `MomentHero`: full-bleed from the top edge, the header floating over it. */}
+            <div class="spot">
+              <Image src={spotlight.photo} alt="" width={px(720)} height={px(940)} fit="cover" quality={q(64)} loading={loading} class={lookClass(spotlight.photo)} />
+              <span class="spot-shade" />
+              <div class="spot-body">
+                <span class="spot-cap glass">
+                  {spotlight.status === 'Live now' && <i class="live-dot" />}
+                  {spotlight.status}
+                </span>
+                <p class="headline xs">{spotlight.title}</p>
+                <div class="spot-numbers">
+                  <span class="spot-stats">
+                    <span><b>{spotlight.photos}</b><small>photos</small></span>
+                    <span><b>{spotlight.people}</b><small>people</small></span>
+                  </span>
+                  <span class="gpill glass">
+                    <svg viewBox="0 0 24 24"><path d={ICON.image} /></svg>Open album
+                  </span>
+                </div>
+              </div>
+            </div>
             <div class="lib-head">
               <p class="headline sm">Moments</p>
               <span class="round lg glass bright">
@@ -437,61 +450,29 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
                 <svg viewBox="0 0 24 24"><path d={ICON.plus} /></svg>
               </span>
             </div>
-            <div class="moment-list">
-              {moments.map((moment, index) => (
-                <div class="moment" style={`--n:${index}`}>
-                  <div class="moment-head">
-                    <span class="moment-name">
-                      <b>{moment.title}</b>
-                      <span class="moment-meta">
-                        <span>
-                          <svg viewBox="0 0 24 24"><path d={ICON.image} /></svg>
-                          {moment.photos} photos
-                        </span>
-                        <span>
-                          <svg viewBox="0 0 24 24"><path d={ICON.users} /></svg>
-                          {moment.people} people
-                        </span>
-                      </span>
-                    </span>
-                    <span class="status-cap">
+            <p class="section">Developed</p>
+            <div class="rows">
+              {moments.map((moment) => (
+                <div class="row">
+                  <span class="row-text">
+                    <b>{moment.title}</b>
+                    <span class="row-meta">{moment.photos} photos · {moment.people} people</span>
+                    <span class="row-meta">
                       {moment.live && <i class="live-dot" />}
-                      {statusText(moment.status)}
-                      {moment.live && <svg viewBox="0 0 24 24"><path d={ICON.next} /></svg>}
+                      {moment.when}
                     </span>
-                  </div>
-                  <div class="strip">
-                    {moment.strip.map((image, tile) => {
-                      const counted = moment.more > 0 && tile === moment.strip.length - 1;
-                      return image ? (
-                        <span class:list={{ counted }}>
-                          {/* 24px wide and stretched: the upscale is the blur. */}
-                          <Image
-                            src={image}
-                            alt=""
-                            width={counted ? 24 : px(170)}
-                            height={counted ? 32 : px(227)}
-                            fit="cover"
-                            quality={q(52)}
-                            loading={loading}
-                            class="look-golden"
-                          />
-                          {counted && <em>+{moment.more}</em>}
-                        </span>
-                      ) : (
-                        <span class="blank">
-                          {tile === 0 && (
-                            <svg viewBox="0 0 24 24"><path d={ICON.image} /></svg>
-                          )}
-                        </span>
-                      );
-                    })}
-                  </div>
+                  </span>
+                  <span class="stack">
+                    {stackSlots(moment.stack).map((slot, i, all) => (
+                      <span class:list={['print', { behind: i < all.length - 1 }]} style={`width:calc(var(--u) * ${slot.w});height:calc(var(--u) * ${slot.h});left:calc(var(--u) * ${slot.l});top:calc(var(--u) * ${slot.t});rotate:${slot.r}deg`}>
+                        <Image src={slot.src} alt="" width={px(140)} height={px(180)} fit="cover" quality={q(56)} loading={loading} class={lookClass(slot.src)} />
+                      </span>
+                    ))}
+                    {moment.more > 0 && <em class="glass">+{moment.more}</em>}
+                  </span>
                 </div>
               ))}
             </div>
-            {/* The list dissolves into the page under the header and at the bottom edge (`ScrollEdge`). */}
-            <span class="edge-top" />
             <span class="edge-bottom" />
           </div>
         )
@@ -501,28 +482,30 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
         screen === 'album' && (
           <div class="s album">
             <div class="hero-print">
-              <Image src={photo} alt="" width={px(720)} height={px(1040)} fit="cover" quality={q(64)} loading={loading} class="look-golden" />
-              <span class="veil" style="--n:0" />
+              <Image src={albumPhoto} alt="" width={px(720)} height={px(1040)} fit="cover" quality={q(64)} loading={loading} class={lookClass(albumPhoto)} />
               <span class="shade" />
               <div class="hero-text">
-                <p class="headline xl">{title}</p>
+                <p class="headline xl">{albumTitle}</p>
                 <p class="stats">
-                  <span><b>412</b><small>Photos</small></span>
+                  <span><b>{albumStats.photos}</b><small>Photos</small></span>
                   <i />
-                  <span><b>38</b><small>People</small></span>
+                  <span><b>{albumStats.people}</b><small>People</small></span>
                 </p>
-                <span class="cta">
-                  <svg viewBox="0 0 24 24"><path d={ICON.download} /></svg>
-                  Save all
+                <span class="hero-actions">
+                  <span class="gpill glass">
+                    <svg viewBox="0 0 24 24"><path d={ICON.download} /></svg>Save all
+                  </span>
+                  <span class="gpill glass">
+                    <svg viewBox="0 0 24 24"><path d={ICON.share} /></svg>Share
+                  </span>
                 </span>
               </div>
             </div>
             <div class="grid">
-              {prints.map((print, index) => (
+              {prints.slice(0, 12).map((print) => (
                 <span>
-                  <Image src={print.src} alt="" width={px(370)} height={px(494)} fit="cover" quality={q(56)} loading={loading} class="look-golden" />
+                  <Image src={print.src} alt="" width={px(260)} height={px(347)} fit="cover" quality={q(60)} loading={loading} class={lookClass(print.src)} />
                   <em>{print.by}</em>
-                  <span class="veil" style={`--n:${index + 1}`} />
                 </span>
               ))}
             </div>
@@ -532,6 +515,14 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
               <span class="round lg glass bright">
                 <svg viewBox="0 0 24 24"><path d={ICON.back} /></svg>
               </span>
+              <span class="float-right">
+                <span class="gpill glass">
+                  <svg viewBox="0 0 24 24"><path d={ICON.plus} /></svg>Add
+                </span>
+                <span class="round lg glass bright">
+                  <svg viewBox="0 0 24 24"><path d={ICON.more} /></svg>
+                </span>
+              </span>
             </div>
           </div>
         )
@@ -540,13 +531,17 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
       {
         screen === 'invite' && (
           <div class="s invite">
+            {/* The event image in the moment's look, fading into the page well above the code. */}
+            <span class="inv-backdrop">
+              <Image src={LENA_TOM_INVITE} alt="" width={px(420)} height={px(380)} fit="cover" quality={q(60)} loading={loading} />
+            </span>
             <div class="head">
               <span class="round" />
               <span class="round flat">
                 <svg viewBox="0 0 24 24"><path d={ICON.x} /></svg>
               </span>
             </div>
-            <span class="eyebrow-s wide">{title}</span>
+            <span class="eyebrow-s wide">{albumTitle}</span>
             <p class="headline">
               Invite your group.<br /><em>Let them in.</em>
             </p>
@@ -1623,28 +1618,127 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
     }
   }
 
-  /* ── 16 Your Moments ──────────────────────────────────────────── */
-  /* The library's glow (`films`): 520 wide, 0.1, centred above the screen. */
+  /* ── 16 Moments: the spotlight full-bleed, then rows ──────────── */
   .moments {
-    padding-bottom: 0;
-    background:
-      radial-gradient(
-          circle calc(var(--u) * 351) at 50% calc(var(--u) * -166),
-          rgba(240, 237, 232, 0.1),
-          rgba(240, 237, 232, 0.033) 42%,
-          rgba(240, 237, 232, 0) 74%
-        ),
-      #101010;
+    padding: 0;
+    background: #101010;
   }
 
-  .lib-head {
+  /* `Films.hero`: 60% of the window, at least 440. */
+  .spot {
     position: relative;
+    height: calc(var(--u) * 524);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    flex: none;
+  }
+
+  .spot > :global(img) {
+    position: absolute;
+    inset: 0;
+    transform: scale(1.02);
+  }
+
+  .spot-shade {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      rgba(16, 16, 16, 0.55),
+      rgba(16, 16, 16, 0) 24%,
+      rgba(16, 16, 16, 0) 42%,
+      rgba(16, 16, 16, 0.78) 74%,
+      #101010
+    );
+  }
+
+  .spot-body {
+    position: relative;
+    padding: 0 calc(var(--u) * 20) calc(var(--u) * 18);
+  }
+
+  .spot-cap {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--u) * 7);
+    height: calc(var(--u) * 26);
+    padding-inline: calc(var(--u) * 10);
+    border-radius: 999px;
+    font-size: calc(var(--u) * 11);
+    font-weight: 600;
+  }
+
+  .spot-body .headline {
+    margin-top: calc(var(--u) * 10);
+  }
+
+  /* Display "xs": Newsreader at 26. */
+  .headline.xs {
+    font-size: calc(var(--u) * 26);
+    line-height: calc(var(--u) * 31);
+  }
+
+  .spot-numbers {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-top: calc(var(--u) * 10);
+  }
+
+  .spot-stats {
+    display: flex;
+    align-items: flex-end;
+    gap: calc(var(--u) * 22);
+  }
+
+  .spot-stats > span {
+    display: grid;
+  }
+
+  /* `heroCountdown`: DM Serif at 22 over `metaMd`. */
+  .spot-stats b {
+    font-family: var(--numeral);
+    font-weight: 400;
+    font-size: calc(var(--u) * 22);
+    line-height: calc(var(--u) * 27);
+    letter-spacing: -0.01em;
+  }
+
+  .spot-stats small {
+    font-size: calc(var(--u) * 12);
+    color: rgba(240, 237, 232, 0.55);
+  }
+
+  /* `GlassButton` with a label: a 36pt capsule. */
+  .gpill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: calc(var(--u) * 7);
+    height: calc(var(--u) * 36);
+    padding-inline: calc(var(--u) * 14);
+    border-radius: 999px;
+    font-size: calc(var(--u) * 11);
+    font-weight: 600;
+    white-space: nowrap;
+    flex: none;
+  }
+
+  .s .gpill svg {
+    width: calc(var(--u) * 16);
+    height: calc(var(--u) * 16);
+  }
+
+  /* "Moments" and the buttons float over the spotlight. */
+  .lib-head {
+    position: absolute;
+    inset: calc(var(--u) * 62) 0 auto;
     z-index: 1;
     display: flex;
     align-items: center;
     gap: calc(var(--u) * 10);
-    padding: 0 calc(var(--u) * 24) calc(var(--u) * 16);
-    flex: none;
+    padding: 0 calc(var(--u) * 24);
   }
 
   .lib-head .headline {
@@ -1652,41 +1746,119 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
     white-space: nowrap;
   }
 
-  /* The first card clears the header and the 40pt top edge it dissolves under. */
-  .moment-list {
-    display: grid;
-    gap: calc(var(--u) * 12);
-    padding: calc(var(--u) * 24) calc(var(--u) * 16) 0;
+  /* `Label small` above the developed rows, 28 under the spotlight. */
+  .section {
+    margin-top: calc(var(--u) * 28);
+    padding: calc(var(--u) * 14) calc(var(--u) * 20) calc(var(--u) * 2);
+    font-size: calc(var(--u) * 11);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(240, 237, 232, 0.32);
   }
 
-  .edge-top,
+  .row {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 14);
+    padding: calc(var(--u) * 14) calc(var(--u) * 20);
+  }
+
+  /* The only line on the screen, inset to the text. */
+  .row + .row {
+    box-shadow: inset 0 calc(var(--u) * 0.5) 0 rgba(255, 255, 255, 0.1);
+    background-clip: content-box;
+  }
+
+  .row-text {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: calc(var(--u) * 4);
+  }
+
+  /* Display "card": Newsreader at 21. */
+  .row-text b {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: calc(var(--u) * 21);
+    line-height: calc(var(--u) * 26);
+    letter-spacing: -0.015em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .row-meta {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 6);
+    font-size: calc(var(--u) * 12);
+    color: rgba(240, 237, 232, 0.55);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Three prints, no frame: depth from the shadow and the dimmer ones behind. */
+  .stack {
+    position: relative;
+    width: calc(var(--u) * 118);
+    height: calc(var(--u) * 100);
+    flex: none;
+  }
+
+  .stack .print {
+    position: absolute;
+    border-radius: calc(var(--u) * 7);
+    overflow: hidden;
+    background: #1a1a1c;
+    box-shadow: 0 calc(var(--u) * 6) calc(var(--u) * 10) rgba(0, 0, 0, 0.55);
+  }
+
+  .stack .print.behind::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(8, 8, 10, 0.3);
+  }
+
+  .stack em {
+    position: absolute;
+    right: calc(var(--u) * -2);
+    bottom: calc(var(--u) * 2);
+    height: calc(var(--u) * 24);
+    padding-inline: calc(var(--u) * 9);
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    font-style: normal;
+    font-size: calc(var(--u) * 11);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .live-dot {
+    width: calc(var(--u) * 6);
+    height: calc(var(--u) * 6);
+    border-radius: 50%;
+    background: rgba(140, 220, 120, 0.85);
+  }
+
+  .phone.live .live-dot {
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  /* `ScrollEdge` at the bottom: Colors.bg, clear to opaque on a smoothstep. */
   .edge-bottom {
     position: absolute;
-    inset-inline: 0;
-    pointer-events: none;
-  }
-
-  /* `ScrollEdge`: Colors.bg, opaque to clear on a smoothstep. */
-  .edge-top {
-    top: calc(var(--u) * 62);
-    height: calc(var(--u) * 100);
-    background: linear-gradient(
-      rgba(16, 16, 16, 0.97),
-      rgba(16, 16, 16, 0.94) 11%,
-      rgba(16, 16, 16, 0.85) 22%,
-      rgba(16, 16, 16, 0.72) 33%,
-      rgba(16, 16, 16, 0.57) 44%,
-      rgba(16, 16, 16, 0.4) 56%,
-      rgba(16, 16, 16, 0.25) 67%,
-      rgba(16, 16, 16, 0.12) 78%,
-      rgba(16, 16, 16, 0.03) 89%,
-      rgba(16, 16, 16, 0)
-    );
-  }
-
-  .edge-bottom {
-    bottom: 0;
+    inset: auto 0 0;
     height: calc(var(--u) * 106);
+    pointer-events: none;
     background: linear-gradient(
       rgba(16, 16, 16, 0),
       rgba(16, 16, 16, 0.03) 11%,
@@ -1701,153 +1873,15 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
     );
   }
 
-  .moment {
-    display: grid;
-    gap: calc(var(--u) * 12);
-    padding: calc(var(--u) * 14);
-    border-radius: calc(var(--u) * 22);
-    background: rgba(255, 255, 255, 0.04);
-    box-shadow: inset 0 0 0 calc(var(--u) * 0.5) rgba(255, 255, 255, 0.1);
-  }
-
-  /* The title is Display "sm": Newsreader at 30. */
-  .moment-name b {
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .moment-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: calc(var(--u) * 12);
-  }
-
-  .moment-name {
-    display: grid;
-    gap: calc(var(--u) * 5);
-    min-width: 0;
-  }
-
-  .moment-name b {
-    font-family: var(--serif);
-    font-weight: 300;
-    font-size: calc(var(--u) * 30);
-    line-height: calc(var(--u) * 35);
-    letter-spacing: -0.015em;
-    white-space: nowrap;
-  }
-
-  .moment-meta,
-  .moment-meta span {
-    display: flex;
-    align-items: center;
-  }
-
-  .moment-meta {
-    gap: calc(var(--u) * 12);
-    font-size: calc(var(--u) * 12);
-    color: rgba(240, 237, 232, 0.55);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-
-  .moment-meta span {
-    gap: calc(var(--u) * 5);
-  }
-
-  .moment svg {
-    width: calc(var(--u) * 12);
-    height: calc(var(--u) * 12);
-  }
-
-  .status-cap {
-    display: flex;
-    align-items: center;
-    gap: calc(var(--u) * 6);
-    height: calc(var(--u) * 24);
-    padding-inline: calc(var(--u) * 10);
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    font-size: calc(var(--u) * 11);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    flex: none;
-  }
-
-  .status-cap svg {
-    color: rgba(240, 237, 232, 0.55);
-  }
-
-  .live-dot {
-    width: calc(var(--u) * 6);
-    height: calc(var(--u) * 6);
-    border-radius: 50%;
-    background: rgba(140, 220, 120, 0.85);
-  }
-
-  /* The one moment still running. */
-  .phone.live .live-dot {
-    animation: breathe 2.4s ease-in-out infinite;
-  }
-
-  @keyframes breathe {
-    50% {
-      opacity: 0.35;
-    }
-  }
-
-  .strip {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: calc(var(--u) * 6);
-  }
-
-  .strip span {
-    position: relative;
-    aspect-ratio: 3 / 4;
-    border-radius: calc(var(--u) * 10);
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.04);
-  }
-
-  .strip .blank {
-    display: grid;
-    place-items: center;
-    border: calc(var(--u) * 1) dashed rgba(255, 255, 255, 0.14);
-    color: rgba(240, 237, 232, 0.42);
-  }
-
-  .strip .blank svg {
-    width: calc(var(--u) * 16);
-    height: calc(var(--u) * 16);
-  }
-
-  .strip .counted :global(img) {
-    transform: scale(1.25);
-  }
-
-  .strip em {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    background: rgba(8, 8, 10, 0.45);
-    font-style: normal;
-    font-size: calc(var(--u) * 15);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-  }
-
-  /* ── album/[id]: the hero, then the prints two to a row ───────── */
+  /* ── album/[id]: the hero, then the prints three to a row ─────── */
   .album {
     padding: 0;
   }
 
+  /* `Album.hero`: 66% of the window. */
   .hero-print {
     position: relative;
-    height: calc(var(--u) * 578);
+    height: calc(var(--u) * 577);
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -1912,22 +1946,24 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
     background: rgba(240, 237, 232, 0.32);
   }
 
-  .album .cta {
-    justify-self: stretch;
-    margin-top: calc(var(--u) * 24);
+  /* "Save all" · "Share": two small glass capsules (2026-11-21). */
+  .hero-actions {
+    display: flex;
+    gap: calc(var(--u) * 10);
+    margin-top: calc(var(--u) * 22);
   }
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: calc(var(--u) * 8);
-    padding-inline: calc(var(--u) * 12);
+    grid-template-columns: repeat(3, 1fr);
+    gap: calc(var(--u) * 4);
+    padding-inline: calc(var(--u) * 8);
   }
 
   .grid > span {
     position: relative;
     aspect-ratio: 3 / 4;
-    border-radius: calc(var(--u) * 16);
+    border-radius: calc(var(--u) * 10);
     overflow: hidden;
     background: #141316;
   }
@@ -1936,19 +1972,21 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
     content: '';
     position: absolute;
     inset: auto 0 0 0;
-    height: calc(var(--u) * 72);
+    z-index: 1;
+    height: calc(var(--u) * 40);
     background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.5));
   }
 
-  /* `tileCaption`: Newsreader light italic at 16. */
+  /* The photographer's name, small on each print. */
   .grid em {
     position: absolute;
-    left: calc(var(--u) * 12);
-    bottom: calc(var(--u) * 10);
+    z-index: 1;
+    left: calc(var(--u) * 7);
+    bottom: calc(var(--u) * 6);
     font-family: var(--serif);
     font-weight: 300;
     font-style: italic;
-    font-size: calc(var(--u) * 16);
+    font-size: calc(var(--u) * 13);
   }
 
   .top-fade {
@@ -1959,17 +1997,10 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
     pointer-events: none;
   }
 
-  /* The reveal: the veils clear one after another, the hero first. */
-  .veil {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(160deg, #241810, #0d0806);
-    transition: opacity 0.5s var(--ease);
-  }
-
-  .phone.live .veil {
-    opacity: 0;
-    transition: opacity 1.4s var(--ease) calc(var(--n) * 220ms + 500ms);
+  .float-right {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--u) * 10);
   }
 
   /* ── 09 Invite ────────────────────────────────────────────────── */
@@ -1992,6 +2023,25 @@ const doneInList = missionList.filter((item) => item.state === 'done').length;
 
   .invite .eyebrow-s {
     margin-top: calc(var(--u) * 52);
+  }
+
+  /* `Invite.backdrop`: 42% of the window, the image in the look, then the page. */
+  .inv-backdrop {
+    position: absolute;
+    inset: 0 0 auto;
+    height: calc(var(--u) * 367);
+    overflow: hidden;
+  }
+
+  .inv-backdrop::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(16, 16, 16, 0.35), rgba(16, 16, 16, 0.55) 40%, rgba(16, 16, 16, 0.9) 80%, #101010);
+  }
+
+  .invite > :not(.inv-backdrop) {
+    position: relative;
   }
 
   /* Display "lg": Newsreader at 34. */

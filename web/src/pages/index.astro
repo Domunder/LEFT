@@ -2,6 +2,7 @@
 import { Picture } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import Phone from '../components/Phone.astro';
+import { lenaTom } from '../store/lena-tom';
 import StoreButtons from '../components/StoreButtons.astro';
 import Pricing from '../components/Pricing.astro';
 import Faq from '../components/Faq.astro';
@@ -18,7 +19,6 @@ import birthdayCandle from '../assets/photos/birthday-candle.jpg';
 import dinnerCandle from '../assets/photos/dinner-candle.jpg';
 import tripTrunk from '../assets/photos/trip-trunk.jpg';
 import tripVan from '../assets/photos/trip-van.jpg';
-import partyFloor from '../assets/photos/party-floor.jpg';
 import partyDance from '../assets/photos/party-dance.jpg';
 import partyToast from '../assets/photos/party-toast.jpg';
 
@@ -131,7 +131,7 @@ const jsonLd = [
         <div class="hero-back" data-parallax="-0.08">
           <Phone
             screen="album"
-            photo={partyFloor}
+            photo={lenaTom(4)}
             class="arrive-back"
             label="The developed album on a second phone: a grid of the photos every guest took"
           />
@@ -280,13 +280,12 @@ const jsonLd = [
         <Phone
           screen="moments"
           class="tilt-left"
-          label="LEFT Your Moments screen: a stack of prints from Mia and Jonas’s wedding, developed, 412 photos"
+          label="LEFT Moments screen: Lena and Tom’s wedding developed at the top, 22 photos from 6 people, and three earlier moments below"
         />
         <Phone
           screen="album"
-          photo={weddingCrowd}
           class="tilt-right"
-          label="LEFT album screen: a grid of 412 photos taken by 38 guests"
+          label="LEFT album screen: Lena and Tom’s wedding, 22 photos from 6 people, three to a row"
         />
       </div>
       <div class="album-copy reveal" data-reveal="right">
