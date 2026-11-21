@@ -538,7 +538,13 @@ cannot UPDATE a photo row or DELETE a roster row — `create_event()`,
 - **`leftmoment.com/j/{CODE}` is a camera for guests without the app**
   (`web/src/pages/j/index.astro`, `web/src/shoot/`): name → (waiting) →
   camera → developing → album. Phones with the app never see it (universal
-  links). It no longer forwards to a store. Details: `web/README.md`.
+  links). Details: `web/README.md`.
+- **The app comes first** (2026-11-21, the user): a new guest sees "Join the
+  film" with only the store buttons and a quiet "Continue in the browser";
+  the name form then carries a note that the browser version is limited,
+  with a link back. "Open in LEFT" is gone (universal links and the App
+  Clip's card cover it). A guest who already joined in that browser goes
+  straight back in; Android skips the gate while Google Play has no listing.
 - **Same server doors, no migration:** anonymous sign-in, `join_event()`,
   `claim_shot()`, the pinned storage paths, `mark_photo_uploaded()`, RLS for
   the reveal. A door that changes for the app changes in `web/src/shoot/api.ts`

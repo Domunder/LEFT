@@ -39,6 +39,7 @@
 }
 
 .shoot[data-view='loading'] [data-screen='loading'],
+.shoot[data-view='get-app'] [data-screen='get-app'],
 .shoot[data-view='join'] [data-screen='join'],
 .shoot[data-view='waiting'] [data-screen='waiting'],
 .shoot[data-view='camera'] [data-screen='camera'],
@@ -208,14 +209,49 @@
   font-size: 0.9rem;
 }
 
-.have-app {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-  margin-top: 8px;
+/* Get the app: the stores first, the browser as a quiet way out. */
+.get-app .stores {
+  margin-top: 4px;
 }
 
-.shoot .have-app .stores,
+.browser-link {
+  background: none;
+  border: 0;
+  padding: 10px 14px;
+  color: var(--ink-55);
+  font: 500 0.95rem var(--sans);
+  text-decoration: underline;
+  text-decoration-color: var(--ink-30);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.browser-note {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(240, 180, 120, 0.08);
+  color: var(--ink-70);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.browser-note b {
+  color: var(--amber);
+  font-weight: 600;
+}
+
+.inline-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--ink);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
 .shoot .album-foot .stores {
   justify-content: center;
 }

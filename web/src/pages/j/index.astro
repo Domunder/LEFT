@@ -7,11 +7,14 @@
  *
  *  - has LEFT installed → never sees this page; the universal / app link opens
  *    the app directly (mobile/app.json + the files in public/.well-known).
- *    In-app browsers that swallow universal links get "Open in LEFT".
- *  - everyone else → **shoots right here** (decided 2026-11-16): a name, then
- *    the camera, with the same roll, look and reveal as the app — all enforced
- *    by the server, see `src/shoot/api.ts`. After the reveal the same link is
- *    the album. The store buttons stay, second.
+ *    On an iPhone without it, the App Clip's card shows over this page.
+ *  - everyone else first sees **get the app** (2026-11-21, the user): the store
+ *    buttons and, under them, "Continue in the browser", which leads to the
+ *    web camera with a note that it is limited — a name, then the camera, with
+ *    the same roll, look and reveal as the app, all enforced by the server
+ *    (`src/shoot/api.ts`). After the reveal the same link is the album. A guest
+ *    who already joined in this browser goes straight back in. Android skips
+ *    the gate while Google Play has no listing (nothing to download).
  *
  * Everything below is one screen at a time, switched by `data-view` on
  * `.shoot` from `src/shoot/app.ts`. Screens carry the states the app's do:
@@ -20,7 +23,6 @@
  */
 import Base from '../../layouts/Base.astro';
 import StoreButtons from '../../components/StoreButtons.astro';
-import { SITE } from '../../site';
 import '../../styles/shoot.css';
 ---
 
@@ -31,7 +33,7 @@ import '../../styles/shoot.css';
   app
   appClip
 >
-  <div class="shoot" data-view="loading" data-scheme={SITE.scheme}>
+  <div class="shoot" data-view="loading">
     <div class="glow shoot-glow" aria-hidden="true"></div>
 
     <!-- Loading -->
@@ -40,13 +42,31 @@ import '../../styles/shoot.css';
       <span class="spinner" aria-label="Loading"></span>
     </section>
 
+    <!-- Get the app: the first thing a new guest sees (the app, or the clip's card, is the real experience) -->
+    <section class="screen screen-center" data-screen="get-app">
+      <div class="card glass join get-app">
+        <p class="eyebrow">You’re invited</p>
+        <h1>Join the <em>film.</em></h1>
+        <p class="lede">
+          One roll of photos each, developed together when the event ends. Get LEFT and open this link again.
+        </p>
+        <StoreButtons />
+      </div>
+      <button class="browser-link press" id="use-browser" type="button">Continue in the browser</button>
+    </section>
+
     <!-- Join: the name, then straight into the event -->
     <section class="screen screen-center" data-screen="join">
       <form class="card glass join" id="join-form" novalidate>
         <p class="eyebrow">You’re invited</p>
         <h1>Join the <em>film.</em></h1>
         <p class="lede">
-          One roll of photos each, developed together when the event ends. Shoot right here — no download.
+          One roll of photos each, developed together when the event ends.
+        </p>
+        <p class="browser-note" id="browser-note">
+          <b>The browser version is limited.</b> No reminders when the film is developed, simpler
+          photos, and it may stop when you leave this page.<span id="note-app"> For the full experience,{' '}
+          <button class="inline-link" id="back-to-app" type="button">get the app</button>.</span>
         </p>
         <label class="field">
           <span class="visually-hidden">Your name</span>
@@ -71,15 +91,10 @@ import '../../styles/shoot.css';
         <p class="error" id="join-error" role="alert"></p>
         <button class="pill pill-primary press" id="join-submit" type="submit" disabled>Start shooting</button>
         <p class="fine">
-          No account needed. By joining you accept the <a href="/terms/">Terms</a>
+          No account needed. By joining you accept the <a href="/terms/">Terms</a>{' '}
           and the <a href="/privacy/">Privacy Policy</a>.
         </p>
       </form>
-      <div class="have-app">
-        <p class="fine">Prefer the app?</p>
-        <a class="pill pill-ghost press" id="open-app" hidden>Open in LEFT</a>
-        <StoreButtons />
-      </div>
     </section>
 
     <!-- Waiting for the host to start -->

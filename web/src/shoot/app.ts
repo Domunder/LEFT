@@ -38,7 +38,7 @@ import { BrowserCamera, CameraError, type CameraFailure } from './camera';
 import { develop, LookRenderer } from './look-gl';
 import { drain, enqueue, onQueue, pending, setQueuedMission, startQueue, type Shot } from './queue';
 
-type View = 'loading' | 'join' | 'waiting' | 'camera' | 'developing' | 'album' | 'error';
+type View = 'loading' | 'get-app' | 'join' | 'waiting' | 'camera' | 'developing' | 'album' | 'error';
 
 /**
  * Loose on purpose: the server decides whether a code exists. (The app's
@@ -135,12 +135,6 @@ export async function start() {
   // iOS Safari only applies :active (the press-in) when a touch listener exists.
   document.addEventListener('touchstart', () => undefined, { passive: true });
 
-  const open = $<HTMLAnchorElement>('open-app');
-  if (state.code) {
-    open.href = `${root().dataset.scheme}://j/${state.code}`;
-    open.hidden = false;
-  }
-
   if (!CODE_SHAPE.test(state.code)) {
     return fail('This link is <em>incomplete.</em>', 'The invite code is missing. Scan the QR code again or ask the host for the link.');
   }
@@ -148,6 +142,7 @@ export async function start() {
     return fail('The camera is <em>not ready.</em>', 'Shooting in the browser is not switched on for this site yet.');
   }
 
+  setUpGetApp();
   setUpJoin();
   setUpCamera();
   setUpDeveloping();
@@ -166,9 +161,28 @@ export async function start() {
   } catch {
     /* fall through to the join form */
   }
+  // The app first; the browser only on request. A guest who already joined
+  // here went straight back in above.
+  if (isAndroid()) openJoin();
+  else show('get-app');
+}
+
+/** Google Play has no listing yet, so Android has nothing to download: straight to the web camera. */
+function isAndroid() {
+  return /android/i.test(navigator.userAgent);
+}
+
+function openJoin() {
   show('join');
   showJoin();
   $<HTMLInputElement>('join-name').focus({ preventScroll: true });
+}
+
+function setUpGetApp() {
+  $('use-browser').addEventListener('click', openJoin);
+  $('back-to-app').addEventListener('click', () => show('get-app'));
+  // Without a store listing "get the app" would lead nowhere.
+  $('note-app').hidden = isAndroid();
 }
 
 let showJoin = () => undefined as void;
