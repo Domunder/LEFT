@@ -21,6 +21,7 @@ npm run assets       # regenerate public/og*.jpg and the icons
 | `/missions/` | `src/pages/missions.astro` | Missions: the guest's camera and mission list, the dares, the reveal, personal missions, own FAQ |
 | `/use-cases/` | `src/pages/use-cases.astro` | Weddings first, then parties, trips, birthdays, more |
 | `/wedding/` | `src/pages/wedding.astro` | The wedding landing page, own FAQ |
+| `/blog/`, `/blog/{slug}/` | `src/pages/blog/` + `src/content/blog/*.md` | The SEO blog: one Markdown file per article, written by the `blog-writer` agent twice a week and published unread. Rules and backlog: `../marketing/seo/`. `scripts/check-blog.mjs` runs before every build and fails it on a wrong price, a competitor's name, an external or dead link |
 | `/j/{CODE}` | `src/pages/j/index.astro` + `src/shoot/` | The invite **and the web camera**: a guest without the app joins, shoots their roll and later sees the album here. One page for every code via `public/_redirects` |
 | `/terms/`, `/privacy/` | `src/components/LegalDocument.astro` | Rendered from `../mobile/src/constants/legal.ts` (the app's own source), which `scripts/sync-legal.mjs` copies to `src/generated/` before every dev, build and check. **Unreviewed draft**: `noindex` and a notice while `LEGAL_DRAFT` is true |
 | `/.well-known/apple-app-site-association` | `public/.well-known/` | Universal links (iOS) |

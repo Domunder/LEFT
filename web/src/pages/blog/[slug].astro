@@ -1,0 +1,283 @@
+---
+/** One article of the blog (src/content/blog/{slug}.md). */
+import { Picture } from 'astro:assets';
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Faq from '../../components/Faq.astro';
+import GetApp from '../../components/GetApp.astro';
+import { SITE } from '../../site';
+import { allPosts, formatDate, photoFor, readingMinutes, resolveRelated, type Post } from '../../blog';
+
+export async function getStaticPaths() {
+  const posts = await allPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post, posts } }));
+}
+
+type Props = { post: Post; posts: Post[] };
+const { post, posts } = Astro.props;
+const { data } = post;
+const { Content } = await render(post);
+const photo = photoFor(post);
+const url = `${SITE.url}/blog/${post.id}/`;
+
+// What the author picked, then the newest other articles, three in all.
+const related = [
+  ...resolveRelated(data.related, posts),
+  ...posts
+    .filter((other) => other.id !== post.id && !data.related.includes(other.id))
+    .map((other) => ({ href: `/blog/${other.id}/`, label: other.data.title })),
+].slice(0, 3);
+
+const jsonLd: object[] = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'LEFT', item: SITE.url + '/' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${SITE.url}/blog/` },
+      { '@type': 'ListItem', position: 3, name: data.title, item: url },
+    ],
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BlogPosting',
+    headline: data.title,
+    description: data.description,
+    datePublished: data.date.toISOString(),
+    dateModified: (data.updated ?? data.date).toISOString(),
+    image: new URL(photo.src, SITE.url).href,
+    mainEntityOfPage: url,
+    author: { '@type': 'Organization', name: SITE.name, url: SITE.url + '/' },
+    publisher: { '@type': 'Organization', name: SITE.name, url: SITE.url + '/' },
+  },
+];
+if (data.faq.length) {
+  jsonLd.push({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: data.faq.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    })),
+  });
+}
+---
+
+<Base title={`${data.title} | LEFT`} description={data.description} jsonLd={jsonLd}>
+  <article>
+    <header class="head">
+      <div class="glow" aria-hidden="true"></div>
+      <div class="wrap head-inner">
+        <p class="eyebrow"><a href="/blog/">Blog</a> · {data.cluster}</p>
+        <h1>{data.title}</h1>
+        <p class="lede">{data.description}</p>
+        <p class="meta">
+          <time datetime={data.date.toISOString().slice(0, 10)}>{formatDate(data.date)}</time>
+          {data.updated && <span> · Updated {formatDate(data.updated)}</span>}
+          <span> · {readingMinutes(post)} min read</span>
+        </p>
+      </div>
+    </header>
+
+    <div class="wrap">
+      <Picture
+        src={photo}
+        alt={data.photoAlt}
+        formats={['avif', 'webp']}
+        widths={[480, 800, 1200, 1600]}
+        sizes="(max-width: 1200px) calc(100vw - 40px), 1160px"
+        loading="eager"
+        fetchpriority="high"
+        class={`cover look-${data.look}`}
+      />
+    </div>
+
+    <div class="wrap prose">
+      <Content />
+    </div>
+  </article>
+
+  {data.faq.length > 0 && <Faq items={data.faq} />}
+
+  {
+    related.length > 0 && (
+      <section class="related">
+        <div class="wrap related-inner reveal">
+          <p class="eyebrow">Keep reading</p>
+          <ul>
+            {related.map((item) => (
+              <li>
+                <a class="text-link" href={item.href}>
+                  {item.label} →
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    )
+  }
+
+  <GetApp />
+</Base>
+
+<style>
+  .head {
+    padding-top: clamp(130px, 16vw, 180px);
+    padding-bottom: clamp(32px, 5vw, 56px);
+    position: relative;
+  }
+
+  .head .glow {
+    right: -25%;
+    top: -55%;
+  }
+
+  .head-inner {
+    display: grid;
+    gap: 20px;
+    max-width: 860px;
+    margin-inline: auto;
+  }
+
+  .head h1 {
+    font-size: clamp(2.2rem, 5.2vw, 3.6rem);
+  }
+
+  .eyebrow a {
+    text-decoration: none;
+  }
+
+  .eyebrow a:hover {
+    color: var(--ink);
+  }
+
+  .meta {
+    color: var(--ink-55);
+    font-size: 0.875rem;
+  }
+
+  article :global(.cover) {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--radius);
+  }
+
+  @media (max-width: 700px) {
+    article :global(.cover) {
+      aspect-ratio: 4 / 3;
+    }
+  }
+
+  .prose {
+    max-width: 700px;
+    padding-block: clamp(40px, 7vw, 72px) 0;
+    font-size: 1.0625rem;
+    line-height: 1.75;
+    color: rgba(240, 237, 232, 0.86);
+  }
+
+  .prose :global(h2) {
+    font-size: clamp(1.6rem, 3.2vw, 2.1rem);
+    margin-top: 2.2em;
+    margin-bottom: 0.6em;
+    color: var(--ink);
+  }
+
+  .prose :global(h3) {
+    margin-top: 1.8em;
+    margin-bottom: 0.5em;
+    color: var(--ink);
+  }
+
+  .prose :global(p),
+  .prose :global(ul),
+  .prose :global(ol),
+  .prose :global(blockquote),
+  .prose :global(table) {
+    margin: 0 0 1.2em;
+  }
+
+  .prose :global(ul),
+  .prose :global(ol) {
+    padding-left: 1.3em;
+  }
+
+  .prose :global(li) {
+    margin-bottom: 0.5em;
+  }
+
+  .prose :global(li::marker) {
+    color: var(--amber);
+  }
+
+  .prose :global(strong) {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .prose :global(a) {
+    color: var(--ink);
+    text-decoration-color: var(--ink-30);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 0.25s var(--ease);
+  }
+
+  .prose :global(a:hover) {
+    text-decoration-color: var(--ink);
+  }
+
+  .prose :global(blockquote) {
+    padding: 4px 0 4px 20px;
+    border-left: 2px solid var(--amber);
+    font-family: var(--serif);
+    font-size: 1.25rem;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+
+  .prose :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    display: block;
+    overflow-x: auto;
+  }
+
+  .prose :global(th),
+  .prose :global(td) {
+    text-align: left;
+    padding: 10px 14px 10px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  .prose :global(th) {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .related {
+    padding-bottom: 0;
+  }
+
+  .related-inner {
+    display: grid;
+    gap: 16px;
+    padding: 28px clamp(22px, 4vw, 40px);
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--card);
+  }
+
+  .related ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+    justify-items: start;
+  }
+</style>

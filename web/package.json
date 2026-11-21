@@ -6,7 +6,8 @@
   "scripts": {
     "legal": "node scripts/sync-legal.mjs",
     "dev": "npm run legal && astro dev",
-    "build": "npm run legal && astro build",
+    "build": "npm run legal && npm run check:blog && astro build",
+    "check:blog": "node scripts/check-blog.mjs",
     "preview": "astro preview",
     "check": "npm run legal && astro check",
     "assets": "node scripts/static-assets.mjs",

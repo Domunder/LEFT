@@ -71,6 +71,12 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   project since 2026-11-18; screens built (typecheck and
   lint clean), **never run on a device**; the mission notifications are not
   built. See "Missions" below.
+- **Built (2026-11-21): the SEO blog** — `leftmoment.com/blog/`, Markdown
+  articles in `web/src/content/blog/`, two a week from the backlog in
+  `marketing/seo/keywords.md`, written by the `blog-writer` agent and
+  **published unread** (the user's decision). `web/scripts/check-blog.mjs`
+  fails the build on a wrong price, a competitor's name, an external or dead
+  link. Rules: `marketing/seo/README.md`.
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 

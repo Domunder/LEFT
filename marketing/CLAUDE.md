@@ -53,8 +53,11 @@ event".
 5. **No trend-jacking of tragedies, politics or real people's names.** No
    copyrighted music added by us — sounds are picked in the app from the
    platform's own library when the post is published.
-6. **Nothing is published without the weekly approval** (see STRATEGY.md →
-   Weekly loop) until the user says otherwise in chat.
+6. **The user posts everything by hand** (since 2026-11-21; see STRATEGY.md →
+   Weekly loop) — posting is the approval. No agent publishes to Instagram
+   or TikTok. **Exception (the user,
+   2026-11-21): the SEO blog publishes on its own**, behind the gate in
+   `web/scripts/check-blog.mjs` — see [`seo/README.md`](seo/README.md).
 7. **No personal data** of the user or anyone else in posts, files or requests
    to outside services.
 
@@ -94,6 +97,7 @@ marketing/
   queue/             (gitignored) rendered images waiting for approval
   results/           weekly performance notes, fed back into the next plan
   outreach/          founder outreach to hosts: guide, messages, prospects (gitignored)
+  seo/               the blog: keyword backlog and rules (articles live in web/src/content/blog/)
 ```
 
 Agents (in the repo's `.claude/agents/`): `trend-researcher`,
