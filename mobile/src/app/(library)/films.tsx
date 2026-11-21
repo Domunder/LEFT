@@ -99,6 +99,8 @@ const NO_EDGES = [] as const;
 type ListItem =
   | { kind: 'hero'; event: EventSummary }
   | { kind: 'prompt' }
+  /** Room between the spotlight and the rest, which belong to the page below it. */
+  | { kind: 'space' }
   | { kind: 'label'; text: string }
   | { kind: 'row'; event: EventSummary; divided: boolean };
 
@@ -299,7 +301,7 @@ export default function FilmsScreen() {
     const developed = rest.filter((event) => phases.get(event.id) === 'developed');
 
     const list: ListItem[] = [];
-    if (hero) list.push({ kind: 'hero', event: hero });
+    if (hero) list.push({ kind: 'hero', event: hero }, { kind: 'space' });
     if (showsPrompt) list.push({ kind: 'prompt' });
     open.forEach((event, i) => list.push({ kind: 'row', event, divided: i > 0 }));
     if (developed.length > 0) {
@@ -313,6 +315,7 @@ export default function FilmsScreen() {
 
   const renderItem = useCallback(
     ({ item }: { item: ListItem }) => {
+      if (item.kind === 'space') return <View style={styles.afterHero} />;
       if (item.kind === 'prompt') {
         return (
           <View style={styles.promptList}>
@@ -618,6 +621,9 @@ const styles = StyleSheet.create({
   },
   listArea: {
     flex: 1,
+  },
+  afterHero: {
+    height: Films.list.afterHero,
   },
   section: {
     paddingHorizontal: Films.row.paddingX,

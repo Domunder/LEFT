@@ -1265,6 +1265,8 @@ export const Films = {
     paddingBottom: 32,
     /** The "Developed" label above its rows. */
     sectionPaddingTop: 14,
+    /** Between the spotlight and the rows under it (2026-11-21, the user: they ran together). */
+    afterHero: 28,
     sectionPaddingBottom: 2,
   },
 
