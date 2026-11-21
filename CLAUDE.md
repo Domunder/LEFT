@@ -341,8 +341,8 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   reconnect, on foreground and with backoff.
 - **Shooting works offline** (decided). The counter is the server's last count
   minus unclaimed queued frames (`useCameraSession`), floored at zero, so the roll
-  cannot be overdrawn. Accepted risk: frames still unclaimed when the event ends
-  are refused by the server and dropped.
+  cannot be overdrawn. Frames still unclaimed when the event ends are counted
+  and uploaded since 2026-11-21 (they used to be refused and dropped).
 - `developPhoto()` is synchronous on the JS thread (a few hundred ms per frame).
   If the shutter feels sticky during bursts, move it to a worklet runtime.
 - Skia must never be touched at import time — keep it inside functions.
@@ -397,18 +397,34 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   2026-11-16 by the user, from a reference, replacing the three-column grid
   under a small title): one of the album's photos, drawn at random per visit,
   full-bleed and going dark towards the event's name, the two counts and
-  "Save all"; under it the prints two to a row with the photographer's name
-  on each. The hero shows the thumbnail first and the original over it, it
-  stretches on overscroll, a tap opens it in the viewer, and in the reveal it
-  is print 0. Only the back button floats. **Not seen on a device.**
-- **The reveal** plays once per film and phone (`left:reveal-seen:{id}` in
-  AsyncStorage): the sheet waits dark until the first thumbnails are
-  prefetched, then `RevealVeil`s clear one after another, a haptic at the start
-  and at the end. Reduced motion: one cross-fade. Timings are `Album.reveal`.
+  "Save all" · "Share"; under it the prints (three to a row since
+  2026-11-21). The hero shows the thumbnail first and the original over it,
+  it stretches on overscroll, and a tap opens it in the viewer. The back
+  button and ••• float. **Not seen on a device.**
+- **No reveal animation** (2026-11-21, the user, replacing the veils that
+  cleared one after another: the album was locked while they played). A
+  developed album is usable at once; its first open on a phone gives one
+  haptic and fires `reveal_seen` (`left:reveal-seen:{id}`). `RevealVeil` and
+  `Album.reveal` are deleted. The "delight is the reveal" principle now lives
+  in the developing state and the push, not in a choreography.
+- **The album grid is three to a row** (2026-11-21, the user), the
+  photographer's name small on each print, a glass target badge on a mission
+  photo. The hero's "Save all" and a new "Share" (the moment's invite link,
+  which opens the album for members) are two small glass capsules under the
+  counts, replacing the full-width white pill. **Not seen on a device.**
 - **Save and share** go through `lib/album.ts`: the original is downloaded
   once into the cache, saved with `MediaLibrary.Asset.create`, shared with RN's
   own `Share` on iOS and `expo-sharing` on Android (lazily required; **never
   run**). Owner or host can delete (`deletePhoto`, RLS).
+- **Rename and delete (2026-11-21, the user):** a long press on a Moments
+  card or the album's ••• opens one menu (`hooks/use-moment-actions.ts`).
+  The host renames in any state (iOS `Alert.prompt` — Android has no Rename
+  yet) and deletes for everyone after a system alert; the row goes by RLS
+  ("host can delete"), cascades take the rest, a purchase stays consumed, and
+  the files are left to the daily orphan sweep. A guest only gets "Remove
+  from Moments", hidden on that phone (`lib/hidden-moments.ts`) until they
+  join again. A deleted moment's album reads "This moment was deleted."
+  (`EventGoneError`). **Not seen on a device.**
 - **`(auth)/keep` is reached when an anonymous guest leaves a developed album**
   (once, unless declined) — after the photos, never in front of them.
 - **A member can report someone else's photo** (2026-11-16, required by both
@@ -493,6 +509,14 @@ and upload queue that use it are described above.
 - **Uploads must belong to a claimed frame.** The bucket's insert policy checks
   the file name against the caller's `photos` rows:
   `{event_id}/{user_id}/{photo_id}.jpg` and `…_thumb.jpg` (`lib/storage.ts`).
+- **Photos can be added from the phone's library** (2026-11-21, the user):
+  an "Add" glass capsule in Your shots and in a developed album's top bar
+  opens Apple's picker (`expo-image-picker`, required lazily — **needs a new
+  native build**) for up to the shots left; any photo, kept without the look
+  (`imported` on the queue entry, `developPhoto(…, null)`). **The roll is the
+  only limit, also after the end**: `claim_shot()` refuses only `setup` since
+  `20261121145855_claims_after_develop.sql` (so camera frames still queued at
+  the end now upload too). Not seen on a device.
 - **`max_members` is a hard cap** (`join_event` refuses with `hint = 'full'`), and
   joining stays open after the event is developed so a latecomer's link opens
   the album.

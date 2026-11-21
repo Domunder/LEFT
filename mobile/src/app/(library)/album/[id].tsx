@@ -8,16 +8,15 @@
  *    many photos exist, nothing to see. The host can develop early.
  *  - **Developed** — `AlbumHero` (one of the album's photos, picked at random
  *    each time the screen opens, full-bleed and going dark towards the name,
- *    the two counts and "Save all"), then the whole group's photos two to a
- *    row with the photographer's name on each, the shared `PhotoViewer`, save,
- *    share and moderation. (2026-11-16, replacing the dense three-column grid
- *    under a small title — the user's design.)
+ *    the two counts, "Save all" and "Share" as small glass capsules), then
+ *    the whole group's photos three to a row (2026-11-21, the user; two since
+ *    2026-11-16) with the photographer's name small on each and a glass
+ *    target badge on a mission photo; the shared `PhotoViewer`, save, share
+ *    and moderation.
  *
- * **The reveal** plays the first time a developed album is opened on this
- * phone: the sheet waits in the dark until the first thumbnails are loaded,
- * then the hero and after it the prints come up one after another
- * (`RevealVeil`), with a haptic as it starts and one as it lands. It is the only choreographed moment in the
- * app; everything else here stays quiet.
+ * **No reveal animation** (2026-11-21, the user: it locked the album while it
+ * played). A developed album is usable at once; the first time it is opened
+ * on this phone it only gives one haptic and records `reveal_seen`.
  *
  * What a member may read is RLS, not this file: before the reveal the photo
  * rows of other people simply do not come back.
@@ -26,20 +25,17 @@
  * they have seen the photos, never in front of them.
  *
  * A photo taken for a mission shows it in the viewer ("Mission · …",
- * `listPhotoMissions`). The grid and the reveal do not mention missions.
+ * `listPhotoMissions`) and a badge on its tile.
  */
 
-import { Image, type ImageSource } from 'expo-image';
+import { Feather } from '@expo/vector-icons';
+import { type ImageSource } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, type FlatList, StyleSheet, Text, View } from 'react-native';
-import Animated, {
-  useAnimatedScrollHandler,
-  useReducedMotion,
-  useSharedValue,
-} from 'react-native-reanimated';
+import { Alert, type FlatList, Share, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlbumHero } from '@/components/ui/album-hero';
@@ -48,7 +44,6 @@ import { Glass, GlassButton } from '@/components/ui/glass';
 import { PhotoTile, useTileRegistry } from '@/components/ui/photo-tile';
 import { PhotoViewer, type Rect, type ViewerPhoto } from '@/components/ui/photo-viewer';
 import { PillButton } from '@/components/ui/pill-button';
-import { RevealVeil, revealDurationMs } from '@/components/ui/reveal-veil';
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
 import { Body } from '@/components/ui/typography';
@@ -69,16 +64,22 @@ import {
 } from '@/lib/album';
 import { getSession, isAnonymous } from '@/lib/auth';
 import { messageFor } from '@/lib/auth-errors';
-import { endEvent, subscribeToEventStatus } from '@/lib/events';
+import { useMomentActions } from '@/hooks/use-moment-actions';
+import { endEvent, EventGoneError, subscribeToEventStatus } from '@/lib/events';
+import { canImport, importAllowance, importPhotos } from '@/lib/import-photos';
+import { inviteUrl } from '@/lib/invite';
+import { pendingCount, subscribeToQueue } from '@/lib/upload-queue';
 import { listPhotoMissions } from '@/lib/missions';
 import { loadMyShots } from '@/lib/my-shots';
 import { deletePhoto, reportPhoto } from '@/lib/photos';
 import { isPromptDismissed } from '@/lib/prompt-dismissal';
 
-type LoadState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; album: Album };
-
-/** `waiting` holds the sheet dark; `playing` develops it; `done` is a plain album. */
-type Reveal = 'waiting' | 'playing' | 'done';
+type LoadState =
+  | { kind: 'loading' }
+  | { kind: 'error' }
+  /** Deleted by its host (or never this user's): nothing to retry. */
+  | { kind: 'gone' }
+  | { kind: 'ready'; album: Album };
 
 const NO_FRAMES: ImageSource[] = [];
 
@@ -88,11 +89,9 @@ const plural = (count: number, one: string, many: string) =>
 export default function AlbumScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const reducedMotion = useReducedMotion();
   const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
-  const [reveal, setReveal] = useState<Reveal>('waiting');
   const [open, setOpen] = useState<{ index: number; origin: Rect | null } | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -121,7 +120,11 @@ export default function AlbumScreen() {
     try {
       const album = await loadAlbum(id);
       setState({ kind: 'ready', album });
-    } catch {
+    } catch (e) {
+      if (e instanceof EventGoneError) {
+        setState({ kind: 'gone' });
+        return;
+      }
       // Keep a loaded album on screen over a failed refresh.
       setState((current) => (current.kind === 'ready' ? current : { kind: 'error' }));
     }
@@ -234,52 +237,21 @@ export default function AlbumScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hero?.id]);
 
-  // --- the reveal -----------------------------------------------------------
+  // --- first look -----------------------------------------------------------
 
-  const firstThumbs = useMemo(() => {
-    const thumbs = photos.slice(0, T.reveal.maxStaggered).map((photo) => photo.thumbUri);
-    return hero ? [hero.thumbUri, ...thumbs] : thumbs;
-  }, [photos, hero]);
-
+  // No animation any more (2026-11-21): the photos are simply there. The first
+  // open on this phone still gets the reveal's haptic and its analytics event.
   useEffect(() => {
-    if (!id || !developed || reveal !== 'waiting') return;
+    if (!id || !developed || photos.length === 0) return;
     let cancelled = false;
-    const timers: ReturnType<typeof setTimeout>[] = [];
-
-    void (async () => {
-      if (photos.length === 0 || (await hasSeenReveal(id))) {
-        if (!cancelled) setReveal('done');
-        return;
-      }
-
-      // Prints coming up over empty tiles would be an anticlimax: wait for the
-      // first thumbnails, but not for ever.
-      await Promise.race([
-        Image.prefetch(firstThumbs).catch(() => false),
-        new Promise((resolve) => timers.push(setTimeout(resolve, T.reveal.prefetchTimeoutMs))),
-      ]);
-      if (cancelled) return;
-
-      setReveal('playing');
-      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      timers.push(
-        setTimeout(() => {
-          if (cancelled) return;
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          setReveal('done');
-          void markRevealSeen(id, photos.length);
-          // The hero comes up first, so the sheet is one print longer.
-        }, revealDurationMs(photos.length + 1, reducedMotion))
-      );
-    })();
-
+    void hasSeenReveal(id).then((seen) => {
+      if (seen || cancelled) return;
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void markRevealSeen(id, photos.length);
+    });
     return () => {
       cancelled = true;
-      timers.forEach(clearTimeout);
     };
-    // `reveal` is left out on purpose: this effect moves it to 'playing' itself,
-    // and re-running then would cancel the timer that finishes the reveal.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, developed, photos.length]);
 
   // --- status capsule -------------------------------------------------------
@@ -330,6 +302,81 @@ export default function AlbumScreen() {
       ]
     );
   }, [id, load]);
+
+  // Rename / delete / remove (2026-11-21) — the same menu as a long press on
+  // the Moments card.
+  const openMenu = useMomentActions({
+    onRenamed: (name) =>
+      setState((current) =>
+        current.kind === 'ready'
+          ? { kind: 'ready', album: { ...current.album, event: { ...current.album.event, name } } }
+          : current
+      ),
+    onGone: () => router.replace('/(library)/films'),
+  });
+  const menu = album ? (
+    <GlassButton
+      icon="more-horizontal"
+      accessibilityLabel="More"
+      onPress={() =>
+        openMenu({
+          event: album.event,
+          isHost: album.isHost,
+          photoCount: album.developed ? album.photos.length : album.shotsTaken,
+          memberCount: album.memberCount,
+        })
+      }
+    />
+  ) : null;
+
+  // --- add from the library (2026-11-21) -------------------------------------
+
+  // Photos can be added after the reveal too, up to the guest's roll
+  // (lib/import-photos.ts). They show up here once uploaded, for everyone.
+  const [allowance, setAllowance] = useState(0);
+  const [importing, setImporting] = useState(false);
+  const [queued, setQueued] = useState(() => (id ? pendingCount(id) : 0));
+  const albumEvent = album?.event;
+  useEffect(() => {
+    if (!albumEvent || !canImport()) return;
+    let cancelled = false;
+    void importAllowance(albumEvent).then((left) => {
+      if (!cancelled) setAllowance(left ?? 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [albumEvent, queued]);
+
+  // When one of this phone's photos for this moment finishes, read the album again.
+  const lastQueued = useRef(queued);
+  useEffect(() => {
+    if (!id) return;
+    return subscribeToQueue((change) => {
+      if (change.type !== 'changed') return;
+      const next = pendingCount(id);
+      if (next < lastQueued.current) void load();
+      lastQueued.current = next;
+      setQueued(next);
+    });
+  }, [id, load]);
+
+  const addPhotos = useCallback(async () => {
+    if (!albumEvent || importing || allowance <= 0) return;
+    setImporting(true);
+    try {
+      const added = await importPhotos(albumEvent, allowance);
+      if (added > 0) {
+        say(`Adding ${plural(added, 'photo', 'photos')}…`);
+        lastQueued.current = id ? pendingCount(id) : 0;
+        setQueued(lastQueued.current);
+      }
+    } catch {
+      say("Couldn't add the photos.");
+    } finally {
+      setImporting(false);
+    }
+  }, [albumEvent, allowance, id, importing, say]);
 
   const guarded = useCallback(
     async (work: () => Promise<void>, failure: string) => {
@@ -511,6 +558,10 @@ export default function AlbumScreen() {
         <View style={styles.center}>
           {state.kind === 'loading' ? (
             <Spinner />
+          ) : state.kind === 'gone' ? (
+            <Body small style={styles.centerCopy}>
+              This moment was deleted.
+            </Body>
           ) : (
             <>
               <Body small style={styles.centerCopy}>
@@ -535,8 +586,9 @@ export default function AlbumScreen() {
   if (!developed) {
     return (
       <Screen transparent padded={false}>
-        <View style={[styles.plainHeader, styles.plainHeaderInset]}>
+        <View style={[styles.plainHeader, styles.plainHeaderInset, styles.headerRow]}>
           <GlassButton icon="chevron-left" accessibilityLabel="Back" onPress={leave} />
+          {menu}
         </View>
         <DevelopingFilm
           eventName={album.event.name}
@@ -556,7 +608,13 @@ export default function AlbumScreen() {
     );
   }
 
-  const veiled = reveal !== 'done';
+  const shareAlbum = () => {
+    // The invite link opens the album for every member (app, App Clip or
+    // browser) and lets a newcomer join and see it.
+    void Share.share({
+      message: `Our photos from ${album.event.name}: ${inviteUrl(album.event.invite_code)}`,
+    }).catch(() => say("Couldn't share the album."));
+  };
 
   return (
     <View style={styles.root}>
@@ -573,8 +631,6 @@ export default function AlbumScreen() {
           { paddingBottom: insets.bottom + T.listPaddingBottom },
         ]}
         showsVerticalScrollIndicator={false}
-        // The sheet holds still while it develops.
-        scrollEnabled={!veiled}
         onScrollToIndexFailed={() => {
           // The row is not laid out yet; the viewer then closes with a fade.
         }}
@@ -593,14 +649,10 @@ export default function AlbumScreen() {
                 : undefined
             }
             scrollY={scrollY}
-            veil={
-              veiled ? (
-                <RevealVeil index={0} play={reveal === 'playing'} reducedMotion={reducedMotion} />
-              ) : null
-            }
-            onPressPhoto={veiled ? undefined : () => setOpen({ index: heroIndex, origin: null })}
+            onPressPhoto={() => setOpen({ index: heroIndex, origin: null })}
             onSaveAll={saveAll}
-            saveDisabled={busy || veiled}
+            onShare={shareAlbum}
+            saveDisabled={busy}
           />
         }
         ListEmptyComponent={
@@ -614,11 +666,9 @@ export default function AlbumScreen() {
           <PhotoTile
             id={item.id}
             uri={item.thumbUri}
-            accessibilityLabel={`Photo ${index + 1} of ${photos.length}${item.author ? `, by ${item.author}` : ''}`}
+            accessibilityLabel={`Photo ${index + 1} of ${photos.length}${item.author ? `, by ${item.author}` : ''}${missionByPhoto.has(item.id) ? ', a mission' : ''}`}
             register={register}
-            onPress={(origin) => {
-              if (!veiled) setOpen({ index, origin });
-            }}
+            onPress={(origin) => setOpen({ index, origin })}
             style={styles.tile}>
             {item.author ? (
               <>
@@ -632,13 +682,11 @@ export default function AlbumScreen() {
                 </Text>
               </>
             ) : null}
-            {veiled ? (
-              // The hero is print 0.
-              <RevealVeil
-                index={index + 1}
-                play={reveal === 'playing'}
-                reducedMotion={reducedMotion}
-              />
+            {missionByPhoto.has(item.id) ? (
+              // Glass over the print, never over other glass.
+              <Glass radius={T.tile.missionBadge / 2} style={styles.missionBadge}>
+                <Feather name="target" size={T.tile.missionIcon} color={Colors.text} />
+              </Glass>
             ) : null}
           </PhotoTile>
         )}
@@ -653,6 +701,18 @@ export default function AlbumScreen() {
 
       <View style={[styles.chrome, { top: insets.top + T.chromeInset }]} pointerEvents="box-none">
         <GlassButton icon="chevron-left" accessibilityLabel="Back" onPress={leave} />
+        <View style={styles.chromeRight}>
+          {allowance > 0 ? (
+            <GlassButton
+              icon="plus"
+              label="Add"
+              accessibilityLabel={`Add photos from your library, ${allowance} left`}
+              disabled={importing}
+              onPress={() => void addPhotos()}
+            />
+          ) : null}
+          {menu}
+        </View>
       </View>
 
       {/*
@@ -742,6 +802,11 @@ const styles = StyleSheet.create({
   plainHeaderInset: {
     paddingHorizontal: T.chromeInset,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   center: {
     flex: 1,
     alignItems: 'center',
@@ -772,8 +837,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     height: T.tile.captionFadeHeight,
   },
+  missionBadge: {
+    position: 'absolute',
+    top: T.tile.missionInset,
+    right: T.tile.missionInset,
+    width: T.tile.missionBadge,
+    height: T.tile.missionBadge,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   caption: {
-    ...Typography.tileCaption,
+    ...Typography.tileCaptionSm,
     position: 'absolute',
     left: T.tile.captionPaddingX,
     right: T.tile.captionPaddingX,
@@ -797,6 +871,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  chromeRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.hero.actionGap,
   },
   status: {
     position: 'absolute',

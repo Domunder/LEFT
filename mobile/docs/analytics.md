@@ -23,7 +23,7 @@ build and a second processor in the privacy policy.
 |---|---|---|
 | `event_created` | `createEvent()` succeeded | `look`, `event_type`, `roll_size`, `max_members`, `paid` |
 | `event_joined` | `joinEvent()` succeeded | — |
-| `photo_taken` | a shot was queued (`enqueueShot()`) | `look` |
+| `photo_taken` | a shot was queued (`enqueueShot()`), or a library photo added | `look`, `imported` |
 | `reveal_seen` | the reveal finished playing | `photos` |
 
 Plus uncaught JS exceptions, unhandled promise rejections, and the SDK's app

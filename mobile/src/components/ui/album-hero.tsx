@@ -1,6 +1,8 @@
 /**
  * The top of a developed album: one of its photos, full-bleed, going dark
- * towards the bottom, with the event's name, two counts and "Save all" on it.
+ * towards the bottom, with the event's name, two counts and two small glass
+ * capsules on it — "Save all" and "Share" (2026-11-21, the user: the white
+ * full-width "Save all" was too present).
  *
  * It is the header of the album's list, so it scrolls away with the grid. On
  * an overscroll the picture stretches from its top edge instead of showing the
@@ -15,12 +17,11 @@
 
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PillButton } from './pill-button';
+import { GlassButton } from './glass';
 import { Display } from './typography';
 import { Album, Colors } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
@@ -35,10 +36,10 @@ type AlbumHeroProps = {
   photo?: { id: string; thumbUri: string; fullUri?: string };
   /** The list's scroll offset — negative while it is pulled down. */
   scrollY: SharedValue<number>;
-  /** Drawn over the picture and under the text — the reveal's veil. */
-  veil?: ReactNode;
   onPressPhoto?: () => void;
   onSaveAll: () => void;
+  /** Shares the moment's link (the album, for anyone in the group). */
+  onShare: () => void;
   saveDisabled?: boolean;
 };
 
@@ -48,9 +49,9 @@ export function AlbumHero({
   memberCount,
   photo,
   scrollY,
-  veil,
   onPressPhoto,
   onSaveAll,
+  onShare,
   saveDisabled = false,
 }: AlbumHeroProps) {
   const insets = useSafeAreaInsets();
@@ -94,7 +95,6 @@ export function AlbumHero({
             transition={T.sharpenMs}
           />
         ) : null}
-        {veil}
       </Animated.View>
 
       <LinearGradient
@@ -124,13 +124,16 @@ export function AlbumHero({
           <Stat value={memberCount} label={memberCount === 1 ? 'Person' : 'People'} />
         </View>
 
-        <PillButton
-          label="Save all"
-          icon="download"
-          disabled={saveDisabled}
-          onPress={onSaveAll}
-          style={styles.save}
-        />
+        <View style={styles.actions}>
+          <GlassButton
+            icon="download"
+            label="Save all"
+            accessibilityLabel={`Save all ${photoCount} photos`}
+            disabled={saveDisabled}
+            onPress={onSaveAll}
+          />
+          <GlassButton icon="share" label="Share" accessibilityLabel="Share the album" onPress={onShare} />
+        </View>
       </View>
     </View>
   );
@@ -187,8 +190,10 @@ const styles = StyleSheet.create({
     height: T.dividerHeight,
     backgroundColor: Colors.textFaint,
   },
-  save: {
-    alignSelf: 'stretch',
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: T.actionGap,
     marginTop: T.actionsGap,
   },
 });

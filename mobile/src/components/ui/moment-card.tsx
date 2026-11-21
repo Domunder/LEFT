@@ -50,6 +50,8 @@ type MomentCardProps = {
   /** How many photos the strip stands for; above `STRIP_SIZE` the last tile reads "+N". */
   stripCount: number;
   onPress: () => void;
+  /** Holding the card — its menu: rename, delete, remove (2026-11-21). */
+  onLongPress?: () => void;
   /** Tapping the status capsule — a running moment's way to its developing state. */
   onPressStatus?: () => void;
   /** Set when the strip leads somewhere other than the card does. */
@@ -71,6 +73,7 @@ export function MomentCard({
   photos,
   stripCount,
   onPress,
+  onLongPress,
   onPressStatus,
   onPressPhotos,
   photosLabel,
@@ -152,8 +155,11 @@ export function MomentCard({
     <PressScale
       accessibilityRole="button"
       accessibilityLabel={`${title}. ${status}. ${photoLabel(photoCount)}, ${memberLabel(members)}.${sampled ? ' Showing sample pictures.' : ''}`}
+      accessibilityActions={onLongPress ? [{ name: 'longpress', label: 'More' }] : undefined}
+      onAccessibilityAction={onLongPress ? () => onLongPress() : undefined}
       scale={T.pressScale}
       onPress={onPress}
+      onLongPress={onLongPress}
       style={styles.card}>
       <View style={styles.header}>
         <View style={styles.heading}>

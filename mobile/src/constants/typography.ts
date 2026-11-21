@@ -353,6 +353,12 @@ export const Typography = {
     fontSize: 16,
   } as TextStyle,
 
+  /** The photographer on a print in the three-column album (2026-11-21). */
+  tileCaptionSm: {
+    fontFamily: FontFamily.displayItalic,
+    fontSize: 12,
+  } as TextStyle,
+
   /** "+39" on the last tile of a moment's photo strip (16). */
   stripMore: {
     fontFamily: FontFamily.semibold,

@@ -1612,10 +1612,10 @@ export const PhotoTile = {
  * Not in the prototype (17 was the clip player).
  */
 export const Album = {
-  /** Two large prints per row (2026-11-16; was a dense grid of three). */
-  columns: 2,
-  gap: 8,
-  gridPaddingX: 12,
+  /** Three prints per row (2026-11-21, the user; two from 2026-11-16). */
+  columns: 3,
+  gap: 4,
+  gridPaddingX: 8,
   /** Under the "couldn't load" copy and the blank-film note. */
   titlePaddingTop: 64,
   titlePaddingBottom: 20,
@@ -1641,7 +1641,9 @@ export const Album = {
     statsGap: 18,
     statLabelGap: 7,
     dividerHeight: 18,
-    actionsGap: 24,
+    actionsGap: 22,
+    /** Between "Save all" and "Share". */
+    actionGap: 10,
     /** The thumbnail giving way to the original. */
     sharpenMs: 300,
     /** A trace of shade for the status bar, clear in the middle, the page's own dark at the foot. */
@@ -1653,11 +1655,15 @@ export const Album = {
 
   /** A print in the grid, with its photographer's name on it. */
   tile: {
-    radius: 16,
-    captionPaddingX: 12,
-    captionPaddingBottom: 10,
-    captionFadeHeight: 72,
+    radius: 10,
+    captionPaddingX: 7,
+    captionPaddingBottom: 6,
+    captionFadeHeight: 40,
     captionFade: ['rgba(0,0,0,0)', 'rgba(0,0,0,0.5)'],
+    /** The glass badge on a mission photo, top right. */
+    missionBadge: 24,
+    missionIcon: 12,
+    missionInset: 6,
   },
   /** The status capsule ("Saved", "Saving 12 / 124"). */
   status: {
@@ -1688,25 +1694,6 @@ export const Album = {
     /** Under an hour the countdown shows seconds. */
     fastTickMs: 1000,
     slowTickMs: 20_000,
-  },
-
-  /**
-   * The reveal — the one choreographed moment in the app. Prints come up out
-   * of the dark one after another, like paper in a developer bath.
-   */
-  reveal: {
-    /** A warm near-black, the colour of a print before the image appears. */
-    veil: '#0d0806',
-    /** Between one print and the next. */
-    staggerMs: 70,
-    /** Prints beyond this come up together — nobody watches tile 200. */
-    maxStaggered: 18,
-    /** One print coming up. */
-    developMs: 1100,
-    /** Reduced motion: one cross-fade for the whole sheet. */
-    reducedMs: 400,
-    /** How long to wait for the first thumbnails before starting anyway. */
-    prefetchTimeoutMs: 2500,
   },
 } as const;
 

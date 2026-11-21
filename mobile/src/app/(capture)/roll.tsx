@@ -19,12 +19,18 @@
  * `MissionPickerSheet` — the way to mark a photo taken without arming the
  * mission first. A frame still waiting for its claim is tagged in the queue;
  * a claimed one goes straight to the server (`setShotMission`).
+ *
+ * **Add photos** (2026-11-21, the user): a glass "Add" capsule in the header
+ * opens Apple's picker for up to the shots left (`lib/import-photos.ts`); the
+ * picked photos join the queue like camera frames, without the look. Hidden
+ * when the roll is used up, before the start, or in a build without the
+ * picker.
  */
 
 import { Feather } from '@expo/vector-icons';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, View } from 'react-native';
 
 import { ScrollEdged } from '@/components/ui/scroll-edge';
 
@@ -38,7 +44,8 @@ import { Spinner } from '@/components/ui/spinner';
 import { Body, Display, Em } from '@/components/ui/typography';
 import { Colors, MissionsCamera as M, ScrollEdge as Edge, Shots as T, Spacing } from '@/constants/theme';
 import { getSession } from '@/lib/auth';
-import { getEvent, isDeveloped } from '@/lib/events';
+import { getEvent, isDeveloped, type Event } from '@/lib/events';
+import { canImport, importAllowance, importPhotos } from '@/lib/import-photos';
 import type { Mission } from '@/lib/missions';
 import {
   applyMissionTag,
@@ -106,6 +113,43 @@ export default function RollScreen() {
       unsubscribe();
     };
   }, [eventId]);
+
+  // --- add from the library --------------------------------------------------
+
+  const [event, setEvent] = useState<Event | null>(null);
+  const [allowance, setAllowance] = useState(0);
+  const [importing, setImporting] = useState(false);
+
+  useEffect(() => {
+    if (!eventId || !canImport()) return;
+    let cancelled = false;
+    getEvent(eventId)
+      .then(async (next) => {
+        const left = await importAllowance(next);
+        if (cancelled) return;
+        setEvent(next);
+        setAllowance(left ?? 0);
+      })
+      .catch(() => {
+        // Offline: no button; the camera still works.
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Each queue change can move the count: a claim, a refusal, a new frame.
+  }, [eventId, queueVersion]);
+
+  const addPhotos = useCallback(async () => {
+    if (!event || importing || allowance <= 0) return;
+    setImporting(true);
+    try {
+      await importPhotos(event, allowance);
+    } catch (e) {
+      Alert.alert("Couldn't add the photos", e instanceof Error ? e.message : 'Try again.');
+    } finally {
+      setImporting(false);
+    }
+  }, [allowance, event, importing]);
 
   // --- missions -------------------------------------------------------------
 
@@ -241,6 +285,15 @@ export default function RollScreen() {
               router.canGoBack() ? router.back() : router.replace('/(library)/films')
             }
           />
+          {allowance > 0 ? (
+            <GlassButton
+              icon="plus"
+              label="Add"
+              accessibilityLabel={`Add photos from your library, ${allowance} left`}
+              disabled={importing}
+              onPress={() => void addPhotos()}
+            />
+          ) : null}
         </View>
 
         <View style={styles.title}>
@@ -357,6 +410,9 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: T.headerPaddingTop,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
     marginTop: T.titleGap,

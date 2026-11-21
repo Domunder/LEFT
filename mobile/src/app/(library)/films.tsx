@@ -37,9 +37,10 @@
  */
 
 import type { Session } from '@supabase/supabase-js';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -60,6 +61,8 @@ import { loadCovers, STRIP_SIZE, type FilmCover } from '@/lib/covers';
 import { isDeveloped, listMyEventSummaries, type EventSummary } from '@/lib/events';
 import { destinationFor, filmPhase, statusLabel, tickIntervalMs } from '@/lib/film-status';
 import { tintFor } from '@/lib/film-tint';
+import { hiddenMoments } from '@/lib/hidden-moments';
+import { useMomentActions } from '@/hooks/use-moment-actions';
 import { dismissPrompt, isPromptDismissed } from '@/lib/prompt-dismissal';
 
 /** One shared identity for "no events", so a non-ready render is stable. */
@@ -96,9 +99,15 @@ export default function FilmsScreen() {
 
   const load = useCallback(async (isCancelled: () => boolean) => {
     try {
-      const [events, current] = await Promise.all([listMyEventSummaries(), getSession()]);
+      const [all, current, hidden] = await Promise.all([
+        listMyEventSummaries(),
+        getSession(),
+        hiddenMoments(),
+      ]);
       if (isCancelled()) return;
 
+      // Moments a guest removed stay off the list (lib/hidden-moments.ts).
+      const events = all.filter((event) => !hidden.has(event.id));
       setState({ kind: 'ready', events });
       setSession(current);
       setNow(new Date());
@@ -189,6 +198,32 @@ export default function FilmsScreen() {
   }, [router, session]);
   const joinEvent = useCallback(() => router.push('/(modals)/join'), [router]);
 
+  // --- rename / delete / remove (2026-11-21) -------------------------------
+
+  /** Which card's menu is open — the handlers below act on it. */
+  const acting = useRef<string | null>(null);
+  const openMenu = useMomentActions({
+    onRenamed: (name) => {
+      const id = acting.current;
+      setState((previous) =>
+        previous.kind === 'ready'
+          ? {
+              kind: 'ready',
+              events: previous.events.map((event) => (event.id === id ? { ...event, name } : event)),
+            }
+          : previous
+      );
+    },
+    onGone: () => {
+      const id = acting.current;
+      setState((previous) =>
+        previous.kind === 'ready'
+          ? { kind: 'ready', events: previous.events.filter((event) => event.id !== id) }
+          : previous
+      );
+    },
+  });
+
   // --- one moment's card ---------------------------------------------------
 
   const renderMoment = useCallback(
@@ -221,6 +256,16 @@ export default function FilmsScreen() {
           samples={cover && cover.uris.length === 0 ? samplesFor(event.id, STRIP_SIZE) : undefined}
           // Nothing left to shoot: the camera would only say so. Go and wait.
           onPress={() => router.push(rollEmpty ? album : destinationFor(event, user?.id))}
+          onLongPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            acting.current = event.id;
+            openMenu({
+              event,
+              isHost: event.host_id === user?.id,
+              photoCount: event.shotsTaken,
+              memberCount: event.memberCount,
+            });
+          }}
           // A running moment opens its camera; the capsule is the way to its
           // count, its countdown and the host's "develop now".
           onPressStatus={phase === 'live' && !rollEmpty ? () => router.push(album) : undefined}
@@ -234,7 +279,7 @@ export default function FilmsScreen() {
         />
       );
     },
-    [covers, now, router, user?.id]
+    [covers, now, openMenu, router, user?.id]
   );
 
   const ready = state.kind === 'ready';

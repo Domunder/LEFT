@@ -4,8 +4,9 @@
  * Not in the prototype (missions arrived after it). The switch is 20's
  * `ToggleSwitch` beside a plain row title. How many each guest gets is not
  * asked here (decided 2026-11-18 by the user): switching on creates the event
- * with `MISSIONS_PER_GUEST_DEFAULT` and the next screen, Missions, is where the
- * host sets the count and plans the list.
+ * with `MISSIONS_PER_GUEST_DEFAULT`. The next screen is the QR (09), then 10,
+ * whose Missions row is where the host plans the list (2026-11-19); the hint
+ * says so (2026-11-21, the user).
  *
  * Off by default. The parent hears one value: `null` (off) or the default.
  * Missions are free, so nothing here touches the price.
@@ -42,7 +43,7 @@ export function MissionsSetup({ value, onChange, style }: MissionsSetupProps) {
 
       <Body small color={Colors.textFaint} style={styles.explainer}>
         {on
-          ? 'You set them up next.'
+          ? 'Invite people first, then edit the missions.'
           : 'Small photo missions for your guests.'}
       </Body>
     </View>

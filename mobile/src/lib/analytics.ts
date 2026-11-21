@@ -36,7 +36,7 @@ type PostHogClient = InstanceType<PostHogModule['default']>;
 export type AnalyticsEvent =
   | { name: 'event_created'; props: { look: string; event_type: string; roll_size: number | null; max_members: number; missions: number; paid: boolean } }
   | { name: 'event_joined'; props: Record<string, never> }
-  | { name: 'photo_taken'; props: { look: string } }
+  | { name: 'photo_taken'; props: { look: string; imported: boolean } }
   | { name: 'reveal_seen'; props: { photos: number } };
 
 const KEY = process.env.EXPO_PUBLIC_POSTHOG_KEY;

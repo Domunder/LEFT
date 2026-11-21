@@ -6,6 +6,7 @@
  */
 
 import { track } from './analytics';
+import { unhideMoment } from './hidden-moments';
 import { subscribeToChanges } from './realtime';
 import type { RollSize } from './roll';
 import { getSupabase } from './supabase';
@@ -151,13 +152,69 @@ export async function joinEvent(inviteCode: string, displayName: string): Promis
   if (error) throw error;
 
   track('event_joined', {});
+  // Following the link again brings back a moment the guest had removed.
+  await unhideMoment(data).catch(() => undefined);
   return data;
 }
 
+/**
+ * The event is not there for this user: deleted by its host, or never theirs.
+ * RLS makes the two indistinguishable, and to the viewer they mean the same.
+ */
+export class EventGoneError extends Error {
+  constructor() {
+    super('This moment was deleted.');
+    this.name = 'EventGoneError';
+  }
+}
+
 export async function getEvent(eventId: string): Promise<Event> {
-  const { data, error } = await getSupabase().from('events').select().eq('id', eventId).single();
+  const { data, error } = await getSupabase().from('events').select().eq('id', eventId).maybeSingle();
   if (error) throw error;
+  if (!data) throw new EventGoneError();
   return data;
+}
+
+/** Longest event name the database accepts (`events.name`). */
+export const EVENT_NAME_MAX = 120;
+
+/**
+ * The host renames their moment — in any state, before, during or after
+ * (2026-11-21, the user). RLS ("host can rename") and the column grant (`name`
+ * only) are the authority; a non-host's update matches no row.
+ */
+export async function renameEvent(eventId: string, name: string): Promise<void> {
+  const trimmed = name.trim();
+  if (trimmed.length === 0 || trimmed.length > EVENT_NAME_MAX) {
+    throw new Error(`A name is 1 to ${EVENT_NAME_MAX} characters.`);
+  }
+  const { data, error } = await getSupabase()
+    .from('events')
+    .update({ name: trimmed })
+    .eq('id', eventId)
+    .select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Only the host can rename this moment.');
+}
+
+/**
+ * The host deletes their moment for everyone (2026-11-21, the user): the event
+ * row goes, and with it — by cascade — the roster, photo rows, missions and
+ * outbox rows. A purchase stays consumed (`consumed_by_event_id` is set null,
+ * `consumed_at` stays), so deleting never frees a paid unlock for reuse.
+ *
+ * **The files are not deleted here.** No foreign key reaches into storage;
+ * once the row is gone nobody can read them (the bucket's policies go through
+ * the event), and the daily purge removes them (`orphaned_storage_paths()`).
+ */
+export async function deleteEvent(eventId: string): Promise<void> {
+  const { data, error } = await getSupabase()
+    .from('events')
+    .delete()
+    .eq('id', eventId)
+    .select('id');
+  if (error) throw error;
+  if (!data || data.length === 0) throw new Error('Only the host can delete this moment.');
 }
 
 /** Every event the signed-in user belongs to — the Films library. */

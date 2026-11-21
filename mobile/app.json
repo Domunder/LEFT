@@ -80,9 +80,16 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "LEFT needs access to your photos so you can save pictures from your events.",
+          "photosPermission": "LEFT needs access to your photos so you can save pictures from your events and add your own.",
           "savePhotosPermission": "LEFT saves pictures from your events to your photo library.",
           "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "LEFT needs access to your photos so you can save pictures from your events and add your own.",
+          "microphonePermission": false
         }
       ],
       [

@@ -112,6 +112,11 @@ export type QueuedShot = {
   missionTagged?: boolean;
   /** Server answers to the tag that were neither a success nor a known refusal. */
   tagAttempts?: number;
+  /**
+   * Added from the phone's library, not shot (2026-11-21): developed without
+   * the look. Counts against the roll like any frame.
+   */
+  imported?: boolean;
 };
 
 export type QueueEvent =
@@ -285,6 +290,8 @@ export async function enqueueShot(shot: {
   missionId?: string | null;
   /** Width / height of the viewfinder; the print is cropped to it. */
   cropAspect?: number;
+  /** From the library: kept as it is, no look. */
+  imported?: boolean;
 }): Promise<string> {
   const id = Crypto.randomUUID();
 
@@ -304,6 +311,7 @@ export async function enqueueShot(shot: {
       width: shot.width,
       height: shot.height,
       ...(shot.cropAspect ? { cropAspect: shot.cropAspect } : {}),
+      ...(shot.imported ? { imported: true } : {}),
       ...(shot.missionId
         ? { missionId: shot.missionId, missionTagged: false, tagAttempts: 0 }
         : {}),
@@ -312,7 +320,7 @@ export async function enqueueShot(shot: {
   emit({ type: 'changed' });
   await persist();
 
-  track('photo_taken', { look: shot.look });
+  track('photo_taken', { look: shot.look, imported: shot.imported === true });
 
   void drain();
   return id;
@@ -475,7 +483,7 @@ async function develop(item: QueuedShot) {
 
   const bytes = await raw.bytes();
   if (__DEV__) console.log('[queue] develop start', { id: item.id, bytes: bytes.length });
-  const result = developPhoto(bytes, item.look, item.cropAspect);
+  const result = developPhoto(bytes, item.imported ? null : item.look, item.cropAspect);
   if (__DEV__) console.log('[queue] develop done', { width: result.width, height: result.height });
 
   await originalFile(item.id).write(result.original);

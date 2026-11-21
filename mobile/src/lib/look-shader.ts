@@ -159,7 +159,9 @@ export type DevelopedPhoto = {
 };
 
 /**
- * Bake a look into a captured frame.
+ * Bake a look into a captured frame — or, with `look` null, only resize and
+ * re-encode it: a photo added from the phone's library keeps its own colours
+ * (2026-11-21, the user) but still becomes the same original + thumbnail.
  *
  * `encoded` is the camera's JPEG. EXIF orientation is applied by the decoder, so
  * the width and height returned are what a viewer will see.
@@ -169,7 +171,7 @@ export type DevelopedPhoto = {
  */
 export function developPhoto(
   encoded: Uint8Array,
-  look: FilmLook,
+  look: FilmLook | null,
   cropAspect?: number
 ): DevelopedPhoto {
   const data = Skia.Data.fromBytes(encoded);
@@ -209,7 +211,9 @@ export function developPhoto(
 
     const paint = Skia.Paint();
     paint.setShader(
-      lookEffect().makeShaderWithChildren(flatUniforms(look, out.width, out.height), [pixels])
+      look === null
+        ? pixels
+        : lookEffect().makeShaderWithChildren(flatUniforms(look, out.width, out.height), [pixels])
     );
     surface.getCanvas().drawPaint(paint);
     surface.flush();
