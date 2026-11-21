@@ -1,6 +1,6 @@
 ---
 name: content-strategist
-description: Plans the coming week of posts for LEFT's eight Instagram/TikTok accounts from the latest trend report, the account files and last week's results. Writes marketing/plans/YYYY-Www.md. Use after trend-researcher in the weekly marketing loop.
+description: Plans the coming week of posts for LEFT's three Instagram/TikTok accounts from the latest trend report, the account files and last week's results. Writes marketing/plans/YYYY-Www.md. Use after trend-researcher in the weekly marketing loop.
 tools: Read, Write, Glob, Grep
 ---
 
@@ -17,16 +17,15 @@ You plan; you do not write captions or slides. Read, in this order:
 
 - **Which phase we are in** (STRATEGY.md → Phases). Before launch, nothing may
   say the app is available.
-- **For each of the 8 accounts (4 × Instagram, TikTok), each day of the week:**
-  the slot (time), format, pillar, hook (from the account file, the trend
-  report, or a new one in the same pattern), which LEFT look, and one line on
-  why. Respect the cadence and the pillar shares.
-- **What to learn this week:** 1–3 explicit tests (e.g. "lowercase vs. title
-  case hooks on left.afterdark TikTok"), so results can teach the next plan.
-- **What to stop**, if results show a format below the account's median for 6
-  posts (STRATEGY.md → Metrics).
-- Reuse a strong post across Instagram and TikTok of the same account, adapted
-  to the format, instead of making two from scratch.
+- **For each account in STRATEGY.md → The accounts, the week's assets**
+  (STRATEGY.md → Cadence; `left.roadtrip` is parked): the day and time,
+  format, hook family, hook (from the account file, the trend report, or a
+  new one in the same pattern), which LEFT look, and one line on why. One
+  asset is posted on both Instagram and TikTok — plan it once.
+- **One test question per account** (STRATEGY.md → How we test), and a new
+  idea as three hook variants on different days.
+- **Winners to remake and families to cut**, from the results, by the
+  thresholds in STRATEGY.md → How we test.
 
 ## Output
 
@@ -36,18 +35,17 @@ Write `marketing/plans/YYYY-Www.md` (ISO week of the coming Monday):
 # Plan — YYYY-Www
 Phase: … · Tests: … · Stopped: …
 
-## leftmoment
-| Day | Platform | Time | Format | Pillar | Hook | Look | Why |
 ## left.weddings
-…
+Test: …
+| Day | Time | Format | Family | Hook | Look | Why |
 ## left.afterdark
 …
-## left.roadtrip
+## leftmoment
 …
 
 ## Notes for the writer
 ```
 
-Give every row an id `{account}-{platform}-{day}` (e.g.
-`weddings-tt-mon`); the writer names its post files after it. If there is no
+Give every row an id `{account}-{day}` (e.g. `weddings-mon`); the writer
+names its post files after it. If there is no
 trend report or no results, plan from the account files and say so at the top.

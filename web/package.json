@@ -12,7 +12,9 @@
     "check": "npm run legal && astro check",
     "assets": "node scripts/static-assets.mjs",
     "preview:cf": "wrangler pages dev dist --port 8788",
-    "store": "node scripts/store-assets.mjs"
+    "store": "node scripts/store-assets.mjs",
+    "social": "node scripts/social-posts.mjs",
+    "stock": "node scripts/stock-download.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.5",

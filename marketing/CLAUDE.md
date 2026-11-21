@@ -102,5 +102,6 @@ marketing/
 
 Agents (in the repo's `.claude/agents/`): `trend-researcher`,
 `content-strategist`, `content-writer`, and `prospect-finder` for founder
-outreach to hosts (`outreach/README.md` — the first channel, before content). A renderer and a publisher are not built
-yet — see STRATEGY.md → Automation.
+outreach to hosts (`outreach/README.md` — the first channel, before content).
+The renderer is `web/scripts/social-posts.mjs` (`cd web && npm run social`);
+there is no publisher — the user posts by hand (STRATEGY.md → Automation).

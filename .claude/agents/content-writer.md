@@ -12,27 +12,34 @@ voice, visual rules), the account file for each post, and the newest plan in
 
 ```
 ---
-id: weddings-tt-mon
-account: left.weddings
-platform: tiktok            # tiktok | instagram
-format: slideshow           # slideshow | carousel | pov | list | app-screens
+id: weddings-mon
+account: left.weddings      # posted on both TikTok and Instagram
+format: story               # story | list | reaction-video | pov | app-screens
+family: rule                # the hook family, STRATEGY.md → Formats
+variant_of:                 # id of the post this is a hook variant of, if any
 publish_at: YYYY-MM-DDTHH:MM # local time
 look: golden                # golden | chrome | faded | mono
-size: 1080x1920             # 1080x1920 (TikTok, stories) | 1080x1350 (IG carousel)
 ai_generated: false
 stock_needed: true
-status: draft               # draft → approved → published, set by the user / publisher
+status: draft               # draft → posted, set by the user
 ---
 
 ## Slides
-1. **Hook:** text on the slide (max ~8 words)
-   Photo: what the photo shows (for stock search) — e.g. "guests dancing at
-   night, warm light, from behind, faces not in focus"
-2. …
-N. Last slide: call to action from the account file
+
+- photo: wedding-night.jpg
+  hook: true
+  text: Plain words. *Italic emphasis.*
+- screen: android/phone/7-developing.png
+  text: All night, nobody can look at a single photo. *Not even you.*
+- photo: wedding-toast.jpg
+  text: The payoff — a photo and the feeling, never an ad.
 
 ## Caption
-The caption (TikTok: 1–2 lines; Instagram: up to ~5 short lines).
+TikTok: 1–2 lines. Instagram: up to ~5 short lines. Write both, labelled.
+
+## Sound
+The kind of sound to pick in the app ("slow piano, trending wedding audio")
+— never a named copyrighted track.
 
 ## Hashtags
 3–5 from the account file or the trend report.
@@ -41,7 +48,29 @@ The caption (TikTok: 1–2 lines; Instagram: up to ~5 short lines).
 Unsplash / Pexels search terms for each photo, in slide order.
 ```
 
+## The slide list is read by a program
+
+`web/scripts/social-posts.mjs` renders it, so keep the exact shape above
+(its header documents every key: `photo`, `screen`, `brand`, `text`, `hook`,
+`mark`, `focus`, `kicker`). `photo:` is a file name that exists in
+`marketing/stock/` or `web/src/assets/photos/` and is listed in
+`marketing/stock/LICENSES.md` — Glob both folders and choose from what is
+there; `marketing/posts/pilot/` shows finished examples. If a post needs a
+photo that does not exist, write the slide with the closest existing one and
+list the wish under "## Stock search terms" for the user to download.
+
 ## Rules for the text
+
+- **Feelings first** (STRATEGY.md → Feelings first): every post is one of the
+  story templates there, built around one feeling. LEFT is named late and
+  once. Second person or "idea" framing — the story never happened to a
+  named or pictured person. Put `template:` and `feeling:` in the front
+  matter.
+- **How LEFT appears** (STRATEGY.md → Feelings first): one real app screen
+  mid-story (`screen:` + `text:`, from `store-assets/android/phone/`), the
+  last slide is the payoff photo, no `brand:` end card and no `mark:` in
+  story or POV posts, and the caption names LEFT once. Only an explicit
+  control post may be a plain product post.
 
 - Hook on slide 1 must stand alone and fit in two lines at large type.
 - 4–8 slides for a slideshow or carousel, one for a POV.
@@ -55,6 +84,12 @@ Unsplash / Pexels search terms for each photo, in slide order.
 - App-screen posts (official only) describe which real app screen to capture;
   do not mock up screens that do not exist.
 - Respect the voice of the account. Max 2 emojis per caption.
+- A `reaction-video` post is a shot list instead of slides: the on-screen
+  text, the reaction (1.5 s), then which real app screens to record in which
+  order, ending on the reveal or a mission. The text is a POV or an idea,
+  never a first-person claim about a wedding that did not happen.
+- The slides must work on both platforms: keep text inside the safe area of
+  `marketing/CLAUDE.md` → Visual rules.
 
 When done, write `marketing/posts/YYYY-Www/README.md`: a table of all posts
-(id, account, platform, time, hook) for the user's weekly approval.
+(id, account, day and time, hook) — the user's posting list for the week.

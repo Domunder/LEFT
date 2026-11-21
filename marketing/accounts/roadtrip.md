@@ -1,5 +1,9 @@
 # Trips — `left.roadtrip`
 
+**Parked since 2026-11-21** (STRATEGY.md → The accounts): no posts are planned
+for it. Trip ideas run as a test on `left.afterdark`; this file is their
+source of hooks.
+
 **Bio:** Friend trips on film. See the photos when you're home · by LEFT 📷
 **Link:** leftmoment.com (`?utm_source={platform}&utm_campaign=left.roadtrip`)
 **Looks used:** Golden for summer, Chrome for mountains and the sea, Mono for cities.
