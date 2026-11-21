@@ -30,7 +30,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { Glass } from './glass';
+import { Glass, GlassButton } from './glass';
 import { PillButton } from './pill-button';
 import { PressScale } from './press-scale';
 import { Display } from './typography';
@@ -72,6 +72,12 @@ type MomentHeroProps = {
   secondary: HeroStat;
   actionLabel: string;
   onAction: () => void;
+  /**
+   * A small glass capsule beside the numbers instead of the full-width pill,
+   * and the whole photo opens it too (the developed moment: the user,
+   * 2026-11-21 — "Open album" stuck out too much).
+   */
+  quiet?: boolean;
   onLongPress: () => void;
 };
 
@@ -86,6 +92,7 @@ export function MomentHero({
   secondary,
   actionLabel,
   onAction,
+  quiet = false,
   onLongPress,
 }: MomentHeroProps) {
   const { height } = useWindowDimensions();
@@ -119,6 +126,7 @@ export function MomentHero({
       accessibilityLabel={`${title}, ${status}`}
       accessibilityActions={[{ name: 'longpress', label: 'More' }]}
       onAccessibilityAction={onLongPress}
+      onPress={quiet ? onAction : undefined}
       onLongPress={onLongPress}
       style={[styles.hero, { height: heroHeight(height) }]}>
       <View style={[StyleSheet.absoluteFill, { backgroundColor: tint }]} />
@@ -149,37 +157,64 @@ export function MomentHero({
           {title}
         </Display>
 
-        <View style={styles.numbers}>
-          <View>
-            <Text style={styles.count}>{primary.value ?? ' '}</Text>
-            <Text style={styles.meta}>{primary.label}</Text>
-          </View>
-
-          {secondary.onPress ? (
-            <PressScale
-              accessibilityRole="button"
-              accessibilityLabel={secondary.accessibilityLabel}
-              scale={Press.iconScale}
-              hitSlop={12}
-              onPress={secondary.onPress}
-              style={styles.secondary}>
-              <Text style={styles.secondaryText}>{secondary.value ?? ' '}</Text>
-              <View style={styles.secondaryLabel}>
-                <Text style={styles.meta}>{secondary.label}</Text>
-                <Feather name="chevron-right" size={T.chevronSize} color={Colors.textMuted} />
-              </View>
-            </PressScale>
-          ) : (
-            <View style={styles.secondary}>
-              <Text style={styles.secondaryText}>{secondary.value ?? ' '}</Text>
-              <Text style={styles.meta}>{secondary.label}</Text>
+        {quiet ? (
+          <View style={styles.numbers}>
+            <View style={styles.stats}>
+              <Stat stat={primary} />
+              <Stat stat={secondary} />
             </View>
-          )}
-        </View>
+            <GlassButton
+              label={actionLabel}
+              icon="image"
+              accessibilityLabel={actionLabel}
+              onPress={onAction}
+            />
+          </View>
+        ) : (
+          <>
+            <View style={styles.numbers}>
+              <View>
+                <Text style={styles.count}>{primary.value ?? ' '}</Text>
+                <Text style={styles.meta}>{primary.label}</Text>
+              </View>
 
-        <PillButton label={actionLabel} onPress={onAction} style={styles.action} />
+              {secondary.onPress ? (
+                <PressScale
+                  accessibilityRole="button"
+                  accessibilityLabel={secondary.accessibilityLabel}
+                  scale={Press.iconScale}
+                  hitSlop={12}
+                  onPress={secondary.onPress}
+                  style={styles.secondary}>
+                  <Text style={styles.secondaryText}>{secondary.value ?? ' '}</Text>
+                  <View style={styles.secondaryLabel}>
+                    <Text style={styles.meta}>{secondary.label}</Text>
+                    <Feather name="chevron-right" size={T.chevronSize} color={Colors.textMuted} />
+                  </View>
+                </PressScale>
+              ) : (
+                <View style={styles.secondary}>
+                  <Text style={styles.secondaryText}>{secondary.value ?? ' '}</Text>
+                  <Text style={styles.meta}>{secondary.label}</Text>
+                </View>
+              )}
+            </View>
+
+            <PillButton label={actionLabel} onPress={onAction} style={styles.action} />
+          </>
+        )}
       </View>
     </Pressable>
+  );
+}
+
+/** A number over its label, at the countdown's size — the quiet hero's counts. */
+function Stat({ stat }: { stat: HeroStat }) {
+  return (
+    <View>
+      <Text style={styles.secondaryText}>{stat.value ?? ' '}</Text>
+      <Text style={styles.meta}>{stat.label}</Text>
+    </View>
   );
 }
 
@@ -225,6 +260,11 @@ const styles = StyleSheet.create({
   },
   secondary: {
     alignItems: 'flex-end',
+  },
+  stats: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: T.statsGap,
   },
   secondaryText: {
     ...Typography.heroCountdown,

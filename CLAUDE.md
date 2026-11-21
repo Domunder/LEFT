@@ -465,7 +465,9 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   countdown — a tap opens the developing state and the host's "develop
   now" — and "Open camera"), or else **the last developed one until the
   next one starts** (the user, same day; a moment in setup does not take
-  it): its album's first photo, "Developed", the counts, "Open album".
+  it): its album's first photo, "Developed", the counts side by side and a
+  small glass "Open album" capsule beside them — not the full-width pill,
+  which stuck out (the user); a tap anywhere on the photo opens it too.
   Without a photo of its own it shows **an unblurred sample as a mock
   picture** ("for now", the user) — no "Sample" tag on the hero. Every other moment is a `MomentRow`
   (`moment-row.tsx`) on the page: name, "42 photos · 18 people", when

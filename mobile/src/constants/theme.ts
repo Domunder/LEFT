@@ -1287,6 +1287,8 @@ export const Films = {
     capsuleHeight: 26,
     capsulePaddingX: 10,
     capsuleDot: 7,
+    /** Between the two counts of a quiet hero ("212 photos   6 people"). */
+    statsGap: 22,
     /** The chevron after "until it develops". */
     chevronSize: 12,
     chevronGap: 2,

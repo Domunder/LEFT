@@ -380,6 +380,7 @@ export default function FilmsScreen() {
               }}
               actionLabel="Open album"
               onAction={() => router.push(album)}
+              quiet
             />
           );
         }
