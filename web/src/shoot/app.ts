@@ -163,13 +163,7 @@ export async function start() {
   }
   // The app first; the browser only on request. A guest who already joined
   // here went straight back in above.
-  if (isAndroid()) openJoin();
-  else show('get-app');
-}
-
-/** Google Play has no listing yet, so Android has nothing to download: straight to the web camera. */
-function isAndroid() {
-  return /android/i.test(navigator.userAgent);
+  show('get-app');
 }
 
 function openJoin() {
@@ -181,8 +175,6 @@ function openJoin() {
 function setUpGetApp() {
   $('use-browser').addEventListener('click', openJoin);
   $('back-to-app').addEventListener('click', () => show('get-app'));
-  // Without a store listing "get the app" would lead nowhere.
-  $('note-app').hidden = isAndroid();
 }
 
 let showJoin = () => undefined as void;

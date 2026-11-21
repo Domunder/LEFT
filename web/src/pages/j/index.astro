@@ -13,8 +13,8 @@
  *    web camera with a note that it is limited — a name, then the camera, with
  *    the same roll, look and reveal as the app, all enforced by the server
  *    (`src/shoot/api.ts`). After the reveal the same link is the album. A guest
- *    who already joined in this browser goes straight back in. Android skips
- *    the gate while Google Play has no listing (nothing to download).
+ *    who already joined in this browser goes straight back in. Android sees
+ *    it too ("Coming soon to Google Play" until the listing exists).
  *
  * Everything below is one screen at a time, switched by `data-view` on
  * `.shoot` from `src/shoot/app.ts`. Screens carry the states the app's do:
@@ -65,7 +65,7 @@ import '../../styles/shoot.css';
         </p>
         <p class="browser-note" id="browser-note">
           <b>The browser version is limited.</b> No reminders when the film is developed, simpler
-          photos, and it may stop when you leave this page.<span id="note-app"> For the full experience,{' '}
+          photos, and it may stop when you leave this page.<span> For the full experience,{' '}
           <button class="inline-link" id="back-to-app" type="button">get the app</button>.</span>
         </p>
         <label class="field">

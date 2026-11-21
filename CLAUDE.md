@@ -544,7 +544,8 @@ cannot UPDATE a photo row or DELETE a roster row — `create_event()`,
   the name form then carries a note that the browser version is limited,
   with a link back. "Open in LEFT" is gone (universal links and the App
   Clip's card cover it). A guest who already joined in that browser goes
-  straight back in; Android skips the gate while Google Play has no listing.
+  straight back in. Android gets the same screen ("Coming soon to Google
+  Play" until `SITE.playStoreUrl` is set).
 - **Same server doors, no migration:** anonymous sign-in, `join_event()`,
   `claim_shot()`, the pinned storage paths, `mark_photo_uploaded()`, RLS for
   the reveal. A door that changes for the app changes in `web/src/shoot/api.ts`
