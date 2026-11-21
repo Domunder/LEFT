@@ -1269,9 +1269,10 @@ export const Films = {
   },
 
   /**
-   * 16 · the running moment, full-bleed from the screen's top edge: its
-   * latest photo, "Moments" and the buttons over it, the roll, the countdown
-   * and "Open camera", fading into the page.
+   * 16 · the moment in the spotlight, full-bleed from the screen's top edge:
+   * the running one, or the last developed one until the next starts. Its
+   * photo, "Moments" and the buttons over it, two numbers and one action,
+   * fading into the page.
    */
   hero: {
     /** Of the window's height. */
@@ -1291,8 +1292,6 @@ export const Films = {
     chevronGap: 2,
     /** The slow drift over the photo: scale at rest -> scale at the far end, and back. */
     drift: { from: 1.02, to: 1.1, ms: 14000 },
-    /** A sample stands in until the viewer has shot: blurred into atmosphere, never a photo. */
-    sampleBlur: 40,
     fadeMs: 320,
     shade: {
       colors: [

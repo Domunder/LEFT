@@ -14,9 +14,11 @@
  *    with the join capsule on it — and that stack blurred into the backdrop.
  *    This replaces the artboard's centred empty state.
  *  - Otherwise (redesigned 2026-11-21, the user, replacing the cards of
- *    2026-11-16): the first running moment full-bleed from the top edge
- *    (`MomentHero` — its latest photo, the roll, the countdown, "Open
- *    camera"), with "Moments" and the buttons floating over it; then every
+ *    2026-11-16): one moment full-bleed from the top edge (`MomentHero`),
+ *    with "Moments" and the buttons floating over it — the first running
+ *    one (its latest photo, the roll, the countdown, "Open camera"), or else
+ *    the last developed one until the next starts (its album's first photo,
+ *    the counts, "Open album"); a mock picture where there is none. Then every
  *    other moment as a row on the page (`MomentRow` — name, counts, when, and
  *    a small stack of prints with a glass "+N"), a hairline between rows, the
  *    developed ones under "Developed". No cards, no borders. A developed
@@ -280,7 +282,17 @@ export default function FilmsScreen() {
     const phases = new Map<string, FilmPhase>(
       events.map((event) => [event.id, filmPhase(event, now)]),
     );
-    const hero = events.find((event) => phases.get(event.id) === 'live');
+    // The spotlight: a running moment, or else the last one developed — it stays
+    // there until the next one starts (the user, 2026-11-21). A moment still in
+    // setup has not started, so it does not take it.
+    const live = events.find((event) => phases.get(event.id) === 'live');
+    const lastDeveloped = events
+      .filter((event) => phases.get(event.id) === 'developed')
+      .reduce<EventSummary | undefined>(
+        (latest, event) => (!latest || event.ends_at > latest.ends_at ? event : latest),
+        undefined,
+      );
+    const hero = live ?? lastDeveloped;
     const rest = events.filter((event) => event !== hero);
     // Whatever is still coming or running first, then the developed ones under their label.
     const open = rest.filter((event) => phases.get(event.id) !== 'developed');
@@ -345,25 +357,57 @@ export default function FilmsScreen() {
 
       if (item.kind === 'hero') {
         const photo = cover?.uris[0];
+        const common = {
+          title: event.name,
+          photo,
+          // Only once the covers are known, so a real photo never follows a mock.
+          sample: cover && !photo ? samplesFor(event.id, 1)[0] : undefined,
+          tint: tintFor(event.id)[0],
+          onLongPress: menu,
+        };
+
+        if (developed) {
+          const photos = cover?.photoCount ?? event.shotsTaken;
+          return (
+            <MomentHero
+              {...common}
+              status="Developed"
+              live={false}
+              primary={{ value: String(photos), label: photos === 1 ? 'photo' : 'photos' }}
+              secondary={{
+                value: String(event.memberCount),
+                label: event.memberCount === 1 ? 'person' : 'people',
+              }}
+              actionLabel="Open album"
+              onAction={() => router.push(album)}
+            />
+          );
+        }
+
         return (
           <MomentHero
-            title={event.name}
-            photo={photo}
-            // Only once the covers are known, so a real photo never follows a sample.
-            sample={cover && !photo ? samplesFor(event.id, 1)[0] : undefined}
-            tint={tintFor(event.id)[0]}
-            shotsLeft={
-              cover === undefined
-                ? undefined
-                : event.roll_size === null
-                  ? null
-                  : Math.max(0, event.roll_size - own)
-            }
-            countdown={countdownOf(event, now)}
+            {...common}
+            status="Live now"
+            live
+            primary={{
+              // Frames left on the viewer's roll, once their own count is known.
+              value:
+                cover === undefined
+                  ? undefined
+                  : event.roll_size === null
+                    ? '∞'
+                    : String(Math.max(0, event.roll_size - own)),
+              label: event.roll_size === null ? 'unlimited roll' : 'shots left',
+            }}
+            secondary={{
+              value: countdownOf(event, now),
+              label: 'until it develops',
+              // The way to the developing state and the host's "develop now".
+              onPress: () => router.push(album),
+              accessibilityLabel: `${countdownOf(event, now)} until it develops. See how the film is doing`,
+            }}
             actionLabel={rollEmpty ? 'See your film' : 'Open camera'}
             onAction={open}
-            onPressCountdown={() => router.push(album)}
-            onLongPress={menu}
           />
         );
       }

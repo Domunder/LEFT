@@ -458,12 +458,16 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
 - **The library: the running moment full-bleed, then rows** (2026-11-21,
   the user, from mockups, replacing the compact cards of 2026-11-16, which
   replaced the full-screen carousel of 2026-11-15 — do not go back to
-  either). The first live moment is `MomentHero` (`moment-hero.tsx`): from the
-  screen's top edge, its latest own photo drifting slowly (a blurred sample
-  before the first shot), "Moments" and the buttons floating over it, "Live
-  now", the name, the shots left, the countdown (a tap opens the developing
-  state and the host's "develop now") and "Open camera", fading into the
-  page — no card, no border. Every other moment is a `MomentRow`
+  either). One moment is in the spotlight, `MomentHero` (`moment-hero.tsx`),
+  from the screen's top edge with "Moments" and the buttons floating over it,
+  fading into the page — no card, no border: **the first live moment**
+  (its latest own photo drifting slowly, "Live now", the shots left, the
+  countdown — a tap opens the developing state and the host's "develop
+  now" — and "Open camera"), or else **the last developed one until the
+  next one starts** (the user, same day; a moment in setup does not take
+  it): its album's first photo, "Developed", the counts, "Open album".
+  Without a photo of its own it shows **an unblurred sample as a mock
+  picture** ("for now", the user) — no "Sample" tag on the hero. Every other moment is a `MomentRow`
   (`moment-row.tsx`) on the page: name, "42 photos · 18 people", when
   ("October", "01d 23h left", "Not started"), and a small stack of up to
   three prints (`STACK_SIZE`) **without a white frame** (the user), with a

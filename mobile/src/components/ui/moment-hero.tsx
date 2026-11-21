@@ -1,15 +1,17 @@
 /**
- * The running moment at the top of the library (16), full-bleed from the
- * screen's top edge (2026-11-21, the user, replacing the card it had in the
- * list): the viewer's latest photo, slowly drifting, with the roll, the
- * countdown and "Open camera" over it, fading into the page at its foot.
+ * The moment in the spotlight at the top of the library (16), full-bleed from
+ * the screen's top edge (2026-11-21, the user, replacing the card it had in
+ * the list). A running moment: the viewer's latest photo, slowly drifting,
+ * with the roll, the countdown and "Open camera" over it. Otherwise the last
+ * developed one, until the next one starts: its album's first photo, the
+ * counts and "Open album". It fades into the page at its foot.
  *
  * The screen's own header ("Moments", the buttons) floats over its top, which
  * the shade darkens for it. There is no border and no card: where the photo
  * ends the page begins.
  *
- * Before the viewer has shot, a sample stands in, blurred past recognition —
- * atmosphere, never a picture to be taken for the group's own.
+ * Without a photo of its own a sample stands in, unblurred (the user,
+ * 2026-11-21: "a mock picture for now").
  *
  * Purely presentational: the numbers and where a tap goes are the caller's.
  */
@@ -44,21 +46,32 @@ export function heroHeight(windowHeight: number): number {
   return Math.max(T.minHeight, Math.round(windowHeight * T.heightRatio));
 }
 
+/** One of the two numbers over the photo: "17" over "shots left". */
+export type HeroStat = {
+  /** Undefined while it is not known yet: the line keeps its height. */
+  value: string | undefined;
+  label: string;
+  /** Makes the number a target of its own, with a chevron after its label. */
+  onPress?: () => void;
+  accessibilityLabel?: string;
+};
+
 type MomentHeroProps = {
   title: string;
-  /** The viewer's latest photo; without one, `sample` stands in, blurred. */
+  /** "Live now" with a green dot, or "Developed". */
+  status: string;
+  live: boolean;
+  /** The moment's photo; without one, `sample` stands in. */
   photo?: string;
   sample?: ImageSource;
   /** Drawn under the photo while it loads. */
   tint: string;
-  /** Frames left on the viewer's roll; null = unlimited, undefined = not known yet. */
-  shotsLeft: number | null | undefined;
-  /** "01d 23h" — the countdown's two largest units. */
-  countdown: string;
+  /** Large, bottom left. */
+  primary: HeroStat;
+  /** Smaller, bottom right. */
+  secondary: HeroStat;
   actionLabel: string;
   onAction: () => void;
-  /** The countdown: the way to the developing state (and the host's "develop now"). */
-  onPressCountdown: () => void;
   onLongPress: () => void;
 };
 
@@ -67,11 +80,12 @@ export function MomentHero({
   photo,
   sample,
   tint,
-  shotsLeft,
-  countdown,
+  status,
+  live,
+  primary,
+  secondary,
   actionLabel,
   onAction,
-  onPressCountdown,
   onLongPress,
 }: MomentHeroProps) {
   const { height } = useWindowDimensions();
@@ -102,7 +116,7 @@ export function MomentHero({
   return (
     <Pressable
       accessibilityRole="summary"
-      accessibilityLabel={`${title}, live now`}
+      accessibilityLabel={`${title}, ${status}`}
       accessibilityActions={[{ name: 'longpress', label: 'More' }]}
       onAccessibilityAction={onLongPress}
       onLongPress={onLongPress}
@@ -114,7 +128,6 @@ export function MomentHero({
             source={source}
             style={StyleSheet.absoluteFill}
             contentFit="cover"
-            blurRadius={photo ? 0 : T.sampleBlur}
             transition={T.fadeMs}
           />
         </Animated.View>
@@ -128,8 +141,8 @@ export function MomentHero({
 
       <View style={styles.body}>
         <Glass radius={T.capsuleHeight / 2} style={styles.capsule}>
-          <View style={styles.dot} />
-          <Text style={styles.capsuleText}>Live now</Text>
+          {live ? <View style={styles.dot} /> : null}
+          <Text style={styles.capsuleText}>{status}</Text>
         </Glass>
 
         <Display size="xs" numberOfLines={2} style={styles.title}>
@@ -138,25 +151,30 @@ export function MomentHero({
 
         <View style={styles.numbers}>
           <View>
-            <Text style={styles.count}>
-              {shotsLeft === undefined ? ' ' : shotsLeft === null ? '∞' : shotsLeft}
-            </Text>
-            <Text style={styles.meta}>{shotsLeft === null ? 'unlimited roll' : 'shots left'}</Text>
+            <Text style={styles.count}>{primary.value ?? ' '}</Text>
+            <Text style={styles.meta}>{primary.label}</Text>
           </View>
 
-          <PressScale
-            accessibilityRole="button"
-            accessibilityLabel={`${countdown} until it develops. See how the film is doing`}
-            scale={Press.iconScale}
-            hitSlop={12}
-            onPress={onPressCountdown}
-            style={styles.countdown}>
-            <Text style={styles.countdownText}>{countdown}</Text>
-            <View style={styles.countdownLabel}>
-              <Text style={styles.meta}>until it develops</Text>
-              <Feather name="chevron-right" size={T.chevronSize} color={Colors.textMuted} />
+          {secondary.onPress ? (
+            <PressScale
+              accessibilityRole="button"
+              accessibilityLabel={secondary.accessibilityLabel}
+              scale={Press.iconScale}
+              hitSlop={12}
+              onPress={secondary.onPress}
+              style={styles.secondary}>
+              <Text style={styles.secondaryText}>{secondary.value ?? ' '}</Text>
+              <View style={styles.secondaryLabel}>
+                <Text style={styles.meta}>{secondary.label}</Text>
+                <Feather name="chevron-right" size={T.chevronSize} color={Colors.textMuted} />
+              </View>
+            </PressScale>
+          ) : (
+            <View style={styles.secondary}>
+              <Text style={styles.secondaryText}>{secondary.value ?? ' '}</Text>
+              <Text style={styles.meta}>{secondary.label}</Text>
             </View>
-          </PressScale>
+          )}
         </View>
 
         <PillButton label={actionLabel} onPress={onAction} style={styles.action} />
@@ -205,14 +223,14 @@ const styles = StyleSheet.create({
     ...Typography.heroCount,
     color: Colors.text,
   },
-  countdown: {
+  secondary: {
     alignItems: 'flex-end',
   },
-  countdownText: {
+  secondaryText: {
     ...Typography.heroCountdown,
     color: Colors.text,
   },
-  countdownLabel: {
+  secondaryLabel: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: T.chevronGap,
