@@ -359,10 +359,28 @@ export const Typography = {
     fontSize: 12,
   } as TextStyle,
 
-  /** "+39" on the last tile of a moment's photo strip (16). */
-  stripMore: {
-    fontFamily: FontFamily.semibold,
-    fontSize: 15,
+  /** "+209" on the glass badge of a moment's print stack (16). */
+  stackBadge: {
+    fontFamily: FontFamily.numeric,
+    fontSize: 13,
+    fontVariant: ['tabular-nums'],
+  } as TextStyle,
+
+  /** 16 · the "17" on the running moment's hero — the roll, read at a glance. */
+  heroCount: {
+    fontFamily: FontFamily.numeric,
+    fontSize: 44,
+    lineHeight: 46,
+    letterSpacing: -0.5,
+    fontVariant: ['tabular-nums'],
+  } as TextStyle,
+
+  /** 16 · the hero's countdown, "01d 23h". */
+  heroCountdown: {
+    fontFamily: FontFamily.numeric,
+    fontSize: 22,
+    letterSpacing: -0.2,
+    fontVariant: ['tabular-nums'],
   } as TextStyle,
 
   /**

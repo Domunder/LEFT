@@ -1258,47 +1258,82 @@ export const Films = {
   },
 
   /**
-   * 16 · the list — one compact card per moment (redesigned 2026-11-16,
-   * replacing the full-screen carousel: its covers were thumbnails blown up to
-   * the whole screen, and only one moment fitted).
+   * 16 · the list (redesigned 2026-11-21, the user, replacing the cards of
+   * 2026-11-16): no cards, rows on the page with a hairline between them.
    */
   list: {
-    paddingX: 16,
     paddingBottom: 32,
-    /** Between cards. */
-    gap: 12,
+    /** The "Developed" label above its rows. */
+    sectionPaddingTop: 14,
+    sectionPaddingBottom: 2,
   },
 
-  /** 16 · one moment's card: title, counts, status, and a strip of its photos. */
-  moment: {
-    radius: 22,
-    padding: 14,
-    pressScale: 0.98,
-    /** Title -> the counts under it. */
-    titleGap: 5,
-    /** Between "42 photos" and "18 people", and an icon and its number. */
-    metaGap: 12,
-    metaIconGap: 5,
-    metaIconSize: 12,
-    /** The status capsule, top right. */
-    capsuleHeight: 24,
+  /**
+   * 16 · the running moment, full-bleed from the screen's top edge: its
+   * latest photo, "Moments" and the buttons over it, the roll, the countdown
+   * and "Open camera", fading into the page.
+   */
+  hero: {
+    /** Of the window's height. */
+    heightRatio: 0.6,
+    minHeight: 440,
+    paddingX: 20,
+    paddingBottom: 18,
+    /** "Live now" -> the name -> the numbers -> the button. */
+    capsuleGap: 10,
+    titleGap: 10,
+    actionGap: 16,
+    capsuleHeight: 26,
     capsulePaddingX: 10,
-    capsuleGap: 6,
+    capsuleDot: 7,
+    /** The chevron after "until it develops". */
+    chevronSize: 12,
+    chevronGap: 2,
+    /** The slow drift over the photo: scale at rest -> scale at the far end, and back. */
+    drift: { from: 1.02, to: 1.1, ms: 14000 },
+    /** A sample stands in until the viewer has shot: blurred into atmosphere, never a photo. */
+    sampleBlur: 40,
+    fadeMs: 320,
+    shade: {
+      colors: [
+        'rgba(16,16,16,0.55)',
+        'rgba(16,16,16,0)',
+        'rgba(16,16,16,0)',
+        'rgba(16,16,16,0.78)',
+        '#101010',
+      ],
+      locations: [0, 0.24, 0.42, 0.74, 1],
+    },
+  },
+
+  /** 16 · one moment's row: name, counts, when, and a small stack of its prints. */
+  row: {
+    paddingX: 20,
+    paddingY: 14,
+    gap: 14,
+    pressScale: 0.98,
+    /** Name -> counts -> when. */
+    lineGap: 4,
     liveDot: 6,
-    /** Header -> the strip of photos. */
-    stripGap: 12,
-    tileGap: 6,
-    tileRadius: 10,
-    /** A print's proportions, upright. */
-    tileAspect: 3 / 4,
-    /** The last tile when there are more photos than tiles: blurred, dimmed, counted. */
-    moreBlur: 14,
-    moreDim: 'rgba(8,8,10,0.45)',
-    /** An empty frame, where no photo exists yet. */
-    emptyIconSize: 16,
-    fadeMs: 220,
-    /** The "Sample" tag on the first tile of a strip of stand-in pictures. */
-    sampleTag: { inset: 5, height: 18, paddingX: 7 },
+    liveDotGap: 6,
+    /** The stack's box, and its three prints, back left, back right, front. */
+    stack: {
+      width: 118,
+      height: 100,
+      prints: [
+        { width: 64, height: 84, left: 4, top: 10, rotate: -9 },
+        { width: 64, height: 84, left: 50, top: 6, rotate: 8 },
+        { width: 68, height: 88, left: 26, top: 4, rotate: -1 },
+      ],
+      radius: 7,
+      /** No border (the user): depth comes from the shadow and the dimmer prints behind. */
+      behindDim: 'rgba(8,8,10,0.3)',
+      shadow: { color: '#000', opacity: 0.55, radius: 10, offsetY: 6, elevation: 8 },
+      emptyIconSize: 16,
+      fadeMs: 220,
+    },
+    /** The glass "+209" (or "Sample") on the stack's corner. */
+    badge: { height: 24, paddingX: 9, right: -2, bottom: 2 },
   },
 
   /**

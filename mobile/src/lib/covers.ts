@@ -18,14 +18,14 @@ import { getSupabase } from './supabase';
 import { localShots } from './upload-queue';
 
 export type FilmCover = {
-  /** Up to `STRIP_SIZE`: the album's first photos, or the caller's own latest before the reveal. */
+  /** Up to `STACK_SIZE`: the album's first photos, or the caller's own latest before the reveal. */
   uris: string[];
   /** Photos the caller can see: their own before the reveal, everyone's after. */
   photoCount: number;
 };
 
-/** How many photos a card's strip shows. */
-export const STRIP_SIZE = 4;
+/** How many prints a moment's stack shows (16). */
+export const STACK_SIZE = 3;
 
 async function coverRow(event: Event): Promise<{ thumbPaths: string[]; count: number }> {
   const developed = isDeveloped(event);
@@ -37,7 +37,7 @@ async function coverRow(event: Event): Promise<{ thumbPaths: string[]; count: nu
     // A developed strip opens the way the album does, on its first photos; a
     // running one shows what the caller shot last.
     .order('taken_at', { ascending: developed })
-    .limit(STRIP_SIZE);
+    .limit(STACK_SIZE);
   if (error) throw error;
 
   const thumbPaths = (data ?? []).flatMap((row) => (row.thumb_path ? [row.thumb_path] : []));
@@ -74,7 +74,7 @@ export async function loadCovers(events: Event[]): Promise<Map<string, FilmCover
     });
 
     covers.set(event.id, {
-      uris: [...queued.map((shot) => shot.thumbUri), ...uploaded].slice(0, STRIP_SIZE),
+      uris: [...queued.map((shot) => shot.thumbUri), ...uploaded].slice(0, STACK_SIZE),
       photoCount: count + queued.length,
     });
   });

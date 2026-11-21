@@ -455,22 +455,30 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   real progressive blur needs a masked view (native, new build). The list
   scrolls up under the "Moments" header and fades out behind it, still
   faintly visible. **Not seen on a device.**
-- **The library is a list of compact cards** (decided
-  2026-11-16 by the user, replacing the full-screen carousel of photo stacks
-  of 2026-11-15 — thumbnails blown up to the screen looked soft and only one
-  moment fitted; do not go back). Each moment is a `MomentCard`
-  (`moment-card.tsx`): name, "42 photos · 18 people", a status capsule and a
-  strip of four photos whose last tile is blurred and reads "+N" when there
-  are more. A developed moment shows its album's first photos; one that is
-  not shows **the viewer's own latest frames** (RLS returns nothing else), or
-  empty frames — `lib/covers.ts`. The photo count before the reveal is the
+- **The library: the running moment full-bleed, then rows** (2026-11-21,
+  the user, from mockups, replacing the compact cards of 2026-11-16, which
+  replaced the full-screen carousel of 2026-11-15 — do not go back to
+  either). The first live moment is `MomentHero` (`moment-hero.tsx`): from the
+  screen's top edge, its latest own photo drifting slowly (a blurred sample
+  before the first shot), "Moments" and the buttons floating over it, "Live
+  now", the name, the shots left, the countdown (a tap opens the developing
+  state and the host's "develop now") and "Open camera", fading into the
+  page — no card, no border. Every other moment is a `MomentRow`
+  (`moment-row.tsx`) on the page: name, "42 photos · 18 people", when
+  ("October", "01d 23h left", "Not started"), and a small stack of up to
+  three prints (`STACK_SIZE`) **without a white frame** (the user), with a
+  **glass** "+N" badge (or "Sample"); a hairline between rows, the developed
+  ones under "Developed". Prints are the album's first photos once
+  developed, **the viewer's own latest frames** before (RLS returns nothing
+  else) — `lib/covers.ts`. The photo count before the reveal is the
   roster's `shots_taken`, summed (`listMyEventSummaries`). A running moment
-  opens its camera, or the album's developing state once the viewer's roll is
-  used up; its status capsule opens the developing state (the host's "develop
-  now") and its strip "Your shots". **With no moments** the screen is
-  the one large `NewMomentCard` stack of sample prints ("Start your moment",
-  join capsule) — the only place the stock pictures (`constants/samples.ts`)
-  and `PhotoStack` are still used. **Not seen on a device.**
+  opens its camera, or the developing state once the viewer's roll is used
+  up. A second running moment is a row and loses the old card's separate
+  capsule and strip targets. The top `ScrollEdge` fades in only once the
+  hero has scrolled away. **With no moments** the screen is the one large
+  `NewMomentCard` stack of sample prints ("Start your moment", join
+  capsule) — the only place the stock pictures (`constants/samples.ts`) and
+  `PhotoStack` are still used. **Not seen on a device.**
 - **04 Event End is one screen, no popovers** (decided 2026-11-15): the
   question, then the answer written large (day, time, "developed in 5 days"),
   and two wheels straight on the screen, no card — `DayStrip` (days sideways, the centred

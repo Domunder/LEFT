@@ -13,21 +13,27 @@
  *  - No moments yet: one large stack of sample prints, "Start your moment",
  *    with the join capsule on it — and that stack blurred into the backdrop.
  *    This replaces the artboard's centred empty state.
- *  - Otherwise a vertical list of compact cards (`MomentCard`): name, photo
- *    and people counts, status, and a strip of four photos whose last tile is
- *    blurred and reads "+N" when there are more. A developed moment shows its
- *    album; one that is not shows the viewer's own frames so far. With
- *    nothing to show, the strip holds sample pictures tagged "Sample". Starting and joining are the header's plus and people buttons.
+ *  - Otherwise (redesigned 2026-11-21, the user, replacing the cards of
+ *    2026-11-16): the first running moment full-bleed from the top edge
+ *    (`MomentHero` — its latest photo, the roll, the countdown, "Open
+ *    camera"), with "Moments" and the buttons floating over it; then every
+ *    other moment as a row on the page (`MomentRow` — name, counts, when, and
+ *    a small stack of prints with a glass "+N"), a hairline between rows, the
+ *    developed ones under "Developed". No cards, no borders. A developed
+ *    moment's prints are its album's; one that is not shows the viewer's own
+ *    frames so far, or samples tagged "Sample". Starting and joining are the
+ *    header's plus and people buttons.
  *
  * Where a tap goes: a running moment opens its camera — unless the viewer's
  * roll is used up, then the album's "developing" state; a finished one opens
- * its album. On a running moment the status capsule opens the developing
- * state (the host's "develop now" lives there) and the strip "Your shots".
+ * its album. The hero's countdown opens the developing state (the host's
+ * "develop now" lives there). A held moment opens its menu.
  *
  * Other deviations from the artboard, all flagged in CLAUDE.md:
  *  - the title is "Moments" (was "Your Films", then "Your Moments")
- *  - the list blurs and dissolves into the page at its top edge and at the
- *    very bottom of the screen (`ScrollEdge`) instead of being cut off there
+ *  - the list dissolves into the page under the header and at the very
+ *    bottom of the screen (`ScrollEdge`) instead of being cut off there; over
+ *    the hero the top edge stays clear until the hero has scrolled away
  *  - the header carries a third control, Join, between the gear and the plus
  *  - a moment reads three phases (not started / live with a countdown /
  *    developed) where the artboard draws two
@@ -41,25 +47,40 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CircleIconButton } from '@/components/ui/circle-back-button';
 import { NewMomentCard } from '@/components/ui/film-poster';
 import { GlassButton } from '@/components/ui/glass';
 import { KeepYourFilm } from '@/components/ui/keep-your-film';
-import { MomentCard } from '@/components/ui/moment-card';
+import { heroHeight, MomentHero } from '@/components/ui/moment-hero';
+import { MomentRow } from '@/components/ui/moment-row';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { ScrollEdge } from '@/components/ui/scroll-edge';
 import { Spinner } from '@/components/ui/spinner';
-import { Body, Display } from '@/components/ui/typography';
+import { Body, Display, Label } from '@/components/ui/typography';
 import { samplesFor } from '@/constants/samples';
 import { Colors, Films, Glass, ScrollEdge as Edge } from '@/constants/theme';
 import { getSession, isAnonymous } from '@/lib/auth';
-import { loadCovers, STRIP_SIZE, type FilmCover } from '@/lib/covers';
+import { loadCovers, STACK_SIZE, type FilmCover } from '@/lib/covers';
+import { countdownParts } from '@/lib/event-end';
 import { isDeveloped, listMyEventSummaries, type EventSummary } from '@/lib/events';
-import { destinationFor, filmPhase, statusLabel, tickIntervalMs } from '@/lib/film-status';
+import {
+  destinationFor,
+  filmPhase,
+  statusLabel,
+  tickIntervalMs,
+  type FilmPhase,
+} from '@/lib/film-status';
 import { tintFor } from '@/lib/film-tint';
 import { hiddenMoments } from '@/lib/hidden-moments';
 import { useMomentActions } from '@/hooks/use-moment-actions';
@@ -69,15 +90,36 @@ import { dismissPrompt, isPromptDismissed } from '@/lib/prompt-dismissal';
 const EMPTY: EventSummary[] = [];
 const NO_COVERS = new Map<string, FilmCover>();
 const NO_PHOTOS: readonly string[] = [];
-const TOP_ONLY = ['top'] as const;
+/** The screen runs to the top edge itself: the hero is full-bleed, the header pads the inset. */
+const NO_EDGES = [] as const;
+
+/** What the list draws, in order: the hero, the guest's prompt, a section label, rows. */
+type ListItem =
+  | { kind: 'hero'; event: EventSummary }
+  | { kind: 'prompt' }
+  | { kind: 'label'; text: string }
+  | { kind: 'row'; event: EventSummary; divided: boolean };
+
+/** "October", or "October 2025" for another year — when a developed moment was. */
+function monthOf(iso: string, now: Date): string {
+  const date = new Date(iso);
+  return date.toLocaleDateString(undefined, {
+    month: 'long',
+    year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric',
+  });
+}
+
+/** The countdown's two largest units, "01d 23h". */
+function countdownOf(event: EventSummary, now: Date): string {
+  const [first, second] = countdownParts(new Date(event.ends_at), now);
+  return `${first.value}${first.unit} ${second.value}${second.unit}`;
+}
 
 /** Seeds the new-moment stack's samples and tint, the way an event id does. */
 const NEW_SEED = 'new-moment';
 
 type LoadState =
-  | { kind: 'loading' }
-  | { kind: 'ready'; events: EventSummary[] }
-  | { kind: 'error' };
+  { kind: 'loading' } | { kind: 'ready'; events: EventSummary[] } | { kind: 'error' };
 
 export default function FilmsScreen() {
   const router = useRouter();
@@ -142,7 +184,7 @@ export default function FilmsScreen() {
       return () => {
         cancelled = true;
       };
-    }, [load])
+    }, [load]),
   );
 
   const events = useMemo(() => (state.kind === 'ready' ? state.events : EMPTY), [state]);
@@ -209,25 +251,72 @@ export default function FilmsScreen() {
         previous.kind === 'ready'
           ? {
               kind: 'ready',
-              events: previous.events.map((event) => (event.id === id ? { ...event, name } : event)),
+              events: previous.events.map((event) =>
+                event.id === id ? { ...event, name } : event,
+              ),
             }
-          : previous
+          : previous,
       );
     },
     onGone: () => {
       const id = acting.current;
       setState((previous) =>
         previous.kind === 'ready'
-          ? { kind: 'ready', events: previous.events.filter((event) => event.id !== id) }
-          : previous
+          ? {
+              kind: 'ready',
+              events: previous.events.filter((event) => event.id !== id),
+            }
+          : previous,
       );
     },
   });
 
-  // --- one moment's card ---------------------------------------------------
+  // --- the list: the running moment's hero, then rows ---------------------
 
-  const renderMoment = useCallback(
-    ({ item: event }: { item: EventSummary }) => {
+  const ready = state.kind === 'ready';
+  const empty = ready && events.length === 0;
+
+  const items = useMemo((): ListItem[] => {
+    const phases = new Map<string, FilmPhase>(
+      events.map((event) => [event.id, filmPhase(event, now)]),
+    );
+    const hero = events.find((event) => phases.get(event.id) === 'live');
+    const rest = events.filter((event) => event !== hero);
+    // Whatever is still coming or running first, then the developed ones under their label.
+    const open = rest.filter((event) => phases.get(event.id) !== 'developed');
+    const developed = rest.filter((event) => phases.get(event.id) === 'developed');
+
+    const list: ListItem[] = [];
+    if (hero) list.push({ kind: 'hero', event: hero });
+    if (showsPrompt) list.push({ kind: 'prompt' });
+    open.forEach((event, i) => list.push({ kind: 'row', event, divided: i > 0 }));
+    if (developed.length > 0) {
+      list.push({ kind: 'label', text: 'Developed' });
+      developed.forEach((event, i) => list.push({ kind: 'row', event, divided: i > 0 }));
+    }
+    return list;
+  }, [events, now, showsPrompt]);
+
+  const hasHero = items[0]?.kind === 'hero';
+
+  const renderItem = useCallback(
+    ({ item }: { item: ListItem }) => {
+      if (item.kind === 'prompt') {
+        return (
+          <View style={styles.promptList}>
+            <KeepYourFilm onLinked={handleLinked} onDismiss={handleDismiss} />
+          </View>
+        );
+      }
+      if (item.kind === 'label') {
+        return (
+          <Label small style={styles.section}>
+            {item.text}
+          </Label>
+        );
+      }
+
+      const event = item.event;
       const cover = covers.get(event.id);
       const developed = isDeveloped(event, now);
       const phase = filmPhase(event, now);
@@ -237,62 +326,95 @@ export default function FilmsScreen() {
       const own = developed ? 0 : (cover?.photoCount ?? 0);
       const rollEmpty = phase === 'live' && event.roll_size !== null && own >= event.roll_size;
 
-      const album = { pathname: '/(library)/album/[id]', params: { id: event.id } } as const;
+      const album = {
+        pathname: '/(library)/album/[id]',
+        params: { id: event.id },
+      } as const;
+      // Nothing left to shoot: the camera would only say so. Go and wait.
+      const open = () => router.push(rollEmpty ? album : destinationFor(event, user?.id));
+      const menu = () => {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        acting.current = event.id;
+        openMenu({
+          event,
+          isHost: event.host_id === user?.id,
+          photoCount: event.shotsTaken,
+          memberCount: event.memberCount,
+        });
+      };
+
+      if (item.kind === 'hero') {
+        const photo = cover?.uris[0];
+        return (
+          <MomentHero
+            title={event.name}
+            photo={photo}
+            // Only once the covers are known, so a real photo never follows a sample.
+            sample={cover && !photo ? samplesFor(event.id, 1)[0] : undefined}
+            tint={tintFor(event.id)[0]}
+            shotsLeft={
+              cover === undefined
+                ? undefined
+                : event.roll_size === null
+                  ? null
+                  : Math.max(0, event.roll_size - own)
+            }
+            countdown={countdownOf(event, now)}
+            actionLabel={rollEmpty ? 'See your film' : 'Open camera'}
+            onAction={open}
+            onPressCountdown={() => router.push(album)}
+            onLongPress={menu}
+          />
+        );
+      }
 
       return (
-        <MomentCard
-          title={event.name}
-          status={statusLabel(event, now)}
-          phase={phase}
-          members={event.memberCount}
-          // Everyone's photos once they can be counted; until then the roster's
-          // counters, which is what the album's "developing" state shows too.
-          photoCount={developed ? (cover?.photoCount ?? event.shotsTaken) : event.shotsTaken}
-          photos={cover?.uris ?? NO_PHOTOS}
-          stripCount={cover?.photoCount ?? 0}
-          // Nothing to show yet — nobody has shot, or only others have, and
-          // theirs are hidden until the reveal: stand-ins, tagged as such.
-          // Only once the covers are known, so real photos never follow samples.
-          samples={cover && cover.uris.length === 0 ? samplesFor(event.id, STRIP_SIZE) : undefined}
-          // Nothing left to shoot: the camera would only say so. Go and wait.
-          onPress={() => router.push(rollEmpty ? album : destinationFor(event, user?.id))}
-          onLongPress={() => {
-            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            acting.current = event.id;
-            openMenu({
-              event,
-              isHost: event.host_id === user?.id,
-              photoCount: event.shotsTaken,
-              memberCount: event.memberCount,
-            });
-          }}
-          // A running moment opens its camera; the capsule is the way to its
-          // count, its countdown and the host's "develop now".
-          onPressStatus={phase === 'live' && !rollEmpty ? () => router.push(album) : undefined}
-          // On a running moment the strip is the viewer's own roll so far.
-          onPressPhotos={
-            phase === 'live' && own > 0
-              ? () => router.push({ pathname: '/(capture)/roll', params: { eventId: event.id } })
-              : undefined
-          }
-          photosLabel="Your photos"
-        />
+        <>
+          {item.divided ? <View style={styles.hairline} /> : null}
+          <MomentRow
+            title={event.name}
+            phase={phase}
+            when={developed ? monthOf(event.ends_at, now) : statusLabel(event, now)}
+            members={event.memberCount}
+            // Everyone's photos once they can be counted; until then the roster's
+            // counters, which is what the album's "developing" state shows too.
+            photoCount={developed ? (cover?.photoCount ?? event.shotsTaken) : event.shotsTaken}
+            photos={cover?.uris ?? NO_PHOTOS}
+            stackCount={cover?.photoCount ?? 0}
+            // Nothing to show yet — nobody has shot, or only others have, and
+            // theirs are hidden until the reveal: stand-ins, tagged as such.
+            // Only once the covers are known, so real photos never follow samples.
+            samples={
+              cover && cover.uris.length === 0 ? samplesFor(event.id, STACK_SIZE) : undefined
+            }
+            onPress={open}
+            onLongPress={menu}
+          />
+        </>
       );
     },
-    [covers, now, openMenu, router, user?.id]
+    [covers, handleDismiss, handleLinked, now, openMenu, router, user?.id],
   );
 
-  const ready = state.kind === 'ready';
-  const empty = ready && events.length === 0;
-
-  const prompt = showsPrompt ? (
-    <View style={empty ? styles.promptEmpty : styles.promptList}>
-      <KeepYourFilm onLinked={handleLinked} onDismiss={handleDismiss} />
-    </View>
-  ) : null;
+  /*
+    The top edge's fade is for rows passing under the header. Over the hero it
+    would only darken the photo, so it comes in as the hero leaves.
+  */
+  const { height: windowHeight } = useWindowDimensions();
+  const scrollY = useSharedValue(0);
+  const onScroll = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
+  const fadeFrom = hasHero ? heroHeight(windowHeight) - headerHeight - Edge.top : -1;
+  const topEdge = useAnimatedStyle(() => ({
+    opacity:
+      fadeFrom < 0
+        ? 1
+        : interpolate(scrollY.value, [fadeFrom - Edge.top, fadeFrom], [0, 1], Extrapolation.CLAMP),
+  }));
 
   return (
-    <Screen transparent padded={false} edges={TOP_ONLY}>
+    <Screen transparent padded={false} edges={NO_EDGES}>
       {/* Only the empty state has a picture to be lit by; the list sits on the page's glow. */}
       {empty ? (
         <View style={styles.backdrop} pointerEvents="none">
@@ -309,7 +431,7 @@ export default function FilmsScreen() {
       ) : null}
 
       <View
-        style={styles.header}
+        style={[styles.header, { paddingTop: insets.top }]}
         onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
         <Display size="md">Moments</Display>
 
@@ -359,8 +481,16 @@ export default function FilmsScreen() {
         </View>
       ) : empty ? (
         <>
-          {prompt}
-          <View style={[styles.emptyStack, { paddingBottom: Films.empty.paddingBottom + insets.bottom }]}>
+          {showsPrompt ? (
+            <View style={styles.promptEmpty}>
+              <KeepYourFilm onLinked={handleLinked} onDismiss={handleDismiss} />
+            </View>
+          ) : null}
+          <View
+            style={[
+              styles.emptyStack,
+              { paddingBottom: Films.empty.paddingBottom + insets.bottom },
+            ]}>
             <NewMomentCard
               photos={samplesFor(NEW_SEED)}
               tint={tintFor(NEW_SEED)}
@@ -371,32 +501,33 @@ export default function FilmsScreen() {
           </View>
         </>
       ) : (
+        // From the screen's top edge: the hero starts there, under the header;
+        // without one, the list's padding keeps the first row clear of it.
         <View style={[styles.listArea, { marginTop: -headerHeight }]}>
-          <FlatList
-            data={events}
-            keyExtractor={(event) => event.id}
-            renderItem={renderMoment}
-            ListHeaderComponent={prompt ?? undefined}
-            ItemSeparatorComponent={Separator}
-            contentContainerStyle={[
-              styles.list,
-              {
-                paddingTop: headerHeight + Edge.top - Films.header.gap,
-                paddingBottom: Math.max(Films.list.paddingBottom, Edge.bottom) + insets.bottom,
-              },
-            ]}
+          <Animated.FlatList
+            data={items}
+            keyExtractor={(item) =>
+              item.kind === 'hero' || item.kind === 'row'
+                ? item.event.id
+                : `${item.kind}:${item.kind === 'label' ? item.text : ''}`
+            }
+            renderItem={renderItem}
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            contentContainerStyle={{
+              paddingTop: hasHero ? 0 : headerHeight + Edge.top - Films.header.gap,
+              paddingBottom: Math.max(Films.list.paddingBottom, Edge.bottom) + insets.bottom,
+            }}
             showsVerticalScrollIndicator={false}
           />
-          <ScrollEdge edge="top" inset={headerHeight} />
+          <Animated.View style={[StyleSheet.absoluteFill, topEdge]} pointerEvents="none">
+            <ScrollEdge edge="top" inset={headerHeight} />
+          </Animated.View>
           <ScrollEdge edge="bottom" inset={insets.bottom} />
         </View>
       )}
     </Screen>
   );
-}
-
-function Separator() {
-  return <View style={styles.separator} />;
 }
 
 const styles = StyleSheet.create({
@@ -428,6 +559,7 @@ const styles = StyleSheet.create({
     paddingBottom: Films.prompt.paddingBottom,
   },
   promptList: {
+    paddingHorizontal: Films.prompt.paddingX,
     paddingTop: Films.prompt.paddingTop,
     paddingBottom: Films.prompt.paddingBottom,
   },
@@ -439,16 +571,19 @@ const styles = StyleSheet.create({
   fill: {
     flex: 1,
   },
-  // Starts right under the header, so the top edge has room to dissolve in;
-  // the list's own padding keeps the first card clear of it at rest.
   listArea: {
     flex: 1,
   },
-  list: {
-    paddingHorizontal: Films.list.paddingX,
+  section: {
+    paddingHorizontal: Films.row.paddingX,
+    paddingTop: Films.list.sectionPaddingTop,
+    paddingBottom: Films.list.sectionPaddingBottom,
   },
-  separator: {
-    height: Films.list.gap,
+  // Between two rows, inset to the text: the only line on the screen.
+  hairline: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: Films.row.paddingX,
+    backgroundColor: Colors.hairline,
   },
   centered: {
     flex: 1,
