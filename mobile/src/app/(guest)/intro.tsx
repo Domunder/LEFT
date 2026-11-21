@@ -187,7 +187,12 @@ function RollPage({ event }: { event: Event }) {
   return (
     <>
       <View style={styles.visual}>
-        <MiniCamera look={event.look} rollSize={event.roll_size} width={T.cameraWidth} />
+        <MiniCamera
+          look={event.look}
+          rollSize={event.roll_size}
+          width={T.cameraWidth}
+          cover={event}
+        />
       </View>
       <View style={styles.text}>
         <Text style={styles.numeral} accessibilityLabel={unlimited ? 'Unlimited' : undefined}>
@@ -261,11 +266,11 @@ function MissionsPage({ count }: { count: number }) {
     <>
       <View style={[styles.visual, styles.missionVisual]}>
         <View style={styles.missionCapsule}>
-          <Text style={styles.missionCapsuleText}>Missions 0/{count}</Text>
+          <Text style={styles.missionCapsuleText}>Example</Text>
         </View>
         <View style={styles.missionNote}>
           <Feather name="target" size={T.missionIcon} color={Colors.text} />
-          <Text style={styles.missionNoteText}>Next photo: {EXAMPLE_MISSION}</Text>
+          <Text style={styles.missionNoteText}>{EXAMPLE_MISSION}</Text>
         </View>
       </View>
       <View style={styles.text}>
@@ -273,8 +278,8 @@ function MissionsPage({ count }: { count: number }) {
           Your <Em>missions.</Em>
         </Display>
         <Body small color={Colors.textDim} style={styles.centered}>
-          Up to {count} small photo {count === 1 ? 'challenge' : 'challenges'}, in the camera once
-          it starts. Tap one, and your next photo counts for it.
+          Your missions for this film: {count === 1 ? 'one photo' : `${count} photos`} to take,
+          like this one. They show up in the camera when it starts.
         </Body>
       </View>
     </>

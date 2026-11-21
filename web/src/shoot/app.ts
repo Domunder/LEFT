@@ -695,10 +695,10 @@ function showIntro() {
   const n = event.missions_per_guest;
   $('intro-missions').hidden = n === null;
   if (n !== null) {
-    $('intro-capsule').textContent = `Missions 0/${n}`;
+    $('intro-capsule').textContent = 'Example';
     $('intro-missions-text').textContent =
-      `Up to ${n} small photo ${n === 1 ? 'challenge' : 'challenges'}, in the camera once it starts. ` +
-      'Tap one, and your next photo counts for it.';
+      `Your missions for this film: ${n === 1 ? 'one photo' : `${n} photos`} to take, like this one. ` +
+      'They show up in the camera when it starts.';
   }
 
   // 4 · developed together

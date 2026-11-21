@@ -19,7 +19,8 @@ import UIKit
 
   Differences from the app, on purpose: no "or add some from your phone" (the
   clip cannot import), no "We'll let you know" (the clip has no push), and
-  page 1's picture is the event image as a print, not the app's `MiniCamera`.
+  page 1's picture is a little iPhone with the camera (`PhoneMock`, as the
+  app's `MiniCamera`, 2026-11-21).
 */
 
 /// `GuestIntro` in theme.ts.
@@ -35,7 +36,6 @@ private enum IntroTokens {
   static let numeral: CGFloat = 96
   /// `Typography.endAnswer`.
   static let date: CGFloat = 34
-  static let rollPrintWidth: CGFloat = 150
   static let printWidth: CGFloat = 110
   static let sideScale: CGFloat = 0.82
   static let printGap: CGFloat = 10
@@ -173,11 +173,7 @@ struct IntroScreen: View {
   private var rollPage: some View {
     let unlimited = event.rollSize == nil
     return layout {
-      CoverImage(event: event)
-        .aspectRatio(3 / 4, contentMode: .fit)
-        .frame(maxWidth: IntroTokens.rollPrintWidth)
-        .background(Theme.surfaceSubtle)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+      PhoneMock(event: event)
     } words: {
       Text(unlimited ? "∞" : "\(event.rollSize ?? 0)")
         .font(Fonts.numeral(IntroTokens.numeral))
@@ -226,7 +222,7 @@ struct IntroScreen: View {
   private func missionsPage(_ count: Int) -> some View {
     layout {
       VStack(spacing: IntroTokens.missionGap) {
-        Text("Missions 0/\(count)")
+        Text("Example")
           .font(Fonts.medium(13))
           .monospacedDigit()
           .foregroundStyle(Theme.text)
@@ -236,7 +232,7 @@ struct IntroScreen: View {
         HStack(spacing: 8) {
           Image(systemName: "scope")
             .font(.system(size: 14, weight: .medium))
-          Text("Next photo: \(exampleMission)")
+          Text(exampleMission)
             .font(Fonts.medium(15))
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
@@ -250,7 +246,7 @@ struct IntroScreen: View {
       .accessibilityElement(children: .combine)
     } words: {
       Headline(plain: "Your ", emphasis: "missions.", size: IntroTokens.headline)
-      caption("Up to \(count) small photo \(count == 1 ? "challenge" : "challenges"), in the camera once it starts. Tap one, and your next photo counts for it.")
+      caption("Your missions for this film: \(count == 1 ? "one photo" : "\(count) photos") to take, like this one. They show up in the camera when it starts.")
     }
   }
 
@@ -277,6 +273,87 @@ struct IntroScreen: View {
 }
 
 /// Someone else's print: a stock picture, blurred past recognition and dimmed.
+/// A small iPhone showing the camera, as the app's `MiniCamera` (2026-11-21,
+/// the user): the event image as the viewfinder from the top to the shutter
+/// bar, the counter under the Dynamic Island, a soft fade behind it (no band),
+/// and the last-shot tile, the shutter and the invite tile. A drawing only.
+private struct PhoneMock: View {
+  let event: EventInfo
+  var width: CGFloat = 130
+
+  var body: some View {
+    let height = (width * 2.06).rounded()
+    let outer = width * 0.2
+    let bezel: CGFloat = 5
+    VStack(spacing: 0) {
+      ZStack(alignment: .top) {
+        CoverImage(event: event)
+        LinearGradient(
+          colors: [Color(hex: 0x0A0A0B).opacity(0.55), Color(hex: 0x0A0A0B).opacity(0)],
+          startPoint: .top, endPoint: .bottom
+        )
+        .frame(height: height * 0.28)
+        .frame(maxHeight: .infinity, alignment: .top)
+        Capsule()
+          .fill(Color.black)
+          .frame(width: width * 0.3, height: 9)
+          .padding(.top, 6)
+        Text(event.rollSize.map { "\($0) left" } ?? "∞")
+          .font(Fonts.numeral(13))
+          .monospacedDigit()
+          .foregroundStyle(Theme.text)
+          .padding(.top, 22)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
+      .background(Theme.surfaceSubtle)
+      .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 12, bottomTrailingRadius: 12, style: .continuous))
+
+      HStack {
+        CoverImage(event: event)
+          .frame(width: 22, height: 22)
+          .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        Spacer()
+        Circle()
+          .strokeBorder(Theme.text, lineWidth: 2)
+          .frame(width: 34, height: 34)
+          .overlay(Circle().fill(Theme.text).padding(4.5))
+        Spacer()
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+          .fill(Theme.surfaceSubtle)
+          .frame(width: 22, height: 22)
+          .overlay(
+            Image(systemName: "person.badge.plus")
+              .font(.system(size: 10))
+              .foregroundStyle(Theme.textMuted)
+          )
+      }
+      .padding(.horizontal, 12)
+      .padding(.top, 10)
+      .padding(.bottom, 16)
+    }
+    .overlay(alignment: .bottom) {
+      Capsule().fill(Theme.text.opacity(0.5)).frame(width: 40, height: 3).padding(.bottom, 5)
+    }
+    .background(Theme.bg)
+    .clipShape(RoundedRectangle(cornerRadius: outer - bezel, style: .continuous))
+    .padding(bezel)
+    .background(
+      RoundedRectangle(cornerRadius: outer, style: .continuous)
+        .fill(Color(hex: 0x0A0A0B))
+        .overlay(
+          RoundedRectangle(cornerRadius: outer, style: .continuous)
+            .strokeBorder(Color.white.opacity(0.16), lineWidth: 1.5)
+        )
+    )
+    .frame(width: width, height: height)
+    .accessibilityElement(children: .ignore)
+    .accessibilityLabel(
+      "LEFT's camera on a phone: "
+        + (event.rollSize.map { "\($0) photos left" } ?? "an unlimited roll")
+    )
+  }
+}
+
 private struct HiddenPrint: View {
   let number: Int
   let width: CGFloat

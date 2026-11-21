@@ -1035,9 +1035,9 @@ export const GuestIntro = {
   /** Picture -> text on a page. */
   visualGap: 28,
   /** Every page's picture gets the same height, so the text holds still while paging. */
-  visualHeight: 260,
-  /** Page 1's still of the camera: 200 tall + its shutter row, inside `visualHeight`. */
-  cameraWidth: 150,
+  visualHeight: 272,
+  /** Page 1's little iPhone: 130 wide is 268 tall, inside `visualHeight`. */
+  cameraWidth: 130,
   textGap: 12,
   printWidth: 110,
   /** The others' prints beside the guest's own, smaller. */
@@ -1062,30 +1062,46 @@ export const GuestIntro = {
   footerBottom: 12,
 } as const;
 
-/** 12's still picture of the camera (`components/ui/mini-camera.tsx`, 2026-11-21). */
+/** The intro's little iPhone showing the camera (`components/ui/mini-camera.tsx`, 2026-11-21). */
 export const MiniCamera = {
-  width: 200,
-  radius: 18,
-  inset: 10,
-  scrimHeight: 90,
-  scrim: 'rgba(16,16,16,0.28)',
+  width: 130,
+  /** Height / width of a current iPhone. */
+  aspect: 2.06,
+  /** Outer corner radius as a share of the width. */
+  cornerRatio: 0.2,
+  bezel: 5,
+  body: '#0a0a0b',
+  frame: 'rgba(255,255,255,0.16)',
+  frameWidth: 1.5,
+  islandRatio: 0.3,
+  islandTop: 6,
+  islandHeight: 9,
+  /** A soft fade under the counter, not a band: a share of the phone's height. */
+  topFadeRatio: 0.28,
+  topFade: ['rgba(10,10,11,0.55)', 'rgba(10,10,11,0)'] as const,
+  counterTop: 22,
+  inset: 8,
   chip: 'rgba(16,16,16,0.55)',
-  counterHeight: 24,
-  counterPaddingX: 10,
-  noteGap: 6,
-  notePaddingX: 9,
-  notePaddingY: 5,
-  noteRadius: 10,
-  noteIcon: 10,
-  noteIconGap: 5,
-  barGap: 12,
+  noteGap: 5,
+  notePaddingX: 7,
+  notePaddingY: 4,
+  noteRadius: 8,
+  noteIcon: 9,
+  noteIconGap: 4,
+  viewfinderRadius: 12,
   barPaddingX: 12,
-  tile: 30,
-  tileRadius: 8,
-  tileIcon: 14,
-  shutter: 44,
+  barPaddingTop: 10,
+  barPaddingBottom: 16,
+  tile: 22,
+  tileRadius: 6,
+  tileIcon: 11,
+  shutter: 34,
   shutterRing: 2,
-  shutterGap: 3,
+  shutterGap: 2.5,
+  homeBottom: 5,
+  homeWidth: 40,
+  homeHeight: 3,
+  home: 'rgba(240,237,232,0.5)',
 } as const;
 
 /**
