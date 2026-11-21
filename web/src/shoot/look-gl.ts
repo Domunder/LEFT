@@ -238,6 +238,33 @@ export async function develop(
   return { original, thumb, width: w, height: h };
 }
 
+let stills: LookRenderer | null = null;
+
+/**
+ * A still picture through `look`, clean (no grain), as a blob URL — the event
+ * image behind the waiting screen, the guest's own print in the intro. Its
+ * own offscreen canvas, not `develop()`'s: that one is read again after an
+ * await, and a still drawn in between would end up in a print. At the image's
+ * own aspect, long edge capped at `maxEdge`. Cross-origin
+ * images (a signed cover) must be loaded with `crossOrigin = 'anonymous'`.
+ */
+export async function lookStill(url: string, look: FilmLook, maxEdge = 1080): Promise<string> {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.decoding = 'async';
+  img.src = url;
+  await img.decode();
+  const srcW = img.naturalWidth;
+  const srcH = img.naturalHeight;
+  const scale = Math.min(1, maxEdge / Math.max(srcW, srcH));
+
+  if (!stills) stills = new LookRenderer(document.createElement('canvas'), { preserve: true });
+  stills.canvas.width = Math.round(srcW * scale);
+  stills.canvas.height = Math.round(srcH * scale);
+  stills.draw(img, srcW, srcH, look, { grain: false, mirror: false });
+  return URL.createObjectURL(await toJpeg(stills.canvas, 0.9));
+}
+
 function toJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
   return new Promise((resolve, reject) =>
     canvas.toBlob(

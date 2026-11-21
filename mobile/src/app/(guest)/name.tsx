@@ -276,7 +276,8 @@ export default function GuestNameScreen() {
       return;
     }
     // `replace`, not `push` — there is nothing behind this worth returning to.
-    router.replace({ pathname: '/(guest)/waiting', params: { eventId } });
+    // The intro (once per moment) continues to 12 by itself.
+    router.replace({ pathname: '/(guest)/intro', params: { eventId } });
   }, [code, canContinue, finalName, hasNames, typing, chosen, chosenId, changing, router]);
 
   /*

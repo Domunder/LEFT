@@ -20,6 +20,8 @@ struct RootView: View {
         )
       case .name:
         NameScreen()
+      case let .intro(event):
+        IntroScreen(event: event)
       case let .waiting(event):
         WaitingScreen(event: event)
       case let .camera(event):
@@ -169,50 +171,80 @@ struct NameScreen: View {
 
 // MARK: 12 — Waiting
 
+/// `Waiting` in theme.ts.
+private enum WaitingTokens {
+  /// The event image covers the top half of the screen.
+  static let backdropRatio: CGFloat = 0.5
+  /// Where the title starts, as a share of the backdrop's height.
+  static let titleAt: CGFloat = 0.62
+  static let fade = Gradient(stops: [
+    .init(color: Theme.bg.opacity(0.25), location: 0),
+    .init(color: Theme.bg.opacity(0.1), location: 0.3),
+    .init(color: Theme.bg.opacity(0.75), location: 0.75),
+    .init(color: Theme.bg, location: 1),
+  ])
+  static let headlineGap: CGFloat = 24
+  static let pingGap: CGFloat = 14
+  static let pingSize: CGFloat = 22
+  static let dotSize: CGFloat = 11
+  static let pingScale: CGFloat = 2.4
+  static let pingOpacity: Double = 0.45
+  static let pingDuration: Double = 2
+  static let factTop: CGFloat = 24
+  static let factGap: CGFloat = 12
+  static let factIcon: CGFloat = 15
+  static let factIconGap: CGFloat = 10
+  static let footGap: CGFloat = 16
+  static let chromeInset: CGFloat = 8
+  static let qrButton: CGFloat = 44
+  static let qrIcon: CGFloat = 19
+}
+
+/// The app's `(guest)/waiting.tsx` (2026-11-21): the event image in the
+/// moment's look over the top half, fading into the page; no cards — the
+/// wait, then the facts, on the page itself; "How it works" at the foot
+/// (replays the intro), and a glass QR button top right to invite more people.
 struct WaitingScreen: View {
   let event: EventInfo
   @EnvironmentObject private var model: ClipModel
-  @State private var pulse = false
+  @State private var hostName: String?
+  @State private var showInvite = false
 
   /// "Are you on the list?" (2026-11-19, the user): back to 11 to switch to
   /// or from a host's name, while there is one to pick and until the start.
   private var mine: MissionName? { model.names.first(where: \.isMine) }
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Eyebrow(text: event.name).padding(.top, 48)
-      Headline(plain: "Almost ", emphasis: "there.", size: 44).padding(.top, 14)
-      Text("Waiting for the host to start the event. The cameras open for everyone at once.")
-        .font(Fonts.body(15))
-        .foregroundStyle(Theme.textMuted)
-        .padding(.top, 20)
-      Spacer()
-      HStack {
-        Spacer()
-        Circle()
-          .fill(Theme.gold)
-          .frame(width: 10, height: 10)
-          .overlay(Circle().stroke(Theme.gold, lineWidth: 1).scaleEffect(pulse ? 3 : 1).opacity(pulse ? 0 : 1))
-        Spacer()
+    GeometryReader { geo in
+      let full = geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom
+      let backdrop = (full * WaitingTokens.backdropRatio).rounded()
+      ZStack(alignment: .top) {
+        // Drawn from the physical top edge, under the status bar.
+        CoverImage(event: event)
+          .frame(width: geo.size.width, height: backdrop)
+          .overlay(LinearGradient(gradient: WaitingTokens.fade, startPoint: .top, endPoint: .bottom))
+          .clipped()
+          .offset(y: -geo.safeAreaInsets.top)
+          .allowsHitTesting(false)
+
+        VStack(alignment: .leading, spacing: 0) {
+          // Scrolls only when it has to — large text can push it past the fold.
+          ScrollView {
+            content
+              .padding(.top, max(48, backdrop * WaitingTokens.titleAt - geo.safeAreaInsets.top))
+          }
+          .scrollBounceBehavior(.basedOnSize)
+          .scrollIndicators(.hidden)
+          foot
+        }
+        .padding(.horizontal, Theme.gutter)
       }
-      .padding(.bottom, 48)
-      if !model.names.isEmpty {
-        Text(mine.map { "You are \($0.name) on the host’s list." }
-          ?? "The host planned something for some of you by name.")
-          .font(Fonts.body(14))
-          .foregroundStyle(Theme.textDim)
-          .padding(.bottom, 12)
-        Button(mine == nil ? "Are you on the list?" : "Change your name") { model.changeName() }
-          .buttonStyle(PillButtonStyle(light: false))
-          .padding(.bottom, 12)
-          .transition(.opacity)
-      }
+      .overlay(alignment: .topTrailing) { qrButton }
     }
-    .padding(.horizontal, Theme.gutter)
     .animation(.easeInOut(duration: 0.2), value: model.names)
-    .onAppear {
-      guard !UIAccessibility.isReduceMotionEnabled else { return }
-      withAnimation(.easeOut(duration: 1.6).repeatForever(autoreverses: false)) { pulse = true }
+    .task(id: event.id) {
+      // The copy reads fine without the name ("the host").
+      hostName = try? await Server.shared.hostName(eventId: event.id)
     }
     .task {
       while !Task.isCancelled {
@@ -220,6 +252,180 @@ struct WaitingScreen: View {
         try? await Task.sleep(nanoseconds: 10_000_000_000)
       }
     }
+    .sheet(isPresented: $showInvite) {
+      if let code = model.inviteCode {
+        InviteSheet(code: code, eventName: event.name)
+      }
+    }
+  }
+
+  private var content: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Eyebrow(text: event.name)
+      Headline(plain: "Almost ", emphasis: "there.", size: 44).padding(.top, 14)
+
+      HStack(spacing: WaitingTokens.pingGap) {
+        WaitPing()
+        (Text("Waiting for ").foregroundColor(Theme.textDim)
+          + Text(hostName ?? "the host").foregroundColor(Theme.text)
+          + Text(" to start the event.").foregroundColor(Theme.textDim))
+          .font(Fonts.body(16))
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .padding(.top, WaitingTokens.headlineGap)
+
+      VStack(alignment: .leading, spacing: WaitingTokens.factGap) {
+        fact("camera", event.rollSize.map { "\($0) photos each" } ?? "Unlimited photos each")
+        fact("clock", "Develops \(EndFormat.date(event.endsAt)) at \(EndFormat.time(event.endsAt))")
+      }
+      .padding(.top, WaitingTokens.factTop)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  private func fact(_ icon: String, _ label: String) -> some View {
+    HStack(spacing: WaitingTokens.factIconGap) {
+      Image(systemName: icon)
+        .font(.system(size: WaitingTokens.factIcon))
+        .foregroundStyle(Theme.textMuted)
+        .accessibilityHidden(true)
+      Text(label)
+        .font(Fonts.medium(15))
+        .monospacedDigit()
+        .foregroundStyle(Theme.text)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  /// At the foot of the page: the names prompt, then "How it works".
+  private var foot: some View {
+    VStack(alignment: .leading, spacing: WaitingTokens.footGap) {
+      if !model.names.isEmpty {
+        VStack(alignment: .leading, spacing: 12) {
+          Text(mine.map { "You are \($0.name) on the host’s list." }
+            ?? "The host planned something for some of you by name.")
+            .font(Fonts.body(14))
+            .foregroundStyle(Theme.textDim)
+          Button(mine == nil ? "Are you on the list?" : "Change your name") { model.changeName() }
+            .buttonStyle(PillButtonStyle(light: false))
+        }
+        .transition(.opacity)
+      }
+      Button { model.replayIntro() } label: {
+        Label("How it works", systemImage: "info.circle")
+      }
+      .buttonStyle(PillButtonStyle(light: false))
+    }
+    .padding(.top, 16)
+    .padding(.bottom, 12)
+  }
+
+  /// Glass, because it floats over the event image.
+  private var qrButton: some View {
+    Button { showInvite = true } label: {
+      Image(systemName: "qrcode")
+        .font(.system(size: WaitingTokens.qrIcon, weight: .medium))
+        .foregroundStyle(Theme.text)
+        .frame(width: WaitingTokens.qrButton, height: WaitingTokens.qrButton)
+        .glass(Circle(), interactive: true)
+    }
+    .buttonStyle(PressScaleStyle(scale: 0.9))
+    .padding(.top, WaitingTokens.chromeInset)
+    .padding(.trailing, Theme.gutter)
+    .accessibilityLabel("Invite")
+    .accessibilityHint("Shows the QR code and the link to this moment")
+    .opacity(model.inviteCode == nil ? 0 : 1)
+    .disabled(model.inviteCode == nil)
+  }
+}
+
+/// The artboard's `wait-ping` — a ring expanding out of a solid dot and
+/// fading, identical on every cycle. Still under Reduce Motion.
+private struct WaitPing: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var pulse = false
+
+  var body: some View {
+    ZStack {
+      Circle()
+        .fill(Theme.text)
+        .frame(width: WaitingTokens.pingSize, height: WaitingTokens.pingSize)
+        .scaleEffect(pulse ? WaitingTokens.pingScale : 1)
+        .opacity(reduceMotion ? 0 : (pulse ? 0 : WaitingTokens.pingOpacity))
+      Circle()
+        .fill(Theme.text)
+        .frame(width: WaitingTokens.dotSize, height: WaitingTokens.dotSize)
+    }
+    // As wide as the ring grows, so nothing clips it.
+    .frame(width: WaitingTokens.pingSize * WaitingTokens.pingScale,
+           height: WaitingTokens.pingSize * WaitingTokens.pingScale)
+    .accessibilityHidden(true)
+    .onAppear {
+      guard !reduceMotion else { return }
+      withAnimation(.easeOut(duration: WaitingTokens.pingDuration).repeatForever(autoreverses: false)) {
+        pulse = true
+      }
+    }
+  }
+}
+
+/// 09 for a guest: the QR code and the link, to invite more people.
+private struct InviteSheet: View {
+  let code: String
+  let eventName: String
+  @State private var qr: UIImage?
+
+  private var url: URL? { InviteQR.url(code: code) }
+
+  var body: some View {
+    VStack(spacing: 0) {
+      Eyebrow(text: eventName).padding(.top, 32)
+      Headline(plain: "Invite ", emphasis: "more people.", size: 34)
+        .multilineTextAlignment(.center)
+        .padding(.top, 12)
+      Text("They scan this or open the link. No app needed.")
+        .font(Fonts.body(14))
+        .foregroundStyle(Theme.textDim)
+        .multilineTextAlignment(.center)
+        .padding(.top, 10)
+
+      ZStack {
+        Color.white
+        if let qr {
+          Image(uiImage: qr)
+            .interpolation(.none)
+            .resizable()
+            .scaledToFit()
+            .padding(16)
+        }
+      }
+      .frame(width: 240, height: 240)
+      .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+      .padding(.top, 28)
+      .accessibilityLabel("QR code for the invite link")
+
+      if let url {
+        Text(url.absoluteString.replacingOccurrences(of: "https://", with: ""))
+          .font(Fonts.body(14))
+          .foregroundStyle(Theme.textMuted)
+          .textSelection(.enabled)
+          .padding(.top, 16)
+      }
+
+      Spacer(minLength: 20)
+
+      if let url {
+        ShareLink(item: url) { Text("Share link") }
+          .buttonStyle(PillButtonStyle())
+      }
+    }
+    .padding(.horizontal, Theme.gutter)
+    .padding(.bottom, 12)
+    .frame(maxWidth: .infinity)
+    .task { qr = url.flatMap { InviteQR.image(for: $0.absoluteString) } }
+    .presentationDetents([.large])
+    .presentationDragIndicator(.visible)
+    .presentationBackground(Theme.bg)
   }
 }
 

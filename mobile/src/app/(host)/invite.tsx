@@ -29,17 +29,20 @@
 import * as MediaLibrary from 'expo-media-library';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Share, StyleSheet, View, type ViewInstance } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Share, StyleSheet, useWindowDimensions, View, type ViewInstance } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 import { captureRef } from 'react-native-view-shot';
 
 import { CircleIconButton } from '@/components/ui/circle-back-button';
+import { LookPreview } from '@/components/ui/look-preview';
 import { PillButton } from '@/components/ui/pill-button';
 import { QrCode, QrCodePlaceholder } from '@/components/ui/qr-code';
 import { Screen } from '@/components/ui/screen';
 import { ShareButton } from '@/components/ui/share-button';
 import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
 import { Colors, Invite, Motion, Spacing } from '@/constants/theme';
+import { useEventCover } from '@/lib/event-cover';
 import { getEvent, listMyEvents, type Event } from '@/lib/events';
 import { inviteMessage, inviteUrl } from '@/lib/invite';
 import { askForPushOnce } from '@/lib/push';
@@ -61,7 +64,9 @@ export default function InviteScreen() {
   const router = useRouter();
   const { eventId, from } = useLocalSearchParams<{ eventId?: string; from?: string }>();
   /** Opened over a running camera rather than at the end of creating the event. */
-  const fromCamera = from === 'camera';
+  // From 12 too (2026-11-21): any member may invite; same exits as the camera.
+  const fromCamera = from === 'camera' || from === 'waiting';
+  const fromWaiting = from === 'waiting';
   /** Opened from 10's QR button: 10 is right behind, so going there is going back. */
   const fromGroup = from === 'group';
   const backToGroup = fromGroup && router.canGoBack();
@@ -105,6 +110,9 @@ export default function InviteScreen() {
   }, [eventId]);
 
   const event = state.kind === 'ready' ? state.event : undefined;
+  const cover = useEventCover(event);
+  const { height: windowHeight } = useWindowDimensions();
+  const backdropHeight = Math.round(windowHeight * Invite.backdrop.heightRatio);
   const url = event ? inviteUrl(event.invite_code) : undefined;
 
   const handleShare = useCallback(async () => {
@@ -144,7 +152,23 @@ export default function InviteScreen() {
   }, [event]);
 
   return (
-    <Screen transparent style={styles.screen}>
+    <View style={styles.root}>
+      {/*
+        The event image in the moment's look behind the QR (2026-11-21, the
+        user), fading into the page well above the code, so the code stays on
+        the plain dark it needs to scan.
+      */}
+      <View style={[styles.backdrop, { height: backdropHeight }]} pointerEvents="none">
+        {event && cover !== null ? (
+          <LookPreview key={String(cover)} look={event.look} source={cover} />
+        ) : null}
+        <LinearGradient
+          colors={Invite.backdrop.fade}
+          locations={Invite.backdrop.fadeLocations}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+      <Screen transparent style={styles.screen}>
       {/*
         The artboard's header is empty on both sides; the exit lives on the right
         because there is no history behind this screen to pop — see the note above.
@@ -155,8 +179,10 @@ export default function InviteScreen() {
         <CircleIconButton
           icon="x"
           accessibilityLabel={
-            fromCamera
-              ? 'Close, back to the camera'
+            fromWaiting
+              ? 'Close'
+              : fromCamera
+                ? 'Close, back to the camera'
               : backToGroup
                 ? 'Close, back to your group'
                 : 'Close, back to your moments'
@@ -190,9 +216,11 @@ export default function InviteScreen() {
 
       <Body color={Invite.subcopy} style={styles.subcopy}>
         Show them the QR or send the link —{'\n'}
-        {fromCamera
-          ? 'they can join while the film is running.'
-          : 'once they’re in, the cameras can open.'}
+        {fromWaiting
+          ? 'they can join before it starts, or during.'
+          : fromCamera
+            ? 'they can join while the film is running.'
+            : 'once they’re in, the cameras can open.'}
       </Body>
 
       <Animated.View
@@ -256,11 +284,22 @@ export default function InviteScreen() {
           }
         />
       )}
-    </Screen>
+      </Screen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+  },
   screen: {
     paddingBottom: Invite.paddingBottom,
   },

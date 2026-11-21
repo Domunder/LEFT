@@ -12,6 +12,8 @@ final class ClipModel: ObservableObject {
     case noInvite
     /// 11: the guest types the name the group will see.
     case name(code: String)
+    /// 11.5: how this moment works, once per moment and phone (`Intro.swift`).
+    case intro(EventInfo)
     /// 12: the host has not started the event.
     case waiting(EventInfo)
     /// 13: shooting.
@@ -110,10 +112,13 @@ final class ClipModel: ObservableObject {
 
   var event: EventInfo? {
     switch phase {
-    case let .waiting(e), let .camera(e), let .developing(e): return e
+    case let .intro(e), let .waiting(e), let .camera(e), let .developing(e): return e
     default: return nil
     }
   }
+
+  /// The code the guest joined with, for 12's invite QR.
+  var inviteCode: String? { code }
 
   // MARK: Invocation
 
@@ -294,6 +299,9 @@ final class ClipModel: ObservableObject {
   private func route(_ event: EventInfo) {
     if event.isDeveloped() || rollUsedUp(event) {
       phase = .developing(event)
+    } else if !introSeen(event.id) {
+      // Before 12 or the camera, once per moment — a late joiner too, as in the app.
+      phase = .intro(event)
     } else if event.status == .setup {
       phase = .waiting(event)
     } else {
@@ -304,6 +312,29 @@ final class ClipModel: ObservableObject {
       await loadMissions()
       await loadShots()
     }
+  }
+
+  // MARK: 11.5 — the intro
+
+  /// `lib/guest-intro.ts`: once per moment and phone.
+  private static func introKey(_ eventId: String) -> String { "left.clip.intro-seen.\(eventId)" }
+
+  private func introSeen(_ eventId: String) -> Bool {
+    memberships.bool(forKey: Self.introKey(eventId))
+  }
+
+  /// "Got it" or "Skip": on to wherever the moment is now (12, the camera, or developing).
+  func finishIntro() {
+    guard case let .intro(event) = phase else { return }
+    memberships.set(true, forKey: Self.introKey(event.id))
+    route(event)
+    // The event may have moved on while the guest read.
+    Task { await refresh() }
+  }
+
+  /// 12's "How it works".
+  func replayIntro() {
+    if case let .waiting(event) = phase { phase = .intro(event) }
   }
 
   private func rollUsedUp(_ event: EventInfo) -> Bool {
@@ -339,6 +370,9 @@ final class ClipModel: ObservableObject {
     switch phase {
     case .waiting where fresh.status != .setup || fresh.isDeveloped():
       route(fresh)
+    case .waiting:
+      // A new name or event image from the host shows without a restart.
+      phase = .waiting(fresh)
     case .camera where fresh.isDeveloped():
       phase = .developing(fresh)
     case .camera:

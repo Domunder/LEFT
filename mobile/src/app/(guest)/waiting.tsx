@@ -14,11 +14,19 @@
  * switch to one of them — or away from one — until the event starts. The link
  * shows while 11 would have something to offer: names nobody else holds, or
  * the one this guest holds.
+ *
+ * **One screen, no scroll** (2026-11-21, the user): the sample photo in the
+ * moment's look fills the top and fades into the page, the title on its foot;
+ * under the card two chips (the roll, the end) and a "How it works" row that
+ * replays the intro (`(guest)/intro`, which 11 opens once per moment first).
  */
 
 import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -27,10 +35,23 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { Glass } from '@/components/ui/glass';
+import { LookPreview } from '@/components/ui/look-preview';
 import { PillButton } from '@/components/ui/pill-button';
+import { PressScale } from '@/components/ui/press-scale';
 import { Screen } from '@/components/ui/screen';
 import { Body, Display, Em, Label } from '@/components/ui/typography';
-import { Colors, Guest, MissionsJoin, Spacing, Waiting } from '@/constants/theme';
+import {
+  Colors,
+  Glass as GlassTokens,
+  Guest,
+  MissionsJoin,
+  Spacing,
+  Waiting,
+} from '@/constants/theme';
+import { Typography } from '@/constants/typography';
+import { useEventCover } from '@/lib/event-cover';
+import { formatEndDate, formatEndTime } from '@/lib/event-end';
 import {
   getEvent,
   isDeveloped,
@@ -44,8 +65,12 @@ import { askForPushOnce } from '@/lib/push';
 export default function WaitingScreen() {
   const router = useRouter();
   const { eventId } = useLocalSearchParams<{ eventId?: string }>();
+  const { height: windowHeight } = useWindowDimensions();
+  const backdropHeight = Math.round(windowHeight * Waiting.backdrop.heightRatio);
+  const insets = useSafeAreaInsets();
 
   const [event, setEvent] = useState<Event | null>(null);
+  const cover = useEventCover(event);
   const [hostName, setHostName] = useState<string | null>(null);
   /** The host's names this guest could switch to (or holds). Empty hides the link. */
   const [names, setNames] = useState<MissionName[]>([]);
@@ -83,9 +108,15 @@ export default function WaitingScreen() {
     if (!event || !liveEventId) return;
     if (isDeveloped(event)) {
       // Joined after the event ended: the link that let people shoot now opens the album.
-      router.replace({ pathname: '/(library)/album/[id]', params: { id: liveEventId } });
+      router.replace({
+        pathname: '/(library)/album/[id]',
+        params: { id: liveEventId },
+      });
     } else if (event.status === 'live') {
-      router.replace({ pathname: '/(capture)/camera', params: { eventId: liveEventId } });
+      router.replace({
+        pathname: '/(capture)/camera',
+        params: { eventId: liveEventId },
+      });
     }
   }, [event, liveEventId, router]);
 
@@ -130,58 +161,161 @@ export default function WaitingScreen() {
     if (!liveEventId) return;
     return subscribeToEventStatus(liveEventId, (status) => {
       if (status === 'live') {
-        router.replace({ pathname: '/(capture)/camera', params: { eventId: liveEventId } });
+        router.replace({
+          pathname: '/(capture)/camera',
+          params: { eventId: liveEventId },
+        });
       } else if (status === 'developed') {
-        router.replace({ pathname: '/(library)/album/[id]', params: { id: liveEventId } });
+        router.replace({
+          pathname: '/(library)/album/[id]',
+          params: { id: liveEventId },
+        });
       }
     });
   }, [liveEventId, router]);
 
+  const ends = event ? new Date(event.ends_at) : null;
+
   return (
-    <Screen>
-      {/* Scrolls only when it has to — large text sizes can push the card past the fold. */}
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        bounces={false}>
-        <Label style={styles.eyebrow}>{event?.name ?? ' '}</Label>
-
-        <Display size="md" style={styles.headline}>
-          Almost <Em>there.</Em>
-        </Display>
-
-        <View style={styles.card}>
-          <WaitPing />
-          <Body small color={Colors.textDim} style={styles.copy}>
-            Waiting for{' '}
-            <Body small color={Colors.textMuted}>
-              {hostName ?? 'the host'}
-            </Body>{' '}
-            to start the event. The cameras open for everyone at once.
-          </Body>
-        </View>
-
-        {inviteCode && names.length > 0 ? (
-          <View style={styles.names}>
-            <Body small color={Colors.textDim} style={styles.namesCopy}>
-              {mine
-                ? `You are ${mine.name} on the host's list.`
-                : 'The host planned something for some of you by name.'}
-            </Body>
-            <PillButton
-              variant="secondary"
-              label={mine ? 'Change your name' : 'Are you on the list?'}
-              onPress={() =>
-                router.push({
-                  pathname: '/(guest)/name',
-                  params: { code: inviteCode, change: '1' },
-                })
-              }
-            />
-          </View>
+    <View style={styles.root}>
+      {/*
+        The event image in the moment's look, fading into the page (2026-11-21,
+        the user) — picked by the host on 03.1, a stock picture otherwise.
+      */}
+      <View style={[styles.backdrop, { height: backdropHeight }]} pointerEvents="none">
+        {event && cover !== null ? (
+          <LookPreview key={String(cover)} look={event.look} source={cover} />
         ) : null}
-      </ScrollView>
-    </Screen>
+        <LinearGradient
+          colors={Waiting.backdrop.fade}
+          locations={Waiting.backdrop.fadeLocations}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+
+      <Screen transparent>
+        {/* Scrolls only when it has to — large text sizes can push the text past the fold. */}
+        <ScrollView
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: backdropHeight * Waiting.backdrop.titleAt },
+          ]}
+          showsVerticalScrollIndicator={false}
+          bounces={false}>
+          <Label style={styles.eyebrow}>{event?.name ?? ' '}</Label>
+
+          <Display size="lg" style={styles.headline}>
+            Almost <Em>there.</Em>
+          </Display>
+
+          {/* No cards (2026-11-21, the user): the wait, then the facts, on the page itself. */}
+          <View style={styles.waitRow}>
+            <WaitPing />
+            <Body color={Colors.textDim} style={styles.copy}>
+              Waiting for <Body color={Colors.text}>{hostName ?? 'the host'}</Body> to start the
+              event.
+            </Body>
+          </View>
+
+          {event && ends ? (
+            <>
+              <View style={styles.facts}>
+                <Fact
+                  icon="camera"
+                  label={
+                    event.roll_size === null
+                      ? 'Unlimited photos each'
+                      : `${event.roll_size} photos each`
+                  }
+                />
+                <Fact
+                  icon="clock"
+                  label={`Develops ${formatEndDate(ends)} at ${formatEndTime(ends)}`}
+                />
+              </View>
+            </>
+          ) : null}
+
+          {/* At the foot of the page: the wait is still the screen. */}
+          <View style={styles.foot}>
+            {inviteCode && names.length > 0 ? (
+              <View>
+                <Body small color={Colors.textDim} style={styles.namesCopy}>
+                  {mine
+                    ? `You are ${mine.name} on the host's list.`
+                    : 'The host planned something for some of you by name.'}
+                </Body>
+                <PillButton
+                  variant="secondary"
+                  label={mine ? 'Change your name' : 'Are you on the list?'}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/(guest)/name',
+                      params: { code: inviteCode, change: '1' },
+                    })
+                  }
+                />
+              </View>
+            ) : null}
+
+            {event ? (
+              <PillButton
+                variant="secondary"
+                icon="info"
+                label="How it works"
+                onPress={() =>
+                  router.push({
+                    pathname: '/(guest)/intro',
+                    params: { eventId: event.id, replay: '1' },
+                  })
+                }
+              />
+            ) : null}
+          </View>
+        </ScrollView>
+      </Screen>
+
+      {/*
+        Invite more people (2026-11-21, the user): 09 with the QR and the link,
+        as the camera's invite tile opens it. Glass, because it floats over the
+        event image.
+      */}
+      {event ? (
+        <View style={[styles.chrome, { top: insets.top + Waiting.chromeInset }]}>
+          <PressScale
+            accessibilityRole="button"
+            accessibilityLabel="Invite"
+            accessibilityHint="Shows the QR code and the link to this moment"
+            scale={GlassTokens.pressScale}
+            onPress={() =>
+              router.push({
+                pathname: '/(host)/invite',
+                params: { eventId: event.id, from: 'waiting' },
+              })
+            }>
+            <Glass radius={GlassTokens.buttonSize / 2} interactive style={styles.qr}>
+              <MaterialCommunityIcons name="qrcode" size={Waiting.qrIconSize} color={Colors.text} />
+            </Glass>
+          </PressScale>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** "24 photos each", "Develops Sat, 22 Nov at 23:00" — on the page, no chip. */
+function Fact({
+  icon,
+  label,
+}: {
+  icon: React.ComponentProps<typeof Feather>['name'];
+  label: string;
+}) {
+  return (
+    <View style={styles.fact}>
+      <Feather name={icon} size={Waiting.fact.iconSize} color={Colors.textMuted} />
+      <Text style={styles.factText}>{label}</Text>
+    </View>
   );
 }
 
@@ -197,9 +331,12 @@ function WaitPing() {
 
   useEffect(() => {
     pulse.value = withRepeat(
-      withTiming(1, { duration: Waiting.pingDuration, easing: Easing.out(Easing.ease) }),
+      withTiming(1, {
+        duration: Waiting.pingDuration,
+        easing: Easing.out(Easing.ease),
+      }),
       -1,
-      false
+      false,
     );
     return () => {
       pulse.value = 0;
@@ -212,7 +349,10 @@ function WaitPing() {
   }));
 
   return (
-    <View style={styles.ping} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+    <View
+      style={styles.ping}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants">
       <Animated.View style={[styles.ringOuter, ring]} />
       <View style={styles.ringDot} />
     </View>
@@ -220,6 +360,17 @@ function WaitPing() {
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: Colors.bg,
+  },
+  backdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    overflow: 'hidden',
+  },
   // Vertical padding lives on the scroll content so the viewport itself is not inset.
   content: {
     flexGrow: 1,
@@ -230,35 +381,58 @@ const styles = StyleSheet.create({
     marginBottom: Guest.eyebrowGap,
   },
   headline: {
-    marginBottom: Waiting.headlineGap,
+    marginBottom: Waiting.backdrop.headlineGap,
   },
-  card: {
+  waitRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: Waiting.cardGap,
-    padding: Waiting.cardPadding,
-    borderRadius: Waiting.cardRadius,
-    borderWidth: 1,
-    borderColor: Waiting.cardBorder,
-    backgroundColor: Waiting.cardBg,
   },
   copy: {
     flex: 1,
   },
-  // Under the card, at the foot of the page: the wait is still the screen.
-  names: {
+  facts: {
+    marginTop: Waiting.fact.top,
+    gap: Waiting.fact.gap,
+  },
+  fact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Waiting.fact.iconGap,
+  },
+  factText: {
+    ...Typography.titleMd,
+    color: Colors.text,
+    fontVariant: ['tabular-nums'],
+    flexShrink: 1,
+  },
+  // Top right (the user, 2026-11-21).
+  chrome: {
+    position: 'absolute',
+    right: Spacing.screenX,
+  },
+  qr: {
+    width: GlassTokens.buttonSize,
+    height: GlassTokens.buttonSize,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // At the foot of the page: the wait is still the screen.
+  // The names prompt and "How it works", pinned to the bottom of the page.
+  foot: {
     marginTop: 'auto',
     paddingTop: Waiting.headlineGap,
+    gap: Waiting.footGap,
   },
   namesCopy: {
     marginBottom: Spacing.md,
   },
+  // As wide as the ring grows, so the scroll view's edge never clips it.
   ping: {
-    width: Waiting.pingSize,
-    height: Waiting.pingSize,
+    width: Waiting.pingSize * Waiting.pingScale,
+    height: Waiting.pingSize * Waiting.pingScale,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Waiting.pingOffset,
   },
   ringOuter: {
     position: 'absolute',
@@ -271,6 +445,6 @@ const styles = StyleSheet.create({
     width: Waiting.dotSize,
     height: Waiting.dotSize,
     borderRadius: Waiting.dotSize / 2,
-    backgroundColor: Colors.textMuted,
+    backgroundColor: Colors.text,
   },
 });

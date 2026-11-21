@@ -31,6 +31,7 @@ import {
 } from 'react';
 
 import type { GlowPresetName } from '@/constants/theme';
+import type { CoverChoice } from '@/lib/event-cover';
 import type { CreateEventInput, EventType, FilmLook } from './events';
 import { DEFAULT_ROLL_SIZE, type RollSize } from './roll';
 
@@ -42,6 +43,8 @@ export type OnboardingDraft = {
   filmName?: string;
   /** 03 · Format */
   look?: FilmLook;
+  /** 03.1 · The event image (2026-11-21). Applied right after the event exists. */
+  cover?: CoverChoice;
   /** 04 · Event End */
   endsAt?: Date;
   /**
@@ -142,10 +145,11 @@ type OnboardingContextValue = {
 /**
  * Steps in the host onboarding flow — the `total` on every indicator.
  *
- * Four, not five: sign-in used to be step 5 and is now the app's entry screen, so
- * 05.1 is the last step and the one that spends the draft.
+ * Five since the event image (2026-11-21): event, look, image, end, group.
+ * Sign-in is the app's entry screen, not a step; 05.1 is the last step and the
+ * one that spends the draft.
  */
-export const ONBOARDING_STEPS = 4;
+export const ONBOARDING_STEPS = 5;
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
 

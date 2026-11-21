@@ -61,11 +61,17 @@ struct EventInfo: Decodable, Equatable {
   let endsAt: Date
   /// nil is the unlimited roll.
   let rollSize: Int?
+  /// Missions per guest; nil is off (the intro's missions page).
+  let missionsPerGuest: Int?
+  /// The event image (`20261121162520_event_cover.sql`): nil, `sample-N` or
+  /// `upload` (the file at `photos/{id}/cover.jpg`). See `EventCover.swift`.
+  let cover: String?
 
   enum CodingKeys: String, CodingKey {
-    case id, name, look, status
+    case id, name, look, status, cover
     case endsAt = "ends_at"
     case rollSize = "roll_size"
+    case missionsPerGuest = "missions_per_guest"
   }
 
   init(from decoder: Decoder) throws {
@@ -80,6 +86,8 @@ struct EventInfo: Decodable, Equatable {
     }
     endsAt = date
     rollSize = try c.decodeIfPresent(Int.self, forKey: .rollSize)
+    missionsPerGuest = try c.decodeIfPresent(Int.self, forKey: .missionsPerGuest)
+    cover = try c.decodeIfPresent(String.self, forKey: .cover)
   }
 
   /// As `is_event_developed()` decides it: by status or by the clock.
@@ -310,7 +318,7 @@ actor Server {
   }
 
   func getEvent(_ id: String) async throws -> EventInfo {
-    let data = try await send("rest/v1/events?id=eq.\(id)&select=id,name,look,status,ends_at,roll_size")
+    let data = try await send("rest/v1/events?id=eq.\(id)&select=id,name,look,status,ends_at,roll_size,missions_per_guest,cover")
     guard let event = try JSONDecoder().decode([EventInfo].self, from: data).first else {
       throw ClipError.server(status: 404, code: "P0002", hint: nil, message: "No such event")
     }
@@ -324,6 +332,16 @@ actor Server {
       "rest/v1/event_members?event_id=eq.\(eventId)&user_id=eq.\(userId)&select=display_name,shots_taken"
     )
     return try JSONDecoder().decode([MemberInfo].self, from: data).first
+  }
+
+  /// The host's name on the roster, for 12's "Waiting for {host}". Members
+  /// may read their event's roster (as `listMembers()` in the app does).
+  func hostName(eventId: String) async throws -> String? {
+    struct Row: Decodable { let display_name: String }
+    let data = try await send(
+      "rest/v1/event_members?event_id=eq.\(eventId)&role=eq.host&select=display_name&limit=1"
+    )
+    return try JSONDecoder().decode([Row].self, from: data).first?.display_name
   }
 
   // MARK: Photos

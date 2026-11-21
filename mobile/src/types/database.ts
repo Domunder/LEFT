@@ -113,6 +113,7 @@ export type Database = {
       }
       events: {
         Row: {
+          cover: string | null
           created_at: string
           developed_at: string | null
           ends_at: string
@@ -128,6 +129,7 @@ export type Database = {
           status: Database["public"]["Enums"]["event_status"]
         }
         Insert: {
+          cover?: string | null
           created_at?: string
           developed_at?: string | null
           ends_at: string
@@ -143,6 +145,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["event_status"]
         }
         Update: {
+          cover?: string | null
           created_at?: string
           developed_at?: string | null
           ends_at?: string

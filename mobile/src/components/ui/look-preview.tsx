@@ -1,5 +1,7 @@
 /**
- * A sample photo developed with one look — the artwork of 03's cards.
+ * A sample photo developed with one look — the artwork of 03's cards. With
+ * `source` it draws any picture through the look instead: the event image
+ * (2026-11-21) on 12, 09, the Moments card and the creation step.
  *
  * Draws `assets/images/look-sample.jpg` through the same shader and the same
  * uniforms the camera bakes into a JPEG (`lib/look-shader.ts`), so what a host
@@ -18,8 +20,14 @@ import { lookEffect, lookUniforms } from '@/lib/look-shader';
 
 const SAMPLE = require('@/assets/images/look-sample.jpg');
 
-export function LookPreview({ look }: { look: FilmLook }) {
-  const image = useImage(SAMPLE);
+type LookPreviewProps = {
+  look: FilmLook;
+  /** A bundled picture (`require`) or a URL. Defaults to the look sample. */
+  source?: number | string;
+};
+
+export function LookPreview({ look, source = SAMPLE }: LookPreviewProps) {
+  const image = useImage(source);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const ready = image && size.width > 0 && size.height > 0;
 

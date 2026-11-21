@@ -1,6 +1,7 @@
 /**
- * The web camera, screen by screen: join → (waiting) → camera → developing →
- * album. The page's markup is `src/pages/j/index.astro`; this file switches
+ * The web camera, screen by screen: join → (intro) → (waiting) → camera →
+ * developing → album. The intro is shown once per moment and browser, as the
+ * app's `(guest)/intro` is once per moment and phone. The page's markup is `src/pages/j/index.astro`; this file switches
  * `data-view` and fills it.
  *
  * Every number shown comes from the server (`api.ts`): the roll is
@@ -13,6 +14,9 @@ import {
   currentUserId,
   deletePhoto,
   ensureGuest,
+  eventCoverUrl,
+  LOOK_SAMPLE,
+  samplesFor,
   getEvent,
   getMyMember,
   getMyMissions,
@@ -35,10 +39,10 @@ import {
   type Photo,
 } from './api';
 import { BrowserCamera, CameraError, type CameraFailure } from './camera';
-import { develop, LookRenderer } from './look-gl';
+import { develop, LookRenderer, lookStill } from './look-gl';
 import { drain, enqueue, onQueue, pending, setQueuedMission, startQueue, type Shot } from './queue';
 
-type View = 'loading' | 'get-app' | 'join' | 'waiting' | 'camera' | 'developing' | 'album' | 'error';
+type View = 'loading' | 'get-app' | 'join' | 'intro' | 'waiting' | 'camera' | 'developing' | 'album' | 'error';
 
 /**
  * Loose on purpose: the server decides whether a code exists. (The app's
@@ -147,6 +151,8 @@ export async function start() {
   setUpCamera();
   setUpDeveloping();
   setUpViewer();
+  setUpIntro();
+  setUpWaiting();
 
   try {
     const userId = await currentUserId();
@@ -306,6 +312,7 @@ async function enter(eventId: string) {
   // No realtime here: a light poll is enough to notice the host starting or
   // developing early. The clock is checked every second by the countdown.
   state.poll = setInterval(() => void refreshEvent(), 15_000);
+  if (!isDeveloped(state.event) && store.get(introKey(state.event.id)) !== '1') return showIntro();
   await route();
 }
 
@@ -315,7 +322,8 @@ async function refreshEvent() {
     const next = await getEvent(state.event.id);
     const changed = next.status !== state.event.status || next.ends_at !== state.event.ends_at;
     state.event = next;
-    if (changed) await route();
+    // The intro is not interrupted; it continues to the right screen when it ends.
+    if (changed && root().dataset.view !== 'intro') await route();
     else if (root().dataset.view === 'camera') void loadMissions();
   } catch {
     /* offline: try again on the next tick */
@@ -328,7 +336,7 @@ async function route() {
     if (state.poll) clearInterval(state.poll);
     return showAlbum();
   }
-  if (event.status === 'setup') return show('waiting');
+  if (event.status === 'setup') return showWaiting();
 
   await refreshRoll();
   if (shotsLeft() === 0) return showDeveloping(true);
@@ -603,6 +611,171 @@ async function invite() {
   } catch {
     /* the guest closed the share sheet */
   }
+}
+
+// ---------------------------------------------------------------------------
+// Intro — the app's `(guest)/intro`: the roll, hidden until the end, the
+// missions (only when on), the end. Once per moment and browser.
+// ---------------------------------------------------------------------------
+
+const introKey = (eventId: string) => `left:intro-seen:${eventId}`;
+
+let introPage = 0;
+
+function introPages(): HTMLElement[] {
+  return [...$('intro-pager').children].filter((el): el is HTMLElement => !(el as HTMLElement).hidden);
+}
+
+function setUpIntro() {
+  const pager = $('intro-pager');
+  $('intro-skip').addEventListener('click', finishIntro);
+  $('intro-next').addEventListener('click', () => {
+    const pages = introPages();
+    if (introPage >= pages.length - 1) return finishIntro();
+    goToIntroPage(introPage + 1);
+  });
+  pager.addEventListener('scroll', () => {
+    const index = Math.round(pager.scrollLeft / Math.max(1, pager.clientWidth));
+    if (index !== introPage) renderIntroPage(index);
+  }, { passive: true });
+  addEventListener('keydown', (e) => {
+    if (root().dataset.view !== 'intro') return;
+    if (e.key === 'ArrowRight') goToIntroPage(introPage + 1);
+    if (e.key === 'ArrowLeft') goToIntroPage(introPage - 1);
+  });
+}
+
+function goToIntroPage(index: number) {
+  const pager = $('intro-pager');
+  const i = Math.max(0, Math.min(introPages().length - 1, index));
+  pager.scrollTo({ left: i * pager.clientWidth, behavior: reducedMotion() ? 'auto' : 'smooth' });
+}
+
+/** The dots, the button and Skip follow the page; nothing else moves. */
+function renderIntroPage(index: number) {
+  const pages = introPages();
+  introPage = Math.max(0, Math.min(pages.length - 1, index));
+  const last = introPage === pages.length - 1;
+  pages.forEach((page, i) => page.setAttribute('aria-hidden', String(i !== introPage)));
+  $('intro-dots').replaceChildren(
+    ...pages.map((_, i) => {
+      const dot = document.createElement('span');
+      if (i === introPage) dot.className = 'on';
+      return dot;
+    })
+  );
+  $('intro-next').textContent = last ? 'Got it' : 'Next';
+  $('intro-skip').hidden = last;
+}
+
+function showIntro() {
+  const event = state.event!;
+  const unlimited = event.roll_size === null;
+
+  // 1 · the roll, written huge
+  $('intro-roll').textContent = unlimited ? '∞' : String(event.roll_size);
+  $('intro-roll').setAttribute('aria-label', unlimited ? 'Unlimited' : String(event.roll_size));
+  $('intro-roll-title').innerHTML = unlimited ? 'Shoot <em>freely.</em>' : 'photos. That’s your <em>whole roll.</em>';
+  $('intro-roll-text').textContent = unlimited ? 'No roll to run out of. Use the camera.' : 'No retakes. Use the camera.';
+  $('intro-cam-count').textContent = unlimited ? '∞' : `${event.roll_size} left`;
+  $('intro-cam').setAttribute(
+    'aria-label',
+    `The camera: a photo in this film’s look, ${unlimited ? 'an unlimited roll' : `${event.roll_size} photos left`}.`
+  );
+
+  // 2 · hidden until the end: the guest's own print clear, the others dark
+  const [a, b] = samplesFor(event.id, 2);
+  $<HTMLImageElement>('intro-other-a').src = a;
+  $<HTMLImageElement>('intro-other-b').src = b;
+  void lookSample(event).then((url) => {
+    for (const id of ['intro-cam-img', 'intro-cam-tile', 'intro-yours']) $<HTMLImageElement>(id).src = url;
+  });
+
+  // 3 · missions, only when the moment has them
+  const n = event.missions_per_guest;
+  $('intro-missions').hidden = n === null;
+  if (n !== null) {
+    $('intro-capsule').textContent = `Missions 0/${n}`;
+    $('intro-missions-text').textContent =
+      `Up to ${n} small photo ${n === 1 ? 'challenge' : 'challenges'}, in the camera once it starts. ` +
+      'Tap one, and your next photo counts for it.';
+  }
+
+  // 4 · developed together
+  const ends = new Date(event.ends_at);
+  $('intro-date').textContent = formatEndDate(ends);
+  $('intro-time').textContent = formatEndTime(ends);
+
+  show('intro');
+  $('intro-pager').scrollLeft = 0;
+  renderIntroPage(0);
+  $('intro-next').focus({ preventScroll: true });
+}
+
+/** Seen (also when skipped); then wherever the moment is now — 12, the camera or the album. */
+function finishIntro() {
+  const event = state.event;
+  if (!event) return;
+  store.set(introKey(event.id), '1');
+  void route();
+}
+
+/** The app's `look-sample.jpg` through this moment's look, once per look. */
+const looked = new Map<string, Promise<string>>();
+function lookSample(event: Event): Promise<string> {
+  let url = looked.get(event.look);
+  if (!url) {
+    url = lookStill(LOOK_SAMPLE, event.look, 800).catch(() => LOOK_SAMPLE);
+    looked.set(event.look, url);
+  }
+  return url;
+}
+
+// "Sat, 22 Nov" · "23:00" — the app's `formatEndDate` / `formatEndTime`, except
+// for `hour: 'numeric'`: "2:46 PM" rather than "02:46 PM" on a 12-hour clock.
+const endDate = new Intl.DateTimeFormat(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+const endTime = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+const formatEndDate = (d: Date) => endDate.format(d);
+const formatEndTime = (d: Date) => endTime.format(d);
+
+// ---------------------------------------------------------------------------
+// Waiting — the app's 12: the event image in the look, the wait, the facts
+// ---------------------------------------------------------------------------
+
+function setUpWaiting() {
+  $('waiting-invite').addEventListener('click', () => void invite());
+  $('waiting-how').addEventListener('click', () => showIntro());
+}
+
+let drawnCover = '';
+
+function showWaiting() {
+  const event = state.event!;
+  $('waiting-roll').textContent = event.roll_size === null ? 'Unlimited photos each' : `${event.roll_size} photos each`;
+  const ends = new Date(event.ends_at);
+  $('waiting-ends').textContent = `Develops ${formatEndDate(ends)} at ${formatEndTime(ends)}`;
+  show('waiting');
+
+  void listMembers(event.id)
+    .then((members) => {
+      const host = members.find((m) => m.user_id === event.host_id);
+      if (host?.display_name) $('waiting-host').textContent = host.display_name;
+    })
+    .catch(() => undefined);
+
+  // The host's pick (03.1), or a stock picture; drawn once per event, cover and look.
+  const key = `${event.id}:${event.cover ?? ''}:${event.look}`;
+  if (key === drawnCover) return;
+  drawnCover = key;
+  const img = $<HTMLImageElement>('waiting-cover');
+  img.hidden = true;
+  void eventCoverUrl(event).then(async (url) => {
+    // Without WebGL (or a cover the browser will not hand to it) the picture without the look.
+    const src = await lookStill(url, event.look).catch(() => url);
+    if (drawnCover !== key) return;
+    img.onload = () => (img.hidden = false);
+    img.src = src;
+  });
 }
 
 // ---------------------------------------------------------------------------

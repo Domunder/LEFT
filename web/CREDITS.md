@@ -71,3 +71,10 @@ The iPhone 17 Pro frame around the screens comes from Mockify
 (`@mockifydev/react`, MIT), which packages the device frames of Apple's design
 resources. Apple's marketing guidelines apply to how the device is shown:
 unaltered, with the app's own screens in it.
+
+## The web camera's stock pictures
+
+`public/shoot/sample-{1..6}.jpg` are the app's event-image pictures
+(`mobile/assets/images/covers/cover-{1..6}.jpg`, credited in its `CREDITS.md`;
+no people, 2026-11-21) and `look-sample.jpg` is
+`mobile/assets/images/look-sample.jpg`.

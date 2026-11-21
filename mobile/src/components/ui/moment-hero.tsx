@@ -2,9 +2,10 @@
  * The moment in the spotlight at the top of the library (16), full-bleed from
  * the screen's top edge (2026-11-21, the user, replacing the card it had in
  * the list). A running moment: the viewer's latest photo, slowly drifting,
- * with the roll, the countdown and "Open camera" over it. Otherwise the last
- * developed one, until the next one starts: its album's first photo, the
- * counts and "Open album". It fades into the page at its foot.
+ * with the roll, the countdown and "Open camera" over it. Else one waiting to
+ * be started (2026-11-21): the roll, who joined, "Invite & start". Only when
+ * every moment is developed, the last one developed: its album's first photo,
+ * the counts and "Open album". It fades into the page at its foot.
  *
  * The screen's own header ("Moments", the buttons) floats over its top, which
  * the shade darkens for it. There is no border and no card: where the photo
@@ -30,12 +31,14 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { EventCoverImage } from './event-cover-image';
 import { Glass, GlassButton } from './glass';
 import { PillButton } from './pill-button';
 import { PressScale } from './press-scale';
 import { Display } from './typography';
 import { Colors, Films, Press } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import type { Event } from '@/lib/events';
 
 const T = Films.hero;
 const SHADE = [...T.shade.colors] as [string, string, ...string[]];
@@ -79,6 +82,11 @@ type MomentHeroProps = {
    */
   quiet?: boolean;
   onLongPress: () => void;
+  /**
+   * The event image, in the look (2026-11-21, the user: "always this event
+   * image"). When set it is the picture, and `photo`/`sample` are ignored.
+   */
+  cover?: Pick<Event, 'id' | 'cover' | 'look'>;
 };
 
 export function MomentHero({
@@ -94,6 +102,7 @@ export function MomentHero({
   onAction,
   quiet = false,
   onLongPress,
+  cover,
 }: MomentHeroProps) {
   const { height } = useWindowDimensions();
   const reducedMotion = useReducedMotion();
@@ -130,7 +139,11 @@ export function MomentHero({
       onLongPress={onLongPress}
       style={[styles.hero, { height: heroHeight(height) }]}>
       <View style={[StyleSheet.absoluteFill, { backgroundColor: tint }]} />
-      {source ? (
+      {cover ? (
+        <Animated.View style={[StyleSheet.absoluteFill, drifting]}>
+          <EventCoverImage event={cover} />
+        </Animated.View>
+      ) : source ? (
         <Animated.View style={[StyleSheet.absoluteFill, drifting]}>
           <Image
             source={source}

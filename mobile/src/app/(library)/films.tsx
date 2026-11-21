@@ -284,17 +284,23 @@ export default function FilmsScreen() {
     const phases = new Map<string, FilmPhase>(
       events.map((event) => [event.id, filmPhase(event, now)]),
     );
-    // The spotlight: a running moment, or else the last one developed — it stays
-    // there until the next one starts (the user, 2026-11-21). A moment still in
-    // setup has not started, so it does not take it.
+    // The spotlight (the user, 2026-11-21): a running moment; else one waiting to
+    // be started — the soonest to end; only when every moment is developed, the
+    // last one developed. A developed moment never takes it from an open one.
     const live = events.find((event) => phases.get(event.id) === 'live');
+    const waiting = events
+      .filter((event) => phases.get(event.id) === 'setup')
+      .reduce<EventSummary | undefined>(
+        (soonest, event) => (!soonest || event.ends_at < soonest.ends_at ? event : soonest),
+        undefined,
+      );
     const lastDeveloped = events
       .filter((event) => phases.get(event.id) === 'developed')
       .reduce<EventSummary | undefined>(
         (latest, event) => (!latest || event.ends_at > latest.ends_at ? event : latest),
         undefined,
       );
-    const hero = live ?? lastDeveloped;
+    const hero = live ?? waiting ?? lastDeveloped;
     const rest = events.filter((event) => event !== hero);
     // Whatever is still coming or running first, then the developed ones under their label.
     const open = rest.filter((event) => phases.get(event.id) !== 'developed');
@@ -367,7 +373,31 @@ export default function FilmsScreen() {
           sample: cover && !photo ? samplesFor(event.id, 1)[0] : undefined,
           tint: tintFor(event.id)[0],
           onLongPress: menu,
+          // The event image heads every moment (the user, 2026-11-21).
+          cover: event,
         };
+
+        // Not started yet: the roll, who has joined, and the way to start it
+        // (the host's 10) or to wait (a guest's 12) — `destinationFor` decides.
+        if (phase === 'setup') {
+          return (
+            <MomentHero
+              {...common}
+              status="Not started"
+              live={false}
+              primary={{
+                value: event.roll_size === null ? '∞' : String(event.roll_size),
+                label: event.roll_size === null ? 'unlimited roll' : 'photos each',
+              }}
+              secondary={{
+                value: String(event.memberCount),
+                label: 'joined',
+              }}
+              actionLabel={event.host_id === user?.id ? 'Invite & start' : 'Open'}
+              onAction={open}
+            />
+          );
+        }
 
         if (developed) {
           const photos = cover?.photoCount ?? event.shotsTaken;

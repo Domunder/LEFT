@@ -44,7 +44,7 @@ export default function EndingScreen() {
   const router = useRouter();
   const { draft, patch } = useOnboarding();
   useGlow('ending');
-  useStep(3);
+  useStep(4);
 
   // Preseeded like 02/03, so there is no empty state to explain. Returning to
   // this screen restores the earlier choice.

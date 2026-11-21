@@ -97,12 +97,117 @@ import '../../styles/shoot.css';
       </form>
     </section>
 
-    <!-- Waiting for the host to start -->
-    <section class="screen screen-center" data-screen="waiting">
-      <p class="eyebrow" data-bind="event-name"></p>
-      <h1>Waiting for the host to <em>start the film.</em></h1>
-      <p class="lede">Keep this page open. The camera opens by itself.</p>
-      <span class="spinner" aria-hidden="true"></span>
+    <!--
+      How this moment works: once per moment and browser, between the name and
+      the wait (the app's `(guest)/intro`). Swipe (scroll-snap) or Next; Skip.
+    -->
+    <section class="screen intro" data-screen="intro" aria-label="How this moment works">
+      <header class="intro-head">
+        <p class="eyebrow" data-bind="event-name"></p>
+        <button class="intro-skip press" id="intro-skip" type="button" aria-label="Skip the introduction">Skip</button>
+      </header>
+
+      <div class="intro-pager" id="intro-pager">
+        <article class="intro-page">
+          <div class="intro-visual">
+            <div class="mini-cam" role="img" id="intro-cam">
+              <div class="mini-frame">
+                <img id="intro-cam-img" alt="" />
+                <span class="mini-count" id="intro-cam-count"></span>
+              </div>
+              <div class="mini-bar" aria-hidden="true">
+                <span class="mini-tile"><img id="intro-cam-tile" alt="" /></span>
+                <span class="mini-shutter"><span></span></span>
+                <span class="mini-tile mini-icon">
+                  <svg viewBox="0 0 24 24"><path d="M15 8a3 3 0 1 0-6 0 3 3 0 0 0 6 0zM4 20c.8-3.5 4-5.5 8-5.5M18 14v6M15 17h6" /></svg>
+                </span>
+              </div>
+            </div>
+          </div>
+          <div class="intro-text">
+            <p class="intro-numeral" id="intro-roll"></p>
+            <h2 id="intro-roll-title"></h2>
+            <p class="lede" id="intro-roll-text"></p>
+          </div>
+        </article>
+
+        <article class="intro-page">
+          <div class="intro-visual intro-prints" aria-hidden="true">
+            <span class="intro-print side"><img id="intro-other-a" alt="" /></span>
+            <span class="intro-print"><img id="intro-yours" alt="" /><span class="intro-tag">Yours</span></span>
+            <span class="intro-print side"><img id="intro-other-b" alt="" /></span>
+          </div>
+          <div class="intro-text">
+            <h2>Hidden until <em>the end.</em></h2>
+            <p class="lede">You can look at your own photos. Everyone else’s stay dark until the film develops.</p>
+          </div>
+        </article>
+
+        <article class="intro-page" id="intro-missions">
+          <div class="intro-visual intro-missions" aria-hidden="true">
+            <span class="intro-capsule" id="intro-capsule"></span>
+            <p class="intro-note">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></svg>
+              <span>Next photo: A photo with someone you’ve never met</span>
+            </p>
+          </div>
+          <div class="intro-text">
+            <h2>Your <em>missions.</em></h2>
+            <p class="lede" id="intro-missions-text"></p>
+          </div>
+        </article>
+
+        <article class="intro-page">
+          <div class="intro-visual">
+            <p class="intro-date" id="intro-date"></p>
+            <p class="intro-numeral" id="intro-time"></p>
+          </div>
+          <div class="intro-text">
+            <h2>Developed <em>together.</em></h2>
+            <p class="lede">Then the cameras close and everyone sees every photo at once, right here on this link.</p>
+          </div>
+        </article>
+      </div>
+
+      <footer class="intro-foot">
+        <div class="intro-dots" id="intro-dots" aria-hidden="true"></div>
+        <button class="pill pill-primary press" id="intro-next" type="button">Next</button>
+      </footer>
+    </section>
+
+    <!-- Waiting for the host to start: the event image in the moment's look, then the facts -->
+    <section class="screen waiting" data-screen="waiting">
+      <div class="waiting-backdrop" aria-hidden="true">
+        <img id="waiting-cover" alt="" hidden />
+      </div>
+      <button class="round glass press waiting-invite" id="waiting-invite" type="button" aria-label="Invite someone">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2zM16 16h2v2h-2z" /></svg>
+      </button>
+      <div class="waiting-body">
+        <p class="eyebrow" data-bind="event-name"></p>
+        <h1>Almost <em>there.</em></h1>
+        <div class="wait-row">
+          <span class="ping" aria-hidden="true"></span>
+          <p>Waiting for <b id="waiting-host">the host</b> to start the event.</p>
+        </div>
+        <ul class="facts">
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+            <span id="waiting-roll"></span>
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+            <span id="waiting-ends"></span>
+          </li>
+        </ul>
+        <p class="fine">Keep this page open. The camera opens by itself.</p>
+      </div>
+      <div class="waiting-foot">
+        <button class="pill pill-ghost press" id="waiting-how" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
+          How it works
+        </button>
+      </div>
     </section>
 
     <!-- The camera -->

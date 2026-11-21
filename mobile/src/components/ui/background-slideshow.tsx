@@ -45,14 +45,16 @@ import Animated, {
 
 import { Backdrop, VideoOverlay } from '@/constants/theme';
 
-/** 9:16 crops of the website's photos — credits in assets/images/backdrop/CREDITS.md. */
+/**
+ * 9:16 crops — credits in assets/images/backdrop/CREDITS.md. Four since
+ * 2026-11-21 (the user): two wedding pictures, the road trip, the dinner; the
+ * party pictures are gone.
+ */
 const PHOTOS = [
   require('@/assets/images/backdrop/backdrop-1.jpg'),
   require('@/assets/images/backdrop/backdrop-2.jpg'),
   require('@/assets/images/backdrop/backdrop-3.jpg'),
   require('@/assets/images/backdrop/backdrop-4.jpg'),
-  require('@/assets/images/backdrop/backdrop-5.jpg'),
-  require('@/assets/images/backdrop/backdrop-6.jpg'),
 ] as const;
 
 type BackgroundSlideshowProps = {

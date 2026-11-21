@@ -2,7 +2,7 @@
  * Rename, delete and remove a moment (2026-11-21, the user) — one menu, opened
  * by a long press on a Moments card and by the album's ••• button.
  *
- *  - The host: Rename, Delete. Delete is for everyone and asks first, naming
+ *  - The host: Rename, Change image (`(host)/cover`, 2026-11-21), Delete. Delete is for everyone and asks first, naming
  *    what goes ("All 142 photos are deleted for all 18 people."); a paid
  *    moment adds that the purchase is not refunded.
  *  - A guest: Remove from Moments — hidden on this phone only
@@ -14,6 +14,7 @@
  * that build exists and gets its own field.
  */
 
+import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
 
@@ -47,6 +48,7 @@ function wasPaid(event: MomentActionsTarget['event']): boolean {
 }
 
 export function useMomentActions({ onRenamed, onGone }: Handlers) {
+  const router = useRouter();
   const rename = useCallback(
     (target: MomentActionsTarget) => {
       Alert.prompt(
@@ -131,6 +133,11 @@ export function useMomentActions({ onRenamed, onGone }: Handlers) {
             ...(Platform.OS === 'ios'
               ? [{ label: 'Rename', run: () => rename(target) }]
               : []),
+            {
+              label: 'Change image',
+              run: () =>
+                router.push({ pathname: '/(host)/cover', params: { eventId: target.event.id } }),
+            },
             { label: 'Delete moment', destructive: true, run: () => confirmDelete(target) },
           ]
         : [{ label: 'Remove from Moments', destructive: true, run: () => confirmRemove(target) }];
@@ -159,6 +166,6 @@ export function useMomentActions({ onRenamed, onGone }: Handlers) {
         { text: 'Cancel', style: 'cancel' as const },
       ]);
     },
-    [confirmDelete, confirmRemove, rename]
+    [confirmDelete, confirmRemove, rename, router]
   );
 }

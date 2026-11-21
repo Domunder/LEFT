@@ -179,6 +179,51 @@ export async function signedUrls(paths: readonly string[], seconds = 3600) {
   return urls;
 }
 
+// ---------------------------------------------------------------------------
+// The event image — mirrors `mobile/src/lib/event-cover.ts`
+// ---------------------------------------------------------------------------
+
+/**
+ * The stock pictures, served from `public/shoot/` — copies of the app's
+ * `assets/images/samples/sample-{1..6}.jpg`. Positions match the app's
+ * `SAMPLE_PHOTOS`: `events.cover = 'sample-N'` is file N.
+ */
+export const SAMPLE_PHOTOS: readonly string[] = [1, 2, 3, 4, 5, 6].map((n) => `/shoot/sample-${n}.jpg`);
+
+/** The app's `look-sample.jpg`, which its `LookPreview` draws by default. */
+export const LOOK_SAMPLE = '/shoot/look-sample.jpg';
+
+/** `count` stock pictures starting at a place seeded by `seed` — the app's `samplesFor`. */
+export function samplesFor(seed: string, count = 3): string[] {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  return Array.from({ length: count }, (_, i) => SAMPLE_PHOTOS[(hash + i) % SAMPLE_PHOTOS.length]);
+}
+
+export function coverPath(eventId: string): string {
+  return `${eventId}/cover.jpg`;
+}
+
+/**
+ * The picture to draw for an event (`events.cover`): null → a stock picture
+ * seeded by the id, 'sample-N' → that one, 'upload' → the host's own photo,
+ * signed (members may read it before the reveal). An upload that cannot be
+ * signed falls back to the seeded stock picture, as in the app.
+ */
+export async function eventCoverUrl(event: Pick<Event, 'id' | 'cover'>): Promise<string> {
+  const fallback = samplesFor(event.id, 1)[0];
+  if (event.cover === 'upload') {
+    try {
+      const path = coverPath(event.id);
+      return (await signedUrls([path])).get(path) ?? fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  const n = /^sample-(\d+)$/.exec(event.cover ?? '')?.[1];
+  return (n && SAMPLE_PHOTOS[Number(n) - 1]) || fallback;
+}
+
 /** The owner's own photo (or the host's moderation). Files first, then the row. */
 export async function deletePhoto(photo: Photo): Promise<void> {
   const paths = [photo.storage_path, photo.thumb_path].filter((p): p is string => !!p);

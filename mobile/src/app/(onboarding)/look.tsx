@@ -81,7 +81,7 @@ export default function LookScreen() {
 
   function handleContinue() {
     patch({ look });
-    router.push('/(onboarding)/ending');
+    router.push('/(onboarding)/cover');
   }
 
   return (

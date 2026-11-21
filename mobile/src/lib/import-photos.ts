@@ -132,3 +132,21 @@ export async function importPhotos(
   }
   return queued;
 }
+
+/**
+ * One photo from the library, for the event image (2026-11-21) — a local file
+ * URI, or null when cancelled or when this build has no picker.
+ */
+export async function pickOnePhoto(): Promise<string | null> {
+  const ImagePicker = loadPicker();
+  if (!ImagePicker) return null;
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsMultipleSelection: false,
+    quality: 1,
+    preferredAssetRepresentationMode:
+      ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+  });
+  if (result.canceled) return null;
+  return result.assets[0]?.uri ?? null;
+}

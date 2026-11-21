@@ -445,6 +445,12 @@ export const SignUp = {
  * 05.1 reaches this screen with `router.replace`, so there is nothing to go back to.
  */
 export const Invite = {
+  /** The event image behind the top of 09 (2026-11-21), gone before the code. */
+  backdrop: {
+    heightRatio: 0.42,
+    fade: ['rgba(16,16,16,0.35)', 'rgba(16,16,16,0.55)', 'rgba(16,16,16,0.9)', '#101010'],
+    fadeLocations: [0, 0.4, 0.8, 1],
+  },
   /** The artboard's `padding: 58px 28px 46px`; 02-05.1 use 52, 06 uses 40. */
   paddingBottom: 46,
   /** The empty header spacer — a back button's height, with no button in it. */
@@ -731,6 +737,19 @@ export const LengthChoiceState = {
  * Landing panel's 32/24/28, and its blur is 48 where Landing's is 40.
  */
 export const JoinSheet = {
+  /** 08 opens straight into the scanner (2026-11-21): its title and the link note. */
+  scanner: {
+    /** Over the screen below while the camera starts. */
+    scrim: 'rgba(16,16,16,0.72)',
+    cameraFadeMs: 220,
+    titleTop: 64,
+    hintBottom: 16,
+    hintRadius: 20,
+    hintPaddingX: 16,
+    hintPaddingY: 14,
+    hintGap: 12,
+    hintIcon: 16,
+  },
   /** The artboard's `padding: 12px 24px 52px` on the panel. */
   paddingTop: 12,
   paddingX: 24,
@@ -956,14 +975,117 @@ export const Waiting = {
    */
   explainerGap: 36,
   /** The expanding ring's footprint, and the solid dot inside it. */
-  pingSize: 10,
-  dotSize: 6,
+  /** Larger since 2026-11-21 (the user: "a little more present"). */
+  pingSize: 22,
+  dotSize: 11,
   /** Nudged down to sit on the copy's first baseline. */
   pingOffset: 2,
   /** The artboard's `wait-ping 2s cubic-bezier(0,0,0.2,1) infinite`. */
   pingDuration: 2000,
-  pingScale: 2.2,
-  pingOpacity: 0.4,
+  pingScale: 2.4,
+  pingOpacity: 0.45,
+
+  /** The moment's look on the sample photo, fading into the page (2026-11-21). */
+  backdrop: {
+    heightRatio: 0.5,
+    /** Where the title starts, as a share of the backdrop's height. */
+    titleAt: 0.62,
+    /** Headline -> the card, tighter than the old 40 now that the page is full. */
+    headlineGap: 24,
+    fade: ['rgba(16,16,16,0.25)', 'rgba(16,16,16,0.1)', 'rgba(16,16,16,0.75)', '#101010'],
+    fadeLocations: [0, 0.3, 0.75, 1],
+  },
+  /** "24 photos each" · "Develops Sat, 22 Nov at 23:00" under the wait. */
+  fact: {
+    top: 24,
+    gap: 12,
+    iconSize: 16,
+    iconGap: 10,
+  },
+  /** Names prompt -> the "How it works" button at the foot. */
+  footGap: 16,
+  /** The QR button, top right over the event image. */
+  chromeInset: 8,
+  qrIconSize: 20,
+} as const;
+
+/** 03.1 · Event image — the creation step after the look (2026-11-21). */
+export const CoverStep = {
+  headerGap: 8,
+  eyebrowGap: 12,
+  headlineGap: 10,
+  enterDelayMs: 120,
+  previewPaddingY: 20,
+  previewMaxHeight: 420,
+  previewRadius: 18,
+  tile: 64,
+  tileGap: 10,
+  tileRadius: 12,
+  selectedWidth: 2,
+  iconSize: 18,
+  badge: 30,
+  badgeBg: 'rgba(16,16,16,0.6)',
+} as const;
+
+/** 11.5 · the guest's swipe-through intro (`(guest)/intro`, 2026-11-21). */
+export const GuestIntro = {
+  headerTop: 8,
+  headerHeight: 44,
+  skipHitSlop: 12,
+  /** Picture -> text on a page. */
+  visualGap: 28,
+  /** Every page's picture gets the same height, so the text holds still while paging. */
+  visualHeight: 260,
+  /** Page 1's still of the camera: 200 tall + its shutter row, inside `visualHeight`. */
+  cameraWidth: 150,
+  textGap: 12,
+  printWidth: 110,
+  /** The others' prints beside the guest's own, smaller. */
+  sideScale: 0.82,
+  printGap: 10,
+  printRadius: 10,
+  hiddenBlur: 40,
+  hiddenDim: 'rgba(8,8,10,0.45)',
+  chip: 'rgba(16,16,16,0.55)',
+  tagInset: 8,
+  tagHeight: 20,
+  tagPaddingX: 8,
+  missionGap: 12,
+  missionCapsuleHeight: 30,
+  missionPaddingX: 14,
+  missionPaddingY: 9,
+  missionNoteRadius: 14,
+  missionNoteMax: 300,
+  missionIcon: 14,
+  missionIconGap: 8,
+  footerGap: 20,
+  footerBottom: 12,
+} as const;
+
+/** 12's still picture of the camera (`components/ui/mini-camera.tsx`, 2026-11-21). */
+export const MiniCamera = {
+  width: 200,
+  radius: 18,
+  inset: 10,
+  scrimHeight: 90,
+  scrim: 'rgba(16,16,16,0.28)',
+  chip: 'rgba(16,16,16,0.55)',
+  counterHeight: 24,
+  counterPaddingX: 10,
+  noteGap: 6,
+  notePaddingX: 9,
+  notePaddingY: 5,
+  noteRadius: 10,
+  noteIcon: 10,
+  noteIconGap: 5,
+  barGap: 12,
+  barPaddingX: 12,
+  tile: 30,
+  tileRadius: 8,
+  tileIcon: 14,
+  shutter: 44,
+  shutterRing: 2,
+  shutterGap: 3,
 } as const;
 
 /**

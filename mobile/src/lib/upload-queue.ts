@@ -137,6 +137,14 @@ type Listener = (event: QueueEvent) => void;
 let items: QueuedShot[] = [];
 let hydrated: Promise<void> | null = null;
 let draining = false;
+/**
+ * Set when `drain()` is asked for while it runs. The running pass works through
+ * the ids it read at its start, so a frame enqueued meanwhile (a burst, or
+ * several photos added from the library at once) would wait for the next
+ * reconnect or foreground — hidden and unclaimed. A set flag runs one more
+ * pass when this one ends (2026-11-21: added 4 photos, 3 showed).
+ */
+let drainAgain = false;
 let failures = 0;
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let started = false;
@@ -605,8 +613,13 @@ function scheduleRetry() {
  * shared phone wait for that account to come back.
  */
 export async function drain(): Promise<void> {
-  if (draining || !isSupabaseConfigured()) return;
+  if (!isSupabaseConfigured()) return;
+  if (draining) {
+    drainAgain = true;
+    return;
+  }
   draining = true;
+  drainAgain = false;
 
   try {
     await hydrate();
@@ -637,6 +650,10 @@ export async function drain(): Promise<void> {
     }
   } finally {
     draining = false;
+    if (drainAgain) {
+      drainAgain = false;
+      void drain();
+    }
   }
 }
 

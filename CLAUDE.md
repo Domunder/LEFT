@@ -188,7 +188,7 @@ mobile/src/
     (guest)/              11 Name · 12 Waiting
     (capture)/            13 Camera · Your shots (roll)
     (library)/            15/16 Moments (list of cards) · album/[id] (developing → reveal → album)
-    (modals)/             08 Join sheet · Delete account
+    (modals)/             08 Join (the QR scanner) · Delete account
     settings.tsx          20 Settings
     +native-intent.ts     invite link -> 11
   components/ui/          shared primitives
@@ -416,6 +416,10 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   once into the cache, saved with `MediaLibrary.Asset.create`, shared with RN's
   own `Share` on iOS and `expo-sharing` on Android (lazily required; **never
   run**). Owner or host can delete (`deletePhoto`, RLS).
+- **08 is the QR scanner itself** (2026-11-21, the user: on the sheet it was
+  not clear the "Scan QR Code" card could be tapped). "Scan the host's QR
+  code." at the top, a glass note at the bottom that a link, tapped in
+  messages, opens LEFT. No sheet, no slideshow behind it. Not seen on a device.
 - **Rename and delete (2026-11-21, the user):** a long press on a Moments
   card or the album's ••• opens one menu (`hooks/use-moment-actions.ts`).
   The host renames in any state (iOS `Alert.prompt` — Android has no Rename
@@ -463,9 +467,11 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   fading into the page — no card, no border: **the first live moment**
   (its latest own photo drifting slowly, "Live now", the shots left, the
   countdown — a tap opens the developing state and the host's "develop
-  now" — and "Open camera"), or else **the last developed one until the
-  next one starts** (the user, same day; a moment in setup does not take
-  it): its album's first photo, "Developed", the counts side by side and a
+  now" — and "Open camera"), else **one waiting to be started** (the
+  soonest to end: the roll, who joined, "Invite & start" for the host —
+  the user, 2026-11-21, replacing "a moment in setup does not take it"),
+  and **only when every moment is developed, the last developed one**: its
+  album's first photo, "Developed", the counts side by side and a
   small glass "Open album" capsule beside them — not the full-width pill,
   which stuck out (the user); a tap anywhere on the photo opens it too.
   Without a photo of its own it shows **an unblurred sample as a mock
@@ -549,6 +555,37 @@ and upload queue that use it are described above.
   files — and then calls `purge_event()`. **"Never earlier" lives in the
   database:** `purge_event()` refuses an event that is not developed, is
   younger than `retention_period()`, or still has objects in the bucket.
+- **The event image** (2026-11-21, the user): 03.1 (`(onboarding)/cover`,
+  after the look; onboarding is 5 steps now) picks one of the six stock
+  pictures or the host's own photo, previewed in the look. 05.1 applies it
+  right after the event exists (`applyCover`, best effort). `events.cover`:
+  null / `sample-N` / `upload` (file at `photos/{event}/cover.jpg`, so the
+  purge and account deletion take it with the photos; members read it any
+  time, only the host writes — migration `20261121162520_event_cover.sql`).
+  Drawn through the look (`LookPreview`'s `source`) behind 12 and the top of
+  09. The host changes it any time through "Change image" in the moment's
+  menu (`(host)/cover`, the same `CoverPicker`). **It heads the moment everywhere**
+  (the user, 2026-11-21): the Moments spotlight and the album's header draw
+  it (`EventCoverImage`) instead of the latest or a random photo. The six stock choices show
+  no people (`assets/images/covers/`, also in the web camera and the clip as
+  `sample-N.jpg`). **Not yet on the Moments list**: that list was being redesigned in a
+  parallel session (`MomentHero`/`MomentRow`) at the time. Not seen on a
+  device.
+- **12 has no cards** (2026-11-21, the user): the wait with a larger ping,
+  "24 photos each" and "Develops Sat, 22 Nov at 23:00" as plain lines, "How
+  it works" as underlined text with an icon and chevron, and a glass QR
+  button top left that opens 09 (`from=waiting`) for any member.
+- **A swipe-through intro after 11** (`(guest)/intro`, 2026-11-21, the user,
+  replacing steps that made 12 scroll): once per moment and phone
+  (`lib/guest-intro.ts`), then 12. Pages: the roll written huge ("24 —
+  photos. That's your whole roll.") over a still of the camera (`MiniCamera`
+  in the moment's look); hidden until the end (own print clear, others dark);
+  missions, only when on ("up to N", an example); the end date → "Got it".
+  Skip at the top. 12 is one screen again: the card, "24 photos each ·
+  develops Sat, 22 Nov, 23:00" and a "How it works" link that replays the
+  intro. A developed moment skips it. 12 has the sample photo in the
+  moment's look fading into the page, two chips (roll, end) and a "How it
+  works" row with an icon and a chevron. **Not seen on a device.**
 - **"Start the Event" stays** (decided 2026-11-15): the host's tap on 10 moves
   the event from `setup` to `live`; guests wait on 12 until then.
 - **A browser guest sees the album on the web** (decided 2026-11-16,
@@ -971,10 +1008,11 @@ A large soft light that **travels and dims through onboarding**.
 
 ## The photo backdrop
 
-Landing (01), the join sheet (08) and the three auth screens sit on
+Landing (01) and the three auth screens sit on
 `components/ui/background-slideshow.tsx` (2026-11-16, replacing the looping
-video and its 8 MB file — the user's call: "fancy, but not a video"). Six
-photos (`assets/images/backdrop/`, 9:16 crops of the website's pictures) each
+video and its 8 MB file — the user's call: "fancy, but not a video"). Four
+photos since 2026-11-21 (`assets/images/backdrop/`, 9:16: two wedding pictures,
+the road trip, the dinner; no party pictures — the user) each
 travel slowly — zoom plus a slight drift, alternating direction — and the next
 dissolves in over the one before, which stays opaque underneath so the fade
 never dips to black. Timings and travel are `Backdrop` in `theme.ts`; the

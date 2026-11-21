@@ -341,6 +341,27 @@ export const Typography = {
   } as TextStyle,
 
   /** 17 — the two counts on the album's hero. */
+  /** "24 left" on 12's still picture of the camera. */
+  miniCounter: {
+    fontFamily: FontFamily.numeric,
+    fontSize: 13,
+  } as TextStyle,
+
+  /** "Next photo: …" on 12's still picture of the camera. */
+  miniNote: {
+    fontFamily: FontFamily.medium,
+    fontSize: 10,
+    lineHeight: 13,
+  } as TextStyle,
+
+  /** The roll, written huge on the guest intro's first page ("24"), and its end time. */
+  introNumeral: {
+    fontFamily: FontFamily.numeric,
+    fontSize: 96,
+    lineHeight: 104,
+    letterSpacing: -1,
+  } as TextStyle,
+
   albumStat: {
     fontFamily: FontFamily.numeric,
     fontSize: 22,

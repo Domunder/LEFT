@@ -55,6 +55,16 @@ app's guest half on the same server doors — nothing new in Supabase:
   is duplicated**: change `look-shader.ts` and `look-gl.ts` together.
 - **The camera needs https** (or localhost). On a phone against a dev
   machine, use a tunnel or the deployed preview.
+- **The intro and the event image** (2026-11-21, as in the app): after the
+  name, a swipe-through once per moment and browser (`left:intro-seen:{id}`
+  in localStorage; skipped for a developed moment): the roll, hidden until
+  the end, the missions (only when on), the end. The waiting screen draws
+  `events.cover` through the look (`lookStill()` in `look-gl.ts`): a stock
+  picture from `public/shoot/sample-{1..6}.jpg` (copies of the app's
+  `assets/images/samples/`, same order), or the host's upload, signed from
+  `photos/{id}/cover.jpg`. "How it works" replays the intro; the QR button
+  shares the link. Replace the copies in `public/shoot/` when the app's
+  samples change.
 - No push on the web: the developing screen offers a calendar reminder
   (`.ics`) and the page polls every 15 s.
 - In-app browsers (Instagram, some WhatsApp versions) often block the

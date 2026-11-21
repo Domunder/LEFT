@@ -6,8 +6,8 @@
  *
  *  - **Before the event is developed** — `DevelopingFilm`: a countdown, how
  *    many photos exist, nothing to see. The host can develop early.
- *  - **Developed** — `AlbumHero` (one of the album's photos, picked at random
- *    each time the screen opens, full-bleed and going dark towards the name,
+ *  - **Developed** — `AlbumHero` (the event image in the look since
+ *    2026-11-21, full-bleed and going dark towards the name,
  *    the two counts, "Save all" and "Share" as small glass capsules), then
  *    the whole group's photos three to a row (2026-11-21, the user; two since
  *    2026-11-16) with the photographer's name small on each and a glass
@@ -99,9 +99,6 @@ export default function AlbumScreen() {
   /** Whether leaving should pass through the "keep your film" offer. */
   const [offerKeep, setOfferKeep] = useState(false);
 
-  /** Which photo opens the album — drawn once per visit, so it holds still. */
-  const [heroDraw] = useState(() => Math.random());
-  const [heroFull, setHeroFull] = useState<{ id: string; uri: string } | null>(null);
 
   const list = useRef<FlatList<AlbumPhoto>>(null);
   const scrollY = useSharedValue(0);
@@ -213,29 +210,6 @@ export default function AlbumScreen() {
       cancelled = true;
     };
   }, [id, developed, hadMissions]);
-
-  // --- the hero -------------------------------------------------------------
-
-  const heroIndex = photos.length > 0 ? Math.floor(heroDraw * photos.length) : -1;
-  const hero = heroIndex >= 0 ? photos[heroIndex] : undefined;
-
-  // The thumbnail is soft at this size: fetch a URL for the original.
-  useEffect(() => {
-    if (!hero) return;
-    let cancelled = false;
-    void originalUrl(hero)
-      .then((uri) => {
-        if (uri && !cancelled) setHeroFull({ id: hero.id, uri });
-      })
-      .catch(() => {
-        // The thumbnail stays.
-      });
-    return () => {
-      cancelled = true;
-    };
-    // Keyed by id: a refresh hands over a new object for the same photo.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hero?.id]);
 
   // --- first look -----------------------------------------------------------
 
@@ -639,17 +613,10 @@ export default function AlbumScreen() {
             title={album.event.name}
             photoCount={photos.length}
             memberCount={album.memberCount}
-            photo={
-              hero
-                ? {
-                    id: hero.id,
-                    thumbUri: hero.thumbUri,
-                    fullUri: heroFull?.id === hero.id ? heroFull.uri : undefined,
-                  }
-                : undefined
-            }
+            // The event image heads the album (the user, 2026-11-21), not a
+            // random print; the prints are all in the grid below.
+            cover={album.event}
             scrollY={scrollY}
-            onPressPhoto={() => setOpen({ index: heroIndex, origin: null })}
             onSaveAll={saveAll}
             onShare={shareAlbum}
             saveDisabled={busy}
