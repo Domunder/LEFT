@@ -1,0 +1,10 @@
+---
+/**
+ * The demo for the website's badge and QR codes: the web camera's page
+ * (`j/index.astro`) under a path outside `/j/*`, without the App Clip's card.
+ * `src/shoot/app.ts` reads `/try` as the demo's code. Why: site.ts → `demoPath`.
+ */
+import Invite from './j/index.astro';
+---
+
+<Invite appClip={false} />

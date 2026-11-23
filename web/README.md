@@ -111,7 +111,7 @@ app's guest half on the same server doors — nothing new in Supabase:
   `app` or `tryBadge={false}` — the web camera and the legal texts): a card
   with a build-time QR code (plain modules, the `qrcode` dev dependency) on
   wide screens with a mouse, a "Try it now" pill on narrow or touch screens.
-  Closing it is remembered (`left:try-dismissed`); it steps aside while the
+  Closing it lasts for the visit (sessionStorage, `left:try-dismissed`); it steps aside while the
   footer is on screen.
 - `start_demo()` and `events.demo` are not in `src/generated/database.ts`
   until the app's types are regenerated; `api.ts` calls them untyped.

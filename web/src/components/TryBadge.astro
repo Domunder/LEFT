@@ -8,7 +8,9 @@
  *    scan with a phone;
  *  - narrow or touch screens: a pill, "Try it now", that opens the demo here.
  *
- * Dismissible, remembered in localStorage (`left:try-dismissed`). It steps
+ * Dismissible for the visit only (sessionStorage, `left:try-dismissed`): it is
+ * back the next time the site is opened (2026-11-23, the user closed it and
+ * had no way to get it back). It steps
  * aside while the footer is on screen, so it never covers the footer's links.
  *
  * The copy says only what holds on every phone: nothing is installed (an
@@ -20,7 +22,7 @@
 import QRCode from 'qrcode';
 import { SITE } from '../site';
 
-const path = `/j/${SITE.demoCode}`;
+const path = SITE.demoPath;
 const qr = QRCode.create(`${SITE.url}${path}`, { errorCorrectionLevel: 'M' }).modules;
 let modules = '';
 for (let row = 0; row < qr.size; row++) {
@@ -36,7 +38,7 @@ const box = `${-quiet} ${-quiet} ${qr.size + quiet * 2} ${qr.size + quiet * 2}`;
 <script is:inline>
   // Before the badge is drawn: a visitor who closed it never sees it flash.
   try {
-    if (localStorage.getItem('left:try-dismissed') === '1') document.documentElement.classList.add('try-off');
+    if (sessionStorage.getItem('left:try-dismissed') === '1') document.documentElement.classList.add('try-off');
   } catch (e) {
     /* no storage: the badge shows, and closing it lasts for this page */
   }
@@ -79,7 +81,8 @@ const box = `${-quiet} ${-quiet} ${qr.size + quiet * 2} ${qr.size + quiet * 2}`;
       button.addEventListener('click', () => {
         document.documentElement.classList.add('try-off');
         try {
-          localStorage.setItem('left:try-dismissed', '1');
+          sessionStorage.setItem('left:try-dismissed', '1');
+          localStorage.removeItem('left:try-dismissed');
         } catch (e) {
           /* private mode: gone for this page at least */
         }

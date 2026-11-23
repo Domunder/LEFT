@@ -14,6 +14,8 @@
 
 import { decode } from 'blurhash';
 
+import { SITE } from '../site';
+
 import {
   claimName,
   currentUserId,
@@ -145,7 +147,9 @@ function haptic(pattern: number | number[]) {
 export async function start() {
   const fromPath = location.pathname.match(/^\/j\/([^/?#]+)/i);
   const raw = (fromPath ? decodeURIComponent(fromPath[1]) : new URLSearchParams(location.search).get('c')) ?? '';
-  state.code = raw.trim().toUpperCase();
+  // `/try` is the demo under a path the App Clip and the app do not claim (site.ts → `demoPath`).
+  const isTry = /^\/try\/?$/i.test(location.pathname);
+  state.code = isTry ? DEMO_CODE : raw.trim().toUpperCase();
 
   // iOS Safari only applies :active (the press-in) when a touch listener exists.
   document.addEventListener('touchstart', () => undefined, { passive: true });
@@ -676,7 +680,7 @@ async function showLastShot() {
 async function invite() {
   // A demo is the visitor's own: what is worth passing on is the demo link, not this moment.
   const demo = isDemo(state.event);
-  const url = `${location.origin}/j/${demo ? DEMO_CODE : state.code}`;
+  const url = demo ? `${location.origin}${SITE.demoPath}` : `${location.origin}/j/${state.code}`;
   const text = demo
     ? 'Try LEFT: a disposable camera for events — one roll of photos each, developed together when it ends.'
     : `Join "${state.event?.name ?? 'the film'}" on LEFT — one roll of photos each, developed together when it ends.`;

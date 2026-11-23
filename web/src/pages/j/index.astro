@@ -30,6 +30,9 @@
 import Base from '../../layouts/Base.astro';
 import StoreButtons from '../../components/StoreButtons.astro';
 import '../../styles/shoot.css';
+
+/** `/try` (src/pages/try.astro) renders this page without the App Clip's card. */
+const { appClip = true } = Astro.props as { appClip?: boolean };
 ---
 
 <Base
@@ -37,7 +40,7 @@ import '../../styles/shoot.css';
   description="Join the film: one roll of photos each, developed together when the event ends."
   noindex
   app
-  appClip
+  appClip={appClip}
 >
   <div class="shoot" data-view="loading">
     <div class="glow shoot-glow" aria-hidden="true"></div>

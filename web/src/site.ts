@@ -23,6 +23,15 @@ export const SITE = {
    * visitor (`start_demo()`). A reserved code, never a real invite.
    */
   demoCode: 'TRYLEFT',
+  /**
+   * Where the website sends people for the demo (2026-11-23). Not `/j/TRYLEFT`:
+   * that link is taken over by the App Clip and the installed app, and the
+   * released 1.1.0 of both treat TRYLEFT as an invite and fail ("This invite
+   * link doesn’t work any more"). `/try` is the same web camera, outside
+   * `/j/*`, without the clip's card. Once 1.2.0 is the released version this
+   * may go back to `/j/TRYLEFT`.
+   */
+  demoPath: '/try',
   /** The app's custom scheme (mobile/app.json → scheme). */
   scheme: 'left',
   contactEmail: 'support@leftmoment.com' as string | null,

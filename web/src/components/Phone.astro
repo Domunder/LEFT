@@ -132,10 +132,11 @@ const missionList: MissionItem[] = Astro.props.missionList ?? [
 ];
 
 /**
- * 09's QR code, real and scannable: it opens the website (an invite code
- * would lead to a film that does not exist). Drawn as one SVG path.
+ * 09's QR code, real and scannable: the demo's, the same code as the "Try
+ * LEFT" badge (2026-11-23, the user) — a visitor who scans the phone on the
+ * page lands in a moment of their own. Drawn as one SVG path.
  */
-const qr = QRCode.create(SITE.url, { errorCorrectionLevel: 'M' }).modules;
+const qr = QRCode.create(`${SITE.url}${SITE.demoPath}`, { errorCorrectionLevel: 'M' }).modules;
 let qrPath = '';
 for (let row = 0; row < qr.size; row++) {
   for (let col = 0; col < qr.size; col++) {
