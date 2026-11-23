@@ -285,6 +285,12 @@ Reihenfolge — vorher zeigt der Link nur „Couldn’t start the demo“:
   Namen und bringt seine persönliche Mission; **Live Activity** auf dem
   Sperrbildschirm und in der Dynamic Island („4 left", Missionen, Countdown),
   ein Tipp öffnet die Kamera der Clip
+- ☐ **Clip, nächster Build nach 1.2.0 (Commit `5f25e37`, noch nie kompiliert):**
+  Clip ohne Link öffnen (TestFlight → „Open" beim Clip, ohne Invocation) →
+  „Scan an invite" zeigt den Knopf **„Try the demo"**, ein Tipp öffnet die
+  Demo-Kamera. Und: `leftmoment.com/j/TRYLEFT` mit langsamem Netz öffnen
+  (Entwickler-Einstellungen → Network Link Conditioner, „3G") → es bleibt der
+  Ladekreis bis zur Kamera, „Scan an invite" blitzt nicht mehr dazwischen auf
 - ☐ **Übergabe:** nach Fotos in der Clip die App installieren und öffnen →
   derselbe Gast, der Film steht in Moments, der Zähler stimmt
 
