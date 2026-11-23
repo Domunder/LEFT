@@ -328,7 +328,8 @@ struct CameraScreen: View {
         let shot = QueuedShot(
           id: UUID().uuidString.lowercased(), eventId: event.id, userId: userId, takenAt: takenAt,
           width: photo.width, height: photo.height, claimed: false, uploaded: false,
-          missionId: missionId, missionDirty: missionId == nil ? nil : true, tagAttempts: nil
+          missionId: missionId, missionDirty: missionId == nil ? nil : true, tagAttempts: nil,
+          blurhash: photo.blurhash
         )
         let count = try await UploadQueue.shared.enqueue(shot, photo: photo)
         await MainActor.run { model.shotQueued(count) }

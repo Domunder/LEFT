@@ -65,8 +65,21 @@ app's guest half on the same server doors — nothing new in Supabase:
   `photos/{id}/cover.jpg`. "How it works" replays the intro; the QR button
   shares the link. Replace the copies in `public/shoot/` when the app's
   samples change.
+- **The developing screen is a gallery** (2026-11-23): the event image, the
+  name, a large countdown (seconds only in the last hour), "N photos so far
+  from M people", "Back to the camera" while the guest has frames left, then
+  every photo of the film, newest first, three to a row
+  (`event_gallery()`). The guest's own are sharp (their own signed
+  thumbnails, or the local blob of a frame still queued) and open the viewer;
+  everyone else's are their blurhash — a colour smudge — with the name and a
+  small countdown, not tappable (a dark frame while the upload is on its way
+  or from an older client). The queue computes the blurhash from the
+  thumbnail (32 px wide, 4x3 components) and sends it with
+  `mark_photo_uploaded()`; a failed encode, or a server without the fourth
+  argument yet, never holds the photo back. Migration
+  `20261123000000_gallery_before_develop.sql`.
 - No push on the web: the developing screen offers a calendar reminder
-  (`.ics`) and the page polls every 15 s.
+  (`.ics`) and the page polls every 15 s (the gallery with it).
 - In-app browsers (Instagram, some WhatsApp versions) often block the
   camera; the page says to open the link in Safari or Chrome.
 - A guest who clears the browser's data is a new member with a new roll

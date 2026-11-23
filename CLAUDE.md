@@ -388,11 +388,22 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   damped) by default, `momentum` only after a release, `press` for touch-down.
 - **`PhotoTile` + `useTileRegistry`** (`photo-tile.tsx`) are the grid half:
   press-in feedback and the tile rects.
-- **The album is one route with two states**, decided by `isDeveloped()`:
-  `DevelopingFilm` (countdown, photo count from the roster's `shots_taken` —
-  the photo rows are hidden by RLS — and the host's "develop now"), then the
-  grid. It is reached from the camera's roll-empty state and from a live
-  card's status capsule.
+- **The album is one route with two states**, decided by `isDeveloped()`.
+  **Before the reveal it is a gallery** (2026-11-23, the user, replacing
+  `DevelopingFilm`'s "Nothing to see yet"): `DevelopingHero` (the event
+  image, a large countdown, "N photos so far", Camera and the host's
+  "Develop now" as glass capsules), then every photo three to a row — the
+  viewer's own sharp and openable, everyone else's a **blurhash** smudge
+  with the photographer's name and a small countdown (`HiddenPhotoTile`),
+  refreshed every 30 s. The smudge is computed on the device from the
+  thumbnail and sent with `mark_photo_uploaded(…, p_blurhash)`;
+  `event_gallery()` hands members id, author, size and blurhash — never a
+  path — so the reveal still holds in RLS (migration
+  `20261123000000_gallery_before_develop.sql`). The web camera and the App
+  Clip have the same gallery (`blurhash` npm package; `Blurhash.swift`).
+  Tapping a moment still opens the camera while shots are left, the gallery
+  once the roll is used up. **Not seen on a device; the clip never
+  compiled.**
 - **A developed album opens with `AlbumHero`** (`album-hero.tsx`; decided
   2026-11-16 by the user, from a reference, replacing the three-column grid
   under a small title): one of the album's photos, drawn at random per visit,

@@ -42,9 +42,9 @@ export default function CoverScreen() {
     <Screen transparent>
       <ScreenHeader style={styles.header} />
 
-      <Label style={styles.eyebrow}>Event image</Label>
+      <Label style={styles.eyebrow}>Event cover</Label>
       <Display size="xl" style={styles.headline}>
-        Pick the <Em>picture.</Em>
+        Choose your <Em>event cover.</Em>
       </Display>
       <Body small color={Colors.textDim}>
         Your guests see it while they wait, in your film&rsquo;s look.

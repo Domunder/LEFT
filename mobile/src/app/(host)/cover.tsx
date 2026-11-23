@@ -113,7 +113,7 @@ export default function ChangeCoverScreen() {
         {event?.name ?? ' '}
       </Label>
       <Display size="xl" style={styles.headline}>
-        Change the <Em>picture.</Em>
+        Change your <Em>event cover.</Em>
       </Display>
       <Body small color={Colors.textDim}>
         Your guests see it while they wait, in your film&rsquo;s look.

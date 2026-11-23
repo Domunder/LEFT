@@ -431,61 +431,300 @@ private struct InviteSheet: View {
 
 // MARK: Developing
 
+/// The developing state. Until the film is developed it is the gallery
+/// before the reveal (`GalleryView`, 2026-11-23); once it is, the album is the
+/// full app's, so this says so and offers LEFT. The clock decides the switch,
+/// to the second, as `is_event_developed()` does.
 struct DevelopingScreen: View {
   let event: EventInfo
-  @EnvironmentObject private var model: ClipModel
   @State private var showStore = false
 
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
-      let developed = event.isDeveloped(now: context.date)
-      VStack(alignment: .leading, spacing: 0) {
-        Eyebrow(text: event.name).padding(.top, 48)
-        if developed {
-          Headline(plain: "The film is\n", emphasis: "developed.", size: 44).padding(.top, 14)
-          Text("Get LEFT to see everyone’s photos. This event is waiting there, with your photos in it.")
-            .font(Fonts.body(15))
-            .foregroundStyle(Theme.textMuted)
-            .padding(.top, 20)
-        } else {
-          Headline(plain: model.shotsLeft == 0 ? "That was your\n" : "Nothing to see\n",
-                   emphasis: model.shotsLeft == 0 ? "last photo." : "yet.", size: 44)
-            .padding(.top, 14)
-          let parts = countdownParts(to: event.endsAt, now: context.date)
-          HStack(alignment: .firstTextBaseline, spacing: 10) {
-            ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
-              HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text(part.value).font(Fonts.numeral(60)).foregroundStyle(Theme.text)
-                Text(part.unit.uppercased()).font(Fonts.medium(13)).foregroundStyle(Theme.textFaint)
-              }
-            }
-          }
-          .monospacedDigit()
-          .padding(.top, 28)
-          .accessibilityElement(children: .ignore)
-          .accessibilityLabel("\(parts[0].value) \(parts[0].unit), \(parts[1].value) \(parts[1].unit) until the film is developed")
-          Text(model.shotsLeft == 0
-            ? "Your roll is used up. Everyone’s photos appear together when the film is developed."
-            : "They appear together when the film is developed.")
-            .font(Fonts.body(15))
-            .foregroundStyle(Theme.textMuted)
-            .padding(.top, 20)
-        }
-        Spacer()
-        Button("Get LEFT") { showStore = true }
-          .buttonStyle(PillButtonStyle())
-        if !developed, model.shotsLeft != 0 {
-          Button("Back to the camera") { model.backToCamera() }
-            .buttonStyle(PillButtonStyle(light: false))
-            .padding(.top, 10)
-        }
+      if event.isDeveloped(now: context.date) {
+        DevelopedView(event: event, showStore: $showStore)
+      } else {
+        GalleryView(event: event, now: context.date, showStore: $showStore)
       }
-      .padding(.horizontal, Theme.gutter)
-      .padding(.bottom, 12)
     }
     .appStoreOverlay(isPresented: $showStore) {
       SKOverlay.AppClipConfiguration(position: .bottom)
     }
+  }
+}
+
+/// The film is developed: the photos are in the full app.
+private struct DevelopedView: View {
+  let event: EventInfo
+  @Binding var showStore: Bool
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Eyebrow(text: event.name).padding(.top, 48)
+      Headline(plain: "The film is\n", emphasis: "developed.", size: 44).padding(.top, 14)
+      Text("Get LEFT to see everyone’s photos. This event is waiting there, with your photos in it.")
+        .font(Fonts.body(15))
+        .foregroundStyle(Theme.textMuted)
+        .padding(.top, 20)
+      Spacer()
+      Button("Get LEFT") { showStore = true }
+        .buttonStyle(PillButtonStyle())
+    }
+    .padding(.horizontal, Theme.gutter)
+    .padding(.bottom, 12)
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
+
+/// The gallery before the reveal (2026-11-23, the user; the web camera's
+/// `developing` view): the event image with the name and the countdown, how
+/// many photos so far from how many people, then every photo of the film,
+/// newest first — the guest's own sharp (a tap opens the viewer), everyone
+/// else's as the blurhash their phone sent, with the photographer's name and
+/// the time left. The files themselves stay behind RLS until the developing.
+private struct GalleryView: View {
+  let event: EventInfo
+  let now: Date
+  @Binding var showStore: Bool
+  @EnvironmentObject private var model: ClipModel
+  @State private var open: ShotItem?
+  @Namespace private var zoom
+
+  private let columns = Array(
+    repeating: GridItem(.flexible(), spacing: GalleryTokens.gap),
+    count: GalleryTokens.columns
+  )
+
+  var body: some View {
+    let tiles = model.galleryTiles
+    GeometryReader { geo in
+      let full = geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom
+      let cover = (full * GalleryTokens.coverRatio).rounded()
+      ZStack(alignment: .top) {
+        // Behind the page, from the physical top edge; the grid slides over it.
+        CoverImage(event: event)
+          .frame(width: geo.size.width, height: cover)
+          .overlay(LinearGradient(gradient: GalleryTokens.coverFade, startPoint: .top, endPoint: .bottom))
+          .clipped()
+          .offset(y: -geo.safeAreaInsets.top)
+          .allowsHitTesting(false)
+
+        ScrollView {
+          VStack(alignment: .leading, spacing: 0) {
+            header(count: tiles.count)
+              .padding(.horizontal, Theme.gutter)
+              .padding(.top, max(48, cover * GalleryTokens.titleAt - geo.safeAreaInsets.top))
+            grid(tiles)
+              .padding(.top, GalleryTokens.gridTop)
+              .padding(.bottom, 24)
+              .frame(maxWidth: .infinity)
+              .background(Theme.bg)
+          }
+        }
+        .scrollIndicators(.hidden)
+      }
+    }
+    .task(id: event.id) {
+      await model.loadShots()
+      await model.loadGallery()
+    }
+    .fullScreenCover(item: $open) { shot in
+      PhotoViewer(start: shot.id, event: event, zoom: zoom)
+        .environmentObject(model)
+    }
+  }
+
+  // MARK: Header
+
+  @ViewBuilder private func header(count: Int) -> some View {
+    let parts = galleryCountdownParts(to: event.endsAt, now: now)
+    let people = model.galleryPeople
+    VStack(alignment: .leading, spacing: 0) {
+      Eyebrow(text: "Developing")
+      Text(event.name)
+        .font(Fonts.display(GalleryTokens.titleSize))
+        .foregroundStyle(Theme.text)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.top, 10)
+
+      HStack(alignment: .firstTextBaseline, spacing: GalleryTokens.countdownGap) {
+        ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+          HStack(alignment: .firstTextBaseline, spacing: 3) {
+            Text(part.value).font(Fonts.numeral(GalleryTokens.countdownSize)).foregroundStyle(Theme.text)
+            Text(part.unit.uppercased())
+              .font(Fonts.medium(GalleryTokens.countdownUnitSize))
+              .foregroundStyle(Theme.textFaint)
+          }
+        }
+      }
+      .monospacedDigit()
+      .lineLimit(1)
+      .minimumScaleFactor(0.6)
+      .padding(.top, 12)
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel(parts.map { "\($0.value) \($0.unit)" }.joined(separator: ", ") + " until the film is developed")
+
+      // Nothing to count yet: the grid says so.
+      if count > 0 {
+        Text("\(count) \(count == 1 ? "photo" : "photos") so far from \(people) \(people == 1 ? "person" : "people")")
+          .font(Fonts.medium(15))
+          .monospacedDigit()
+          .foregroundStyle(Theme.text)
+          .padding(.top, GalleryTokens.countsTop)
+      }
+
+      VStack(spacing: GalleryTokens.actionsGap) {
+        // As `backToCamera()` decides it: while the roll has shots left.
+        if model.shotsLeft != 0 {
+          Button("Back to the camera") { model.backToCamera() }
+            .buttonStyle(PillButtonStyle())
+        }
+        Button("Get LEFT") { showStore = true }
+          .buttonStyle(PillButtonStyle(light: model.shotsLeft == 0))
+      }
+      .padding(.top, GalleryTokens.actionsTop)
+
+      Text(model.shotsLeft == 0
+        ? "That was your last photo. Everyone else’s clear up when the film is developed."
+        : "Only yours are sharp for now. Everyone else’s clear up when the film is developed.")
+        .font(Fonts.body(14))
+        .foregroundStyle(Theme.textMuted)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.top, GalleryTokens.ledeTop)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  // MARK: Grid
+
+  @ViewBuilder private func grid(_ tiles: [GalleryTile]) -> some View {
+    if tiles.isEmpty {
+      Text("No photos yet. The first one shows up here.")
+        .font(Fonts.body(14))
+        .foregroundStyle(Theme.textMuted)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Theme.gutter)
+        .padding(.top, 24)
+    } else {
+      let time = tileCountdown(to: event.endsAt, now: now)
+      LazyVGrid(columns: columns, spacing: GalleryTokens.gap) {
+        ForEach(tiles) { tile in
+          switch tile.kind {
+          case let .mine(shot):
+            mineTile(shot)
+          case let .theirs(blurhash, author, portrait):
+            TheirTile(blurhash: blurhash, portrait: portrait, author: author, time: time)
+          }
+        }
+      }
+    }
+  }
+
+  private func mineTile(_ shot: ShotItem) -> some View {
+    let mission = model.mission(for: shot.id)
+    return Button { open = shot } label: {
+      GalleryTokens.tileBg
+        .aspectRatio(GalleryTokens.tileAspect, contentMode: .fit)
+        .overlay { GalleryThumb(url: shot.thumb) }
+        .clipShape(RoundedRectangle(cornerRadius: GalleryTokens.tileRadius, style: .continuous))
+        .overlay(alignment: .topTrailing) {
+          if mission != nil {
+            Image(systemName: "scope")
+              .font(.system(size: GalleryTokens.badgeIcon, weight: .semibold))
+              .foregroundStyle(Theme.text)
+              .frame(width: GalleryTokens.badgeSize, height: GalleryTokens.badgeSize)
+              .background(Theme.badgeScrim, in: Circle())
+              .padding(GalleryTokens.badgeInset)
+          }
+        }
+    }
+    .buttonStyle(PressScaleStyle(scale: 0.97))
+    .zoomSource(id: shot.id, in: zoom)
+    .accessibilityLabel("Your photo" + (mission.map { ", for the mission: \($0.body)" } ?? ""))
+    .accessibilityHint("Opens the photo")
+  }
+}
+
+/// Someone else's photo before the reveal: its smudge stretched to the tile
+/// (a dark frame without one), the photographer's name and the time left.
+/// Not tappable — there is nothing more to see yet.
+private struct TheirTile: View {
+  let blurhash: String?
+  let portrait: Bool
+  let author: String
+  let time: String
+
+  var body: some View {
+    GalleryTokens.tileBg
+      .aspectRatio(GalleryTokens.tileAspect, contentMode: .fit)
+      .overlay {
+        if let blurhash, let smudge = BlurhashCache.image(blurhash, portrait: portrait) {
+          Image(uiImage: smudge)
+            .resizable()
+            .interpolation(.medium)
+            .scaledToFill()
+        }
+      }
+      .overlay(alignment: .bottom) {
+        ZStack(alignment: .bottomLeading) {
+          LinearGradient(colors: GalleryTokens.tileScrim, startPoint: .top, endPoint: .bottom)
+            .frame(height: GalleryTokens.tileScrimHeight)
+          VStack(alignment: .leading, spacing: 1) {
+            Text(author)
+              .font(Fonts.medium(GalleryTokens.tileNameSize))
+              .foregroundStyle(GalleryTokens.tileName)
+              .lineLimit(1)
+            Text(time)
+              .font(Fonts.body(GalleryTokens.tileTimeSize))
+              .monospacedDigit()
+              .foregroundStyle(GalleryTokens.tileTime)
+              .lineLimit(1)
+          }
+          .padding(GalleryTokens.tilePadding)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
+      .clipShape(RoundedRectangle(cornerRadius: GalleryTokens.tileRadius, style: .continuous))
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel("A photo by \(author), hidden until the film is developed")
+  }
+}
+
+/// One of the guest's own frames in the gallery: a file while it is queued, a
+/// signed URL once uploaded. Loaded once into state (the gallery redraws every
+/// second for its countdowns) and kept in a small cache across tiles.
+private struct GalleryThumb: View {
+  let url: URL?
+  @State private var image: UIImage?
+
+  var body: some View {
+    ZStack {
+      if let image {
+        Image(uiImage: image)
+          .resizable()
+          .scaledToFill()
+      }
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .clipped()
+    .task(id: url) {
+      guard let url else { image = nil; return }
+      if let hit = ThumbCache.images[url] { image = hit; return }
+      guard let loaded = await PhotoLoader.load(url) else { return }
+      ThumbCache.store(loaded, for: url)
+      image = loaded
+    }
+  }
+}
+
+@MainActor
+private enum ThumbCache {
+  static var images: [URL: UIImage] = [:]
+
+  static func store(_ image: UIImage, for url: URL) {
+    if images.count >= 200 { images.removeAll(keepingCapacity: true) }
+    images[url] = image
   }
 }
 

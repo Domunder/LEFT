@@ -1847,29 +1847,32 @@ export const Album = {
     showMs: 2200,
   },
 
-  /** Before the reveal: countdown, a count, nothing to see. */
+  /**
+   * Before the reveal (2026-11-23, the user): the gallery. The event image
+   * with a large countdown heads it; under it every photo — the viewer's own
+   * sharp, everyone else's a blurhash smudge with a small countdown.
+   */
   developing: {
-    paddingX: 28,
-    eyebrowGap: 14,
-    countdownGap: 36,
-    unitGap: 18,
-    valueUnitGap: 6,
-    statGap: 20,
-    /** The strip of blank frames. */
-    frames: 5,
-    frameGap: 6,
-    frameRadius: 4,
-    frameFill: 'rgba(255,255,255,0.035)',
-    /** A frame that holds a photo: blurred past recognition, and dimmed. */
-    frameBlur: 60,
-    frameDim: 'rgba(8,8,10,0.35)',
-    frameFadeMs: 320,
-    stripGap: 40,
-    actionsGap: 12,
-    actionsBottom: 12,
+    countdownGap: 18,
+    unitGap: 14,
+    valueUnitGap: 5,
+    statGap: 12,
+    actionsGap: 22,
     /** Under an hour the countdown shows seconds. */
     fastTickMs: 1000,
     slowTickMs: 20_000,
+    /** New photos from the others appear without a pull. */
+    refreshMs: 30_000,
+    /** A frame with no smudge yet. */
+    frameFill: 'rgba(255,255,255,0.05)',
+    /** Over the smudge, so the name and the countdown read. */
+    smudgeDim: 'rgba(8,8,10,0.18)',
+    smudgeFadeMs: 240,
+    /** The small countdown on each hidden print. */
+    badgeHeight: 22,
+    badgePaddingX: 8,
+    badgeIconGap: 4,
+    badgeIcon: 10,
   },
 } as const;
 

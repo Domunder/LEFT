@@ -1,6 +1,6 @@
 /**
  * The web camera, screen by screen: join → (intro) → (waiting) → camera →
- * developing → album. The intro is shown once per moment and browser, as the
+ * developing (the gallery before the reveal) → album. The intro is shown once per moment and browser, as the
  * app's `(guest)/intro` is once per moment and phone. The page's markup is `src/pages/j/index.astro`; this file switches
  * `data-view` and fills it.
  *
@@ -9,12 +9,15 @@
  * claimed, floored at zero — as `useCameraSession` counts it in the app.
  */
 
+import { decode } from 'blurhash';
+
 import {
   claimName,
   currentUserId,
   deletePhoto,
   ensureGuest,
   eventCoverUrl,
+  eventGallery,
   LOOK_SAMPLE,
   samplesFor,
   getEvent,
@@ -34,6 +37,7 @@ import {
   setPhotoMission,
   signedUrls,
   type Event,
+  type GalleryPhoto,
   type Mission,
   type MissionName,
   type Photo,
@@ -306,6 +310,7 @@ async function enter(eventId: string) {
     if (change.kind === 'dropped' && change.reason === 'event_closed') toast('The film was developed before that photo was sent.');
     if (change.kind === 'mission' || change.kind === 'done') void loadMissions();
     if (change.kind !== 'mission') void refreshRoll();
+    if ((change.kind === 'done' || change.kind === 'dropped') && root().dataset.view === 'developing') void loadGallery();
   });
 
   if (state.poll) clearInterval(state.poll);
@@ -325,6 +330,11 @@ async function refreshEvent() {
     // The intro is not interrupted; it continues to the right screen when it ends.
     if (changed && root().dataset.view !== 'intro') await route();
     else if (root().dataset.view === 'camera') void loadMissions();
+    else if (root().dataset.view === 'developing') {
+      await refreshRoll();
+      renderDevActions();
+      void loadGallery();
+    }
   } catch {
     /* offline: try again on the next tick */
   }
@@ -747,8 +757,6 @@ function setUpWaiting() {
   $('waiting-how').addEventListener('click', () => showIntro());
 }
 
-let drawnCover = '';
-
 function showWaiting() {
   const event = state.event!;
   $('waiting-roll').textContent = event.roll_size === null ? 'Unlimited photos each' : `${event.roll_size} photos each`;
@@ -763,45 +771,250 @@ function showWaiting() {
     })
     .catch(() => undefined);
 
-  // The host's pick (03.1), or a stock picture; drawn once per event, cover and look.
+  paintCover($<HTMLImageElement>('waiting-cover'), event);
+}
+
+/**
+ * The host's pick (03.1), or a stock picture, through the look; drawn once per
+ * image element, event, cover and look.
+ */
+function paintCover(img: HTMLImageElement, event: Event) {
   const key = `${event.id}:${event.cover ?? ''}:${event.look}`;
-  if (key === drawnCover) return;
-  drawnCover = key;
-  const img = $<HTMLImageElement>('waiting-cover');
+  if (img.dataset.cover === key) return;
+  img.dataset.cover = key;
   img.hidden = true;
   void eventCoverUrl(event).then(async (url) => {
     // Without WebGL (or a cover the browser will not hand to it) the picture without the look.
     const src = await lookStill(url, event.look).catch(() => url);
-    if (drawnCover !== key) return;
+    if (img.dataset.cover !== key) return;
     img.onload = () => (img.hidden = false);
     img.src = src;
   });
 }
 
 // ---------------------------------------------------------------------------
-// Developing
+// Developing — the gallery before the reveal (2026-11-23): the event image,
+// the countdown, and every photo so far. The guest's own are sharp (RLS hands
+// out their own files; frames still queued are local blobs); everyone else's
+// are their blurhash — a colour smudge — with the name and the time left.
 // ---------------------------------------------------------------------------
 
 function setUpDeveloping() {
-  $('dev-shots').addEventListener('click', () => void openMyShots());
   $('dev-camera').addEventListener('click', () => void showCamera());
 }
 
 function showDeveloping(empty: boolean) {
   const event = state.event!;
-  $('dev-title').innerHTML = empty ? 'That’s your <em>roll.</em>' : 'Your film is <em>developing.</em>';
+  $('dev-title').textContent = empty ? 'That’s your roll · developing in' : 'Developing in';
   const when = new Date(event.ends_at);
-  const day = when.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
-  const time = when.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   $('dev-lede').textContent =
-    `Everyone’s photos appear on ${day} at ${time}. Open this link again then — ` +
-    'the web has no notifications, so set a reminder.';
-  $('dev-camera').hidden = empty || event.status !== 'live';
+    `Everyone’s photos appear ${formatEndDate(when)} at ${formatEndTime(when)}. ` +
+    'The web has no notifications, so set a reminder and open this link again then.';
+  devEmpty = empty;
+  renderDevActions();
+  paintCover($<HTMLImageElement>('dev-cover'), event);
   setCalendar(event, when);
   show('developing');
   renderCountdown();
   startTick();
+  void loadGallery();
   void drain();
+}
+
+let devEmpty = false;
+
+/** "Back to the camera" while the guest still has frames and the cameras are open — as before. */
+function renderDevActions() {
+  const event = state.event;
+  $('dev-camera').hidden = devEmpty || !event || event.status !== 'live' || shotsLeft() === 0;
+}
+
+type Tile =
+  | { kind: 'mine'; id: string; takenAt: string; print: Print }
+  | { kind: 'theirs'; id: string; takenAt: string; userId: string; author: string; blurhash: string | null };
+
+/** Thumbnails already signed (`photoId → url, signed at`), so a poll does not reload every image. */
+const signedThumbs = new Map<string, { url: string; at: number }>();
+/** Object URLs for frames still in the queue, one per frame. */
+const queuedThumbs = new Map<string, string>();
+const SIGNED_FOR_MS = 50 * 60_000;
+
+let galleryKey = '';
+let galleryLoading: Promise<void> | null = null;
+
+function loadGallery(): Promise<void> {
+  galleryLoading ??= buildGallery().finally(() => (galleryLoading = null));
+  return galleryLoading;
+}
+
+async function buildGallery() {
+  const event = state.event;
+  if (!event) return;
+  let rows: GalleryPhoto[];
+  let names: Map<string, string>;
+  let queue: Shot[];
+  let mine: Photo[];
+  try {
+    const [gallery, members, queued, own] = await Promise.all([
+      eventGallery(event.id),
+      listMembers(event.id),
+      pending(event.id, state.userId),
+      // Before the reveal RLS returns only the caller's own rows — with their paths.
+      listPhotos(event.id).catch(() => [] as Photo[]),
+    ]);
+    rows = gallery;
+    names = new Map(members.map((m) => [m.user_id, m.display_name]));
+    queue = queued;
+    mine = own.filter((p) => p.user_id === state.userId);
+  } catch {
+    // Offline, or a server without event_gallery() yet: keep what is on screen.
+    return;
+  }
+  if (state.event?.id !== event.id || root().dataset.view !== 'developing') return;
+
+  // Sign the thumbnails not signed yet (or about to expire).
+  const now = Date.now();
+  const unsigned = mine.filter((p) => p.thumb_path && !(now - (signedThumbs.get(p.id)?.at ?? 0) < SIGNED_FOR_MS));
+  if (unsigned.length) {
+    const urls = await signedUrls(unsigned.map((p) => p.thumb_path!)).catch(() => new Map<string, string>());
+    for (const p of unsigned) {
+      const url = urls.get(p.thumb_path!);
+      if (url) signedThumbs.set(p.id, { url, at: now });
+    }
+  }
+  const byId = new Map(mine.map((p) => [p.id, p]));
+  const queuedById = new Map(queue.map((shot) => [shot.id, shot]));
+  const localThumb = (shot: Shot) => {
+    let url = queuedThumbs.get(shot.id);
+    if (!url) {
+      url = URL.createObjectURL(shot.thumb);
+      queuedThumbs.set(shot.id, url);
+    }
+    return url;
+  };
+  const ownPrint = (id: string): Print => {
+    const shot = queuedById.get(id);
+    const row = byId.get(id) ?? null;
+    return {
+      id,
+      thumb: shot ? localThumb(shot) : (signedThumbs.get(id)?.url ?? ''),
+      original: shot
+        ? async () => URL.createObjectURL(shot.original)
+        : row?.storage_path
+          ? () => signOne(row.storage_path!)
+          : () => Promise.reject(new Error('This photo is still on its way.')),
+      author: 'You',
+      photo: row,
+    };
+  };
+
+  const tiles: Tile[] = rows.map((row) =>
+    row.user_id === state.userId
+      ? { kind: 'mine', id: row.id, takenAt: row.taken_at, print: ownPrint(row.id) }
+      : {
+          kind: 'theirs',
+          id: row.id,
+          takenAt: row.taken_at,
+          userId: row.user_id ?? row.id,
+          author: names.get(row.user_id ?? '') ?? 'A guest',
+          blurhash: row.blurhash,
+        }
+  );
+  // Frames the server has not seen yet (not claimed) are the guest's own too.
+  const seen = new Set(rows.map((r) => r.id));
+  for (const shot of queue) {
+    if (!seen.has(shot.id)) tiles.push({ kind: 'mine', id: shot.id, takenAt: shot.takenAt, print: ownPrint(shot.id) });
+  }
+  tiles.sort((a, b) => b.takenAt.localeCompare(a.takenAt) || a.id.localeCompare(b.id));
+
+  // Frames that left the queue no longer need their object URL.
+  for (const [id, url] of queuedThumbs) {
+    if (!queuedById.has(id)) {
+      URL.revokeObjectURL(url);
+      queuedThumbs.delete(id);
+    }
+  }
+
+  const people = new Set(tiles.map((t) => (t.kind === 'mine' ? state.userId : t.userId))).size;
+  $('dev-counts').textContent =
+    `${tiles.length} ${tiles.length === 1 ? 'photo' : 'photos'} so far from ${people} ${people === 1 ? 'person' : 'people'}`;
+  $('dev-counts').hidden = tiles.length === 0;
+  $('gallery-empty').hidden = tiles.length > 0;
+
+  // Redraw only when something changed: a poll that brings nothing new leaves the grid alone.
+  const key = tiles
+    .map((t) => (t.kind === 'mine' ? `m:${t.id}:${t.print.thumb}` : `t:${t.id}:${t.blurhash ?? ''}:${t.author}`))
+    .join('|');
+  if (key === galleryKey) return;
+  galleryKey = key;
+  renderGallery(tiles);
+}
+
+function renderGallery(tiles: Tile[]) {
+  const list = $('gallery');
+  const own = tiles.filter((t): t is Extract<Tile, { kind: 'mine' }> => t.kind === 'mine').map((t) => t.print);
+  const time = tileCountdown();
+  list.replaceChildren(
+    ...tiles.map((tile, i) => {
+      const li = document.createElement('li');
+      if (tile.kind === 'mine') {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'gtile press';
+        button.setAttribute('aria-label', 'Your photo');
+        if (tile.print.thumb) {
+          const img = document.createElement('img');
+          img.src = tile.print.thumb;
+          img.alt = '';
+          img.loading = i < 12 ? 'eager' : 'lazy';
+          img.decoding = 'async';
+          button.append(img);
+        }
+        button.append(label('gtile-name', 'You'));
+        const index = own.indexOf(tile.print);
+        button.addEventListener('click', () => openViewer(own, index, button));
+        li.append(button);
+      } else {
+        const frame = document.createElement('div');
+        frame.className = 'gtile';
+        frame.setAttribute('role', 'img');
+        frame.setAttribute('aria-label', `Photo by ${tile.author}, hidden until the film is developed`);
+        const smudge = tile.blurhash ? smudgeCanvas(tile.blurhash) : null;
+        if (smudge) frame.append(smudge);
+        frame.append(label('gtile-name', tile.author), label('gtile-time glass', time));
+        li.append(frame);
+      }
+      return li;
+    })
+  );
+}
+
+function label(className: string, text: string): HTMLElement {
+  const span = document.createElement('span');
+  span.className = className;
+  span.textContent = text;
+  return span;
+}
+
+/** Blurhash drawn at 24x32 into a canvas the tile stretches; null when the hash does not decode. */
+function smudgeCanvas(hash: string): HTMLCanvasElement | null {
+  try {
+    const w = 24;
+    const h = 32;
+    const pixels = decode(hash, w, h);
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    const image = ctx.createImageData(w, h);
+    image.data.set(pixels);
+    ctx.putImageData(image, 0, 0);
+    canvas.setAttribute('aria-hidden', 'true');
+    return canvas;
+  } catch {
+    return null;
+  }
 }
 
 function setCalendar(event: Event, when: Date) {
@@ -850,15 +1063,32 @@ function remaining(): number {
   return Math.max(0, new Date(state.event!.ends_at).getTime() - Date.now());
 }
 
+/** Days, hours, minutes; seconds only in the last hour. */
 function renderCountdown() {
-  const ms = remaining();
-  const s = Math.floor(ms / 1000);
+  const s = Math.floor(remaining() / 1000);
   const d = Math.floor(s / 86400);
   const h = Math.floor((s % 86400) / 3600);
   const m = Math.floor((s % 3600) / 60);
   const sec = s % 60;
   const pad = (n: number) => String(n).padStart(2, '0');
-  $('countdown').textContent = d > 0 ? `${d}d ${h}h ${pad(m)}m` : `${h}:${pad(m)}:${pad(sec)}`;
+  $('countdown').textContent =
+    d > 0 ? `${d}d ${h}h ${pad(m)}m` : h > 0 ? `${h}h ${pad(m)}m` : `${pad(m)}m ${pad(sec)}s`;
+  if (root().dataset.view === 'developing') {
+    const time = tileCountdown();
+    document.querySelectorAll<HTMLElement>('#gallery .gtile-time').forEach((el) => (el.textContent = time));
+  }
+}
+
+/** The small one on each hidden photo: "01d 23h", or "12m 05s" in the last hour. */
+function tileCountdown(): string {
+  const s = Math.floor(remaining() / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  if (d > 0) return `${pad(d)}d ${pad(h)}h`;
+  if (h > 0) return `${pad(h)}h ${pad(m)}m`;
+  return `${pad(m)}m ${pad(s % 60)}s`;
 }
 
 function renderEndsIn() {
@@ -1150,6 +1380,7 @@ async function remove() {
   try {
     await deletePhoto(print.photo);
     viewing.splice(current, 1);
+    if (root().dataset.view === 'developing') void loadGallery();
     if (viewing === album) {
       renderPrints(false);
       $('album-counts').textContent = `${album.length} ${album.length === 1 ? 'photo' : 'photos'}`;

@@ -110,14 +110,47 @@ export async function getRollState(
  */
 export async function markPhotoUploaded(
   photoId: string,
-  size: { width: number; height: number }
+  size: { width: number; height: number },
+  /** The thumbnail's colour smudge for the gallery before the reveal. */
+  blurhash?: string
 ): Promise<void> {
   const { error } = await getSupabase().rpc('mark_photo_uploaded', {
     p_photo_id: photoId,
     p_width: size.width,
     p_height: size.height,
+    ...(blurhash ? { p_blurhash: blurhash } : {}),
   });
   if (error) throw error;
+}
+
+/** One photo of an event as every member may know it before the reveal. */
+export type GalleryRow = {
+  id: string;
+  userId: string | null;
+  width: number | null;
+  height: number | null;
+  /** The colour smudge; null while the upload is on its way or from an older client. */
+  blurhash: string | null;
+  takenAt: string;
+};
+
+/**
+ * Every photo of an event, newest first, without its files (2026-11-23):
+ * `event_gallery()` hands members who took what and its blurhash at any time.
+ * The pictures themselves stay behind RLS until the film is developed.
+ */
+export async function listEventGallery(eventId: string): Promise<GalleryRow[]> {
+  const { data, error } = await getSupabase().rpc('event_gallery', { p_event_id: eventId });
+  if (error) throw error;
+  // The generated types call every column non-null; these can be null.
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    userId: (row.user_id as string | null) ?? null,
+    width: (row.width as number | null) ?? null,
+    height: (row.height as number | null) ?? null,
+    blurhash: (row.blurhash as string | null) || null,
+    takenAt: row.taken_at,
+  }));
 }
 
 /**

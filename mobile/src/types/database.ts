@@ -340,6 +340,7 @@ export type Database = {
       }
       photos: {
         Row: {
+          blurhash: string | null
           created_at: string
           event_id: string
           height: number | null
@@ -352,6 +353,7 @@ export type Database = {
           width: number | null
         }
         Insert: {
+          blurhash?: string | null
           created_at?: string
           event_id: string
           height?: number | null
@@ -364,6 +366,7 @@ export type Database = {
           width?: number | null
         }
         Update: {
+          blurhash?: string | null
           created_at?: string
           event_id?: string
           height?: number | null
@@ -523,6 +526,7 @@ export type Database = {
           p_transaction_id?: string
         }
         Returns: {
+          cover: string | null
           created_at: string
           developed_at: string | null
           ends_at: string
@@ -555,6 +559,7 @@ export type Database = {
       end_event: {
         Args: { p_event_id: string }
         Returns: {
+          cover: string | null
           created_at: string
           developed_at: string | null
           ends_at: string
@@ -577,6 +582,18 @@ export type Database = {
         }
       }
       enqueue_ending_reminders: { Args: never; Returns: number }
+      event_gallery: {
+        Args: { p_event_id: string }
+        Returns: {
+          blurhash: string
+          height: number
+          id: string
+          status: Database["public"]["Enums"]["photo_status"]
+          taken_at: string
+          user_id: string
+          width: number
+        }[]
+      }
       event_storage_paths: {
         Args: { p_event_id: string }
         Returns: {
@@ -613,7 +630,12 @@ export type Database = {
         Returns: string
       }
       mark_photo_uploaded: {
-        Args: { p_height: number; p_photo_id: string; p_width: number }
+        Args: {
+          p_blurhash?: string
+          p_height: number
+          p_photo_id: string
+          p_width: number
+        }
         Returns: undefined
       }
       max_event_days: { Args: never; Returns: number }
@@ -681,6 +703,7 @@ export type Database = {
       set_missions: {
         Args: { p_event_id: string; p_per_guest: number }
         Returns: {
+          cover: string | null
           created_at: string
           developed_at: string | null
           ends_at: string
@@ -709,6 +732,7 @@ export type Database = {
       start_event: {
         Args: { p_event_id: string }
         Returns: {
+          cover: string | null
           created_at: string
           developed_at: string | null
           ends_at: string

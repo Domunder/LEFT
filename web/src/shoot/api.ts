@@ -145,13 +145,48 @@ export async function uploadJpeg(path: string, body: Blob): Promise<void> {
   if (error) throw error;
 }
 
-export async function markPhotoUploaded(photoId: string, width: number, height: number) {
-  const { error } = await db().rpc('mark_photo_uploaded', {
-    p_photo_id: photoId,
-    p_width: width,
-    p_height: height,
-  });
+/**
+ * The doors added on 2026-11-23 (`20261123000000_gallery_before_develop.sql`)
+ * are not in the generated types yet (they are copied from the app's
+ * `types/database.ts`, regenerated there). Untyped until then.
+ */
+function untyped(): SupabaseClient {
+  return db() as unknown as SupabaseClient;
+}
+
+/**
+ * Attach the uploaded files. `blurhash` is the smudge others see before the
+ * reveal; it is only a preview, so a server without the fourth argument yet
+ * (PostgREST answers PGRST202, "no such function") gets the call without it.
+ */
+export async function markPhotoUploaded(photoId: string, width: number, height: number, blurhash: string | null = null) {
+  const args = { p_photo_id: photoId, p_width: width, p_height: height };
+  if (blurhash) {
+    const { error } = await untyped().rpc('mark_photo_uploaded', { ...args, p_blurhash: blurhash });
+    if (!error) return;
+    if (error.code !== 'PGRST202') throw error;
+  }
+  const { error } = await db().rpc('mark_photo_uploaded', args);
   if (error) throw error;
+}
+
+/** One photo of the event as every member sees it before the reveal: no paths, no picture. */
+export type GalleryPhoto = {
+  id: string;
+  user_id: string | null;
+  width: number | null;
+  height: number | null;
+  /** The colour smudge; null while the upload is on its way or from an older client. */
+  blurhash: string | null;
+  status: 'pending' | 'uploaded' | 'failed';
+  taken_at: string;
+};
+
+/** Every photo of the event, newest first, for members at any time (`event_gallery()`). */
+export async function eventGallery(eventId: string): Promise<GalleryPhoto[]> {
+  const { data, error } = await untyped().rpc('event_gallery', { p_event_id: eventId });
+  if (error) throw error;
+  return (data ?? []) as GalleryPhoto[];
 }
 
 /** Uploaded photos, oldest first. Before the reveal RLS returns only the caller's own. */

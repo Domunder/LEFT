@@ -54,11 +54,16 @@ final class ClipModel: ObservableObject {
   @Published private(set) var memberName: String?
   /// Your shots: uploaded frames and those still in the queue.
   @Published private(set) var shots: [ShotItem] = []
+  /// The gallery before the reveal (2026-11-23): everyone else's photos, as
+  /// smudges, newest first. The guest's own are `shots`.
+  @Published private(set) var theirTiles: [GalleryTile] = []
 
   /// The server's last answer, kept for when it cannot be asked (no signal).
   private var serverMissions: [Mission] = []
   /// Storage path → signed URL, so a frame is signed once.
   private var signed: [String: URL] = [:]
+  /// The roster's names by user id, for the gallery's tiles.
+  private var rosterNames: [String: String] = [:]
 
   private var code: String?
   private var poll: Task<Void, Never>?
@@ -379,6 +384,11 @@ final class ClipModel: ObservableObject {
       phase = .camera(fresh)
     case .developing:
       phase = .developing(fresh)
+      // The gallery fills in as the group shoots.
+      if !fresh.isDeveloped() {
+        await loadShots()
+        await loadGallery()
+      }
     default:
       break
     }
@@ -530,6 +540,60 @@ final class ClipModel: ObservableObject {
     }
     shots = items.sorted { $0.takenAt < $1.takenAt }
   }
+
+  // MARK: The gallery before the reveal
+
+  /// Every photo of the event so far: the guest's own (sharp, from `shots`)
+  /// and everyone else's (`theirTiles`), newest first.
+  var galleryTiles: [GalleryTile] {
+    let mine = shots.map { GalleryTile(id: $0.id, userId: nil, takenAt: $0.takenAt, kind: .mine($0)) }
+    let ids = Set(mine.map(\.id))
+    return (mine + theirTiles.filter { !ids.contains($0.id) }).sorted { $0.takenAt > $1.takenAt }
+  }
+
+  /// "from M people": everyone with a photo in the gallery, the guest included.
+  var galleryPeople: Int {
+    Set(theirTiles.compactMap(\.userId)).count + (shots.isEmpty ? 0 : 1)
+  }
+
+  /// `event_gallery()` and the roster's names. Offline, or on a server
+  /// without the function yet, the gallery stays as it was.
+  func loadGallery() async {
+    guard let event, !event.isDeveloped(), let userId = await Server.shared.userId else { return }
+    guard let rows = try? await Server.shared.eventGallery(eventId: event.id) else { return }
+    if let names = try? await Server.shared.roster(eventId: event.id) { rosterNames = names }
+    // The phase may have moved on while the server answered.
+    guard self.event?.id == event.id else { return }
+    let tiles = rows.filter { $0.userId != userId }.map { row in
+      GalleryTile(
+        id: row.id, userId: row.userId,
+        takenAt: parseTimestamp(row.takenAt) ?? .distantPast,
+        kind: .theirs(
+          blurhash: row.blurhash,
+          author: rosterNames[row.userId] ?? "A guest",
+          portrait: (row.height ?? 4) >= (row.width ?? 3)
+        )
+      )
+    }
+    if tiles != theirTiles { theirTiles = tiles }
+  }
+}
+
+/// One tile of the gallery before the reveal.
+struct GalleryTile: Identifiable, Equatable {
+  enum Kind: Equatable {
+    /// The guest's own frame, sharp; opens in the viewer.
+    case mine(ShotItem)
+    /// Someone else's: its smudge (nil while the upload is on its way, or from
+    /// a phone that sent none), the photographer's name, and its shape.
+    case theirs(blurhash: String?, author: String, portrait: Bool)
+  }
+
+  let id: String
+  /// The photographer; nil for the guest's own.
+  let userId: String?
+  let takenAt: Date
+  let kind: Kind
 }
 
 /// A frame in Your shots. `thumb` and `full` are files while it is queued,

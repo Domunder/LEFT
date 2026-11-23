@@ -151,6 +151,24 @@ struct OwnPhoto: Decodable {
   }
 }
 
+/// One row of `event_gallery()`. `width`/`height`/`blurhash` are null while
+/// the upload is on its way (`status` "pending").
+struct GalleryPhoto: Decodable, Equatable {
+  let id: String
+  let userId: String
+  let width: Int?
+  let height: Int?
+  let blurhash: String?
+  let status: String
+  let takenAt: String
+
+  enum CodingKeys: String, CodingKey {
+    case id, width, height, blurhash, status
+    case userId = "user_id"
+    case takenAt = "taken_at"
+  }
+}
+
 enum ClipError: LocalizedError, Equatable {
   case notConfigured
   case rollEmpty
@@ -384,12 +402,32 @@ actor Server {
     )
   }
 
-  func markPhotoUploaded(photoId: String, width: Int, height: Int) async throws {
-    _ = try await send("rest/v1/rpc/mark_photo_uploaded", method: "POST", json: [
+  /// `blurhash`: the thumbnail's smudge (`20261123000000_gallery_before_develop.sql`),
+  /// left out when there is none — the server's default is null.
+  func markPhotoUploaded(photoId: String, width: Int, height: Int, blurhash: String? = nil) async throws {
+    var body: [String: Any] = [
       "p_photo_id": photoId,
       "p_width": width,
       "p_height": height,
-    ])
+    ]
+    if let blurhash { body["p_blurhash"] = blurhash }
+    _ = try await send("rest/v1/rpc/mark_photo_uploaded", method: "POST", json: body)
+  }
+
+  /// Every photo of the event, newest first, without paths (`event_gallery()`):
+  /// before the reveal, all a member learns about someone else's photo.
+  func eventGallery(eventId: String) async throws -> [GalleryPhoto] {
+    let data = try await send("rest/v1/rpc/event_gallery", method: "POST", json: ["p_event_id": eventId])
+    return try JSONDecoder().decode([GalleryPhoto].self, from: data)
+  }
+
+  /// `user_id → display_name` for the event's roster, which members may read.
+  func roster(eventId: String) async throws -> [String: String] {
+    struct Row: Decodable { let user_id: String; let display_name: String }
+    let data = try await send("rest/v1/event_members?event_id=eq.\(eventId)&select=user_id,display_name")
+    var names: [String: String] = [:]
+    for row in try JSONDecoder().decode([Row].self, from: data) { names[row.user_id] = row.display_name }
+    return names
   }
 
   /// The guest's uploaded photos in this event, oldest first.

@@ -92,6 +92,68 @@ enum CameraTokens {
   static let countdownUnit: [Color] = [Theme.text.opacity(0.3), Theme.text.opacity(0.2)]
 }
 
+/// The gallery before the reveal (2026-11-23): the developing state as every
+/// photo so far — the guest's own sharp, everyone else's as a smudge.
+enum GalleryTokens {
+  /// The event image heads the page, from the physical top edge.
+  static let coverRatio: CGFloat = 0.46
+  /// Where the title starts, as a share of the cover's height.
+  static let titleAt: CGFloat = 0.5
+  static let coverFade = Gradient(stops: [
+    .init(color: Theme.bg.opacity(0.3), location: 0),
+    .init(color: Theme.bg.opacity(0.1), location: 0.3),
+    .init(color: Theme.bg.opacity(0.8), location: 0.75),
+    .init(color: Theme.bg, location: 1),
+  ])
+  static let titleSize: CGFloat = 40
+  static let countdownSize: CGFloat = 52
+  static let countdownUnitSize: CGFloat = 13
+  static let countdownGap: CGFloat = 10
+  static let countsTop: CGFloat = 14
+  static let actionsTop: CGFloat = 20
+  static let actionsGap: CGFloat = 10
+  static let ledeTop: CGFloat = 14
+  static let gridTop: CGFloat = 24
+
+  /// Three to a row, as the album and Your photos.
+  static let columns = 3
+  static let gap: CGFloat = 3
+  static let tileAspect: CGFloat = 3 / 4
+  static let tileRadius: CGFloat = 4
+  static let tileBg = Color(hex: 0x141316)
+  /// Name and time on someone else's tile, on a scrim at its foot.
+  static let tileScrim: [Color] = [.black.opacity(0), .black.opacity(0.55)]
+  static let tileScrimHeight: CGFloat = 46
+  static let tilePadding: CGFloat = 7
+  static let tileNameSize: CGFloat = 11
+  static let tileTimeSize: CGFloat = 10
+  static let tileName = Theme.text.opacity(0.9)
+  static let tileTime = Theme.text.opacity(0.6)
+  static let badgeSize: CGFloat = 22
+  static let badgeIcon: CGFloat = 11
+  static let badgeInset: CGFloat = 6
+
+  /// A smudge is decoded this small and stretched to the tile.
+  static let smudgeShort = 24
+  static let smudgeLong = 32
+}
+
+/// The developing state's countdown: days, hours and minutes; minutes and
+/// seconds in the last hour (the web camera's `renderCountdown()`).
+func galleryCountdownParts(to end: Date, now: Date = .now) -> [(value: String, unit: String)] {
+  let total = max(0, Int(end.timeIntervalSince(now)))
+  let days = total / 86_400, hours = (total % 86_400) / 3600, minutes = (total % 3600) / 60, seconds = total % 60
+  let pad = { (n: Int) in String(format: "%02d", n) }
+  if days > 0 { return [(pad(days), "d"), (pad(hours), "h"), (pad(minutes), "m")] }
+  if hours > 0 { return [(pad(hours), "h"), (pad(minutes), "m")] }
+  return [(pad(minutes), "m"), (pad(seconds), "s")]
+}
+
+/// A tile's time left: "01d 23h", "05h 12m", "12m 05s" (the web's `tileCountdown()`).
+func tileCountdown(to end: Date, now: Date = .now) -> String {
+  countdownParts(to: end, now: now).map { $0.value + $0.unit }.joined(separator: " ")
+}
+
 /// The two units of `countdownParts()` in `lib/event-end.ts`: "01 d 23 h",
 /// "05 h 12 m", "12 m 40 s".
 func countdownParts(to end: Date, now: Date = .now) -> [(value: String, unit: String)] {

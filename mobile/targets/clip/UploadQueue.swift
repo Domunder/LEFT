@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import Network
 
 /*
@@ -31,6 +32,11 @@ struct QueuedShot: Codable, Identifiable {
   /// The tag changed and the server has not heard it yet.
   var missionDirty: Bool?
   var tagAttempts: Int?
+  /// The thumbnail's blurhash, computed once when the frame was developed and
+  /// sent with `mark_photo_uploaded()`. nil from entries written before
+  /// 2026-11-23 (then computed from the thumbnail file at the mark) or when
+  /// encoding failed.
+  var blurhash: String?
 }
 
 /// A frame still in the queue, with its files.
@@ -243,7 +249,8 @@ actor UploadQueue {
         // The bucket refuses to overwrite a print once it is attached. A retry
         // that meets the refusal may be one whose mark already went through:
         // ask the server, and drop the entry if it holds the photo.
-        if (try? await server.markPhotoUploaded(photoId: shot.id, width: shot.width, height: shot.height)) != nil {
+        if (try? await server.markPhotoUploaded(photoId: shot.id, width: shot.width, height: shot.height,
+                                                blurhash: blurhash(for: shot))) != nil {
           try await settleTag(shot.id)
           finish(shot)
           return
@@ -254,7 +261,8 @@ actor UploadQueue {
       try write(shot)
     }
 
-    try await server.markPhotoUploaded(photoId: shot.id, width: shot.width, height: shot.height)
+    try await server.markPhotoUploaded(photoId: shot.id, width: shot.width, height: shot.height,
+                                       blurhash: blurhash(for: shot))
     // Re-tagged while it uploaded: settle that before the entry goes.
     try await settleTag(shot.id)
     finish(shot)
@@ -292,6 +300,20 @@ actor UploadQueue {
         return
       }
     }
+  }
+
+  /// The entry's smudge; for an entry from before smudges, one computed from
+  /// its thumbnail file. nil on any failure — the photo goes up without one.
+  private func blurhash(for shot: QueuedShot) -> String? {
+    if let hash = shot.blurhash { return hash }
+    guard let source = CGImageSourceCreateWithURL(url(shot.id, "_thumb.jpg") as CFURL, nil),
+          let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: Blurhash.sourceMaxPixels,
+          ] as CFDictionary)
+    else { return nil }
+    return Blurhash.encode(image)
   }
 
   private func finish(_ shot: QueuedShot) {

@@ -4,8 +4,12 @@
  * Replaces the clip player; **not in the prototype**. The `id` param is the
  * event id. One route, two states, decided by the server's clock:
  *
- *  - **Before the event is developed** — `DevelopingFilm`: a countdown, how
- *    many photos exist, nothing to see. The host can develop early.
+ *  - **Before the event is developed** — the gallery (2026-11-23, the user,
+ *    replacing "Nothing to see yet"): `DevelopingHero` (the event image, a
+ *    large countdown, the count so far, the camera and the host's "Develop
+ *    now"), then every photo three to a row — the viewer's own sharp and
+ *    openable, everyone else's a blurhash smudge with the photographer's name
+ *    and a small countdown (`HiddenPhotoTile`).
  *  - **Developed** — `AlbumHero` (the event image in the look since
  *    2026-11-21, full-bleed and going dark towards the name,
  *    the two counts, "Save all" and "Share" as small glass capsules), then
@@ -29,7 +33,6 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import { type ImageSource } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -39,7 +42,8 @@ import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AlbumHero } from '@/components/ui/album-hero';
-import { DevelopingFilm } from '@/components/ui/developing-film';
+import { DevelopingHero } from '@/components/ui/developing-hero';
+import { HiddenPhotoTile } from '@/components/ui/hidden-photo-tile';
 import { Glass, GlassButton } from '@/components/ui/glass';
 import { PhotoTile, useTileRegistry } from '@/components/ui/photo-tile';
 import { PhotoViewer, type Rect, type ViewerPhoto } from '@/components/ui/photo-viewer';
@@ -47,7 +51,6 @@ import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
 import { Body } from '@/components/ui/typography';
-import { samplesFor } from '@/constants/samples';
 import { Album as T, Colors, Glass as GlassTokens, MissionsCamera } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import {
@@ -61,18 +64,20 @@ import {
   sharePhoto,
   type Album,
   type AlbumPhoto,
+  type HiddenPhoto,
 } from '@/lib/album';
 import { getSession, isAnonymous } from '@/lib/auth';
 import { messageFor } from '@/lib/auth-errors';
 import { useMomentActions } from '@/hooks/use-moment-actions';
+import { countdownParts } from '@/lib/event-end';
 import { endEvent, EventGoneError, subscribeToEventStatus } from '@/lib/events';
 import { canImport, importAllowance, importPhotos } from '@/lib/import-photos';
 import { inviteUrl } from '@/lib/invite';
 import { pendingCount, subscribeToQueue } from '@/lib/upload-queue';
 import { listPhotoMissions } from '@/lib/missions';
-import { loadMyShots } from '@/lib/my-shots';
 import { deletePhoto, reportPhoto } from '@/lib/photos';
 import { isPromptDismissed } from '@/lib/prompt-dismissal';
+import { signedUrls } from '@/lib/storage';
 
 type LoadState =
   | { kind: 'loading' }
@@ -81,10 +86,10 @@ type LoadState =
   | { kind: 'gone' }
   | { kind: 'ready'; album: Album };
 
-const NO_FRAMES: ImageSource[] = [];
+type GridItem = AlbumPhoto | HiddenPhoto;
+const isHiddenPhoto = (item: GridItem): item is HiddenPhoto => 'kind' in item;
 
-const plural = (count: number, one: string, many: string) =>
-  `${count} ${count === 1 ? one : many}`;
+const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export default function AlbumScreen() {
   const router = useRouter();
@@ -92,15 +97,17 @@ export default function AlbumScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [state, setState] = useState<LoadState>({ kind: 'loading' });
-  const [open, setOpen] = useState<{ index: number; origin: Rect | null } | null>(null);
+  const [open, setOpen] = useState<{
+    index: number;
+    origin: Rect | null;
+  } | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [developing, setDeveloping] = useState(false);
   /** Whether leaving should pass through the "keep your film" offer. */
   const [offerKeep, setOfferKeep] = useState(false);
 
-
-  const list = useRef<FlatList<AlbumPhoto>>(null);
+  const list = useRef<FlatList<GridItem>>(null);
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
@@ -130,37 +137,8 @@ export default function AlbumScreen() {
   useFocusEffect(
     useCallback(() => {
       void load();
-    }, [load])
+    }, [load]),
   );
-
-  /*
-    What the developing state's frames hold under their blur: the viewer's own
-    latest frames, then stand-ins. Other people's photos cannot be fetched
-    before the reveal (RLS), and at that blur a stand-in says the same thing —
-    there is a picture here, and it cannot be seen yet.
-  */
-  // `null` until the viewer's frames are known, so stand-ins never flash first.
-  const [ownThumbs, setOwnThumbs] = useState<readonly string[] | null>(null);
-  const waiting = state.kind === 'ready' && !state.album.developed;
-  useEffect(() => {
-    if (!id || !waiting) return;
-    let cancelled = false;
-    void loadMyShots(id).then((shots) => {
-      if (!cancelled) setOwnThumbs(shots.slice(0, T.developing.frames).map((shot) => shot.thumbUri));
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [id, waiting]);
-  const hiddenFrames = useMemo<ImageSource[]>(() => {
-    if (ownThumbs === null) return NO_FRAMES;
-    // Stock pictures only for someone with no photos of their own; otherwise
-    // the viewer's own frames, repeated to fill the strip.
-    if (ownThumbs.length === 0) return samplesFor(id ?? '', T.developing.frames);
-    return Array.from({ length: T.developing.frames }, (_, i) => ({
-      uri: ownThumbs[i % ownThumbs.length],
-    }));
-  }, [id, ownThumbs]);
 
   // The host developing early, or the scheduled job catching up with the clock.
   useEffect(() => {
@@ -187,13 +165,59 @@ export default function AlbumScreen() {
   const photos = useMemo(() => album?.photos ?? [], [album]);
   const developed = album?.developed ?? false;
 
+  // --- before the reveal: the countdown and fresh photos ----------------------
+
+  const waiting = album !== null && !developed;
+  const endsAt = album?.event.ends_at;
+  const [now, setNow] = useState(() => new Date());
+  const remaining = endsAt ? new Date(endsAt).getTime() - now.getTime() : 0;
+  // Seconds are on screen in the last hour; before that a slow tick is enough.
+  const tickMs = remaining < 3_600_000 ? T.developing.fastTickMs : T.developing.slowTickMs;
+  useEffect(() => {
+    if (!waiting) return;
+    const tick = setInterval(() => setNow(new Date()), tickMs);
+    return () => clearInterval(tick);
+  }, [waiting, tickMs]);
+  const countdown = useMemo(
+    () => countdownParts(endsAt ? new Date(endsAt) : now, now),
+    [endsAt, now],
+  );
+  const countdownLabel = `${countdown[0].value}${countdown[0].unit} ${countdown[1].value}${countdown[1].unit}`;
+
+  // The clock passing the end develops the film (RLS reads the clock).
+  const ended = waiting && remaining <= 0;
+  useEffect(() => {
+    if (ended) void load();
+  }, [ended, load]);
+
+  // Others' photos arrive while the screen is open.
+  useFocusEffect(
+    useCallback(() => {
+      if (!waiting) return;
+      const timer = setInterval(() => void load(), T.developing.refreshMs);
+      return () => clearInterval(timer);
+    }, [waiting, load]),
+  );
+
+  const hidden = useMemo(() => album?.hidden ?? [], [album]);
+  const gridItems = useMemo<readonly GridItem[]>(
+    () => (developed ? photos : hidden),
+    [developed, photos, hidden],
+  );
+  /** Only the viewer's own frames open before the reveal. */
+  const mineBefore = useMemo(
+    () =>
+      hidden.filter((item): item is Extract<HiddenPhoto, { kind: 'mine' }> => item.kind === 'mine'),
+    [hidden],
+  );
+
   /*
     Which mission each photo was for, for the viewer's caption. Asked once the
     film is developed (RLS returns everyone's then) and only when the event had
     missions. Without an answer the photos simply carry no caption.
   */
   const [missionByPhoto, setMissionByPhoto] = useState<ReadonlyMap<string, string>>(
-    () => new Map()
+    () => new Map(),
   );
   const hadMissions = album?.event.missions_per_guest != null;
   useEffect(() => {
@@ -240,7 +264,7 @@ export default function AlbumScreen() {
     () => () => {
       if (statusTimer.current) clearTimeout(statusTimer.current);
     },
-    []
+    [],
   );
 
   // --- actions --------------------------------------------------------------
@@ -257,24 +281,20 @@ export default function AlbumScreen() {
 
   const develop = useCallback(() => {
     if (!id) return;
-    Alert.alert(
-      'Develop the film now?',
-      'Closes every camera and shows the photos to everyone.',
-      [
-        { text: 'Not yet', style: 'cancel' },
-        {
-          text: 'Develop',
-          style: 'destructive',
-          onPress: () => {
-            setDeveloping(true);
-            endEvent(id)
-              .then(load)
-              .catch((e) => Alert.alert("Couldn't develop the film", messageFor(e)))
-              .finally(() => setDeveloping(false));
-          },
+    Alert.alert('Develop the film now?', 'Closes every camera and shows the photos to everyone.', [
+      { text: 'Not yet', style: 'cancel' },
+      {
+        text: 'Develop',
+        style: 'destructive',
+        onPress: () => {
+          setDeveloping(true);
+          endEvent(id)
+            .then(load)
+            .catch((e) => Alert.alert("Couldn't develop the film", messageFor(e)))
+            .finally(() => setDeveloping(false));
         },
-      ]
-    );
+      },
+    ]);
   }, [id, load]);
 
   // Rename / delete / remove (2026-11-21) — the same menu as a long press on
@@ -283,8 +303,14 @@ export default function AlbumScreen() {
     onRenamed: (name) =>
       setState((current) =>
         current.kind === 'ready'
-          ? { kind: 'ready', album: { ...current.album, event: { ...current.album.event, name } } }
-          : current
+          ? {
+              kind: 'ready',
+              album: {
+                ...current.album,
+                event: { ...current.album.event, name },
+              },
+            }
+          : current,
       ),
     onGone: () => router.replace('/(library)/films'),
   });
@@ -360,15 +386,13 @@ export default function AlbumScreen() {
         await work();
       } catch (e) {
         say(
-          e instanceof PhotoAccessDeniedError
-            ? 'Allow photo access in Settings to save.'
-            : failure
+          e instanceof PhotoAccessDeniedError ? 'Allow photo access in Settings to save.' : failure,
         );
       } finally {
         setBusy(false);
       }
     },
-    [busy, say]
+    [busy, say],
   );
 
   const saveOne = useCallback(
@@ -379,7 +403,7 @@ export default function AlbumScreen() {
         await savePhoto(photo);
         say('Saved to your photos.');
       }, "Couldn't save the photo."),
-    [guarded, say]
+    [guarded, say],
   );
 
   const shareOne = useCallback(
@@ -389,7 +413,7 @@ export default function AlbumScreen() {
         await sharePhoto(photo);
         setStatus(null);
       }, "Couldn't share the photo."),
-    [guarded, say]
+    [guarded, say],
   );
 
   const saveAll = useCallback(() => {
@@ -414,7 +438,7 @@ export default function AlbumScreen() {
             say(
               failed === 0
                 ? `Saved ${plural(total, 'photo', 'photos')}.`
-                : `Saved ${total - failed} of ${total}. Try again for the rest.`
+                : `Saved ${total - failed} of ${total}. Try again for the rest.`,
             );
           }, "Couldn't save the photos."),
       },
@@ -445,15 +469,15 @@ export default function AlbumScreen() {
                           photos: current.album.photos.filter((p) => p.id !== photo.id),
                         },
                       }
-                    : current
+                    : current,
                 );
                 say('Photo deleted.');
               }, "Couldn't delete the photo."),
           },
-        ]
+        ],
       );
     },
-    [guarded, say]
+    [guarded, say],
   );
 
   /*
@@ -479,46 +503,65 @@ export default function AlbumScreen() {
                 say('Reported. Thank you.');
               }, "Couldn't send the report."),
           },
-        ]
+        ],
       );
     },
-    [guarded, say]
+    [guarded, say],
   );
 
   // --- viewer ---------------------------------------------------------------
 
   const viewerPhotos = useMemo<ViewerPhoto[]>(
     () =>
-      photos.map((photo) => ({
-        id: photo.id,
-        thumbUri: photo.thumbUri,
-        full: () => originalUrl(photo),
-        width: photo.width,
-        height: photo.height,
-        caption: photo.author,
-        mission: missionByPhoto.get(photo.id),
-      })),
-    [photos, missionByPhoto]
+      !developed
+        ? mineBefore.map((item) => ({
+            id: item.id,
+            thumbUri: item.shot.thumbUri,
+            full: async () => {
+              const full = item.shot.full;
+              if ('uri' in full) return full.uri;
+              return (await signedUrls([full.path])).get(full.path);
+            },
+            width: null,
+            height: null,
+            caption: item.author,
+          }))
+        : photos.map((photo) => ({
+            id: photo.id,
+            thumbUri: photo.thumbUri,
+            full: () => originalUrl(photo),
+            width: photo.width,
+            height: photo.height,
+            caption: photo.author,
+            mission: missionByPhoto.get(photo.id),
+          })),
+    [developed, mineBefore, photos, missionByPhoto],
   );
 
   /** The viewer's photo — the status capsule steps above its mission caption. */
   const [viewerIndex, setViewerIndex] = useState(0);
 
-  const follow = useCallback((index: number) => {
-    setViewerIndex(index);
-    list.current?.scrollToIndex({
-      index: Math.floor(index / T.columns),
-      viewPosition: 0.5,
-      animated: false,
-    });
-  }, []);
+  const follow = useCallback(
+    (index: number) => {
+      setViewerIndex(index);
+      // Before the reveal the viewer pages the own frames, which sit among the others.
+      const at = developed ? index : hidden.findIndex((item) => item.id === mineBefore[index]?.id);
+      if (at < 0) return;
+      list.current?.scrollToIndex({
+        index: Math.floor(at / T.columns),
+        viewPosition: 0.5,
+        animated: false,
+      });
+    },
+    [developed, hidden, mineBefore],
+  );
 
   const originFor = useCallback(
     (index: number) => {
-      const photo = photos[index];
-      return photo ? rectOf(photo.id) : Promise.resolve(null);
+      const id = developed ? photos[index]?.id : mineBefore[index]?.id;
+      return id ? rectOf(id) : Promise.resolve(null);
     },
-    [photos, rectOf]
+    [developed, photos, mineBefore, rectOf],
   );
 
   // --- render ---------------------------------------------------------------
@@ -557,31 +600,6 @@ export default function AlbumScreen() {
     );
   }
 
-  if (!developed) {
-    return (
-      <Screen transparent padded={false}>
-        <View style={[styles.plainHeader, styles.plainHeaderInset, styles.headerRow]}>
-          <GlassButton icon="chevron-left" accessibilityLabel="Back" onPress={leave} />
-          {menu}
-        </View>
-        <DevelopingFilm
-          eventName={album.event.name}
-          endsAt={album.event.ends_at}
-          shotsTaken={album.shotsTaken}
-          memberCount={album.memberCount}
-          photos={hiddenFrames}
-          canDevelop={album.isHost && album.event.status === 'live'}
-          developing={developing}
-          onDevelop={develop}
-          onOpenCamera={() =>
-            router.replace({ pathname: '/(capture)/camera', params: { eventId: album.event.id } })
-          }
-          onEnded={() => void load()}
-        />
-      </Screen>
-    );
-  }
-
   const shareAlbum = () => {
     // The invite link opens the album for every member (app, App Clip or
     // browser) and lets a newcomer join and see it.
@@ -596,7 +614,7 @@ export default function AlbumScreen() {
         ref={list}
         onScroll={onScroll}
         scrollEventThrottle={16}
-        data={photos}
+        data={gridItems}
         keyExtractor={(photo) => photo.id}
         numColumns={T.columns}
         columnWrapperStyle={styles.row}
@@ -609,54 +627,113 @@ export default function AlbumScreen() {
           // The row is not laid out yet; the viewer then closes with a fade.
         }}
         ListHeaderComponent={
-          <AlbumHero
-            title={album.event.name}
-            photoCount={photos.length}
-            memberCount={album.memberCount}
-            // The event image heads the album (the user, 2026-11-21), not a
-            // random print; the prints are all in the grid below.
-            cover={album.event}
-            scrollY={scrollY}
-            onSaveAll={saveAll}
-            onShare={shareAlbum}
-            saveDisabled={busy}
-          />
+          !developed ? (
+            <DevelopingHero
+              title={album.event.name}
+              cover={album.event}
+              countdown={countdown}
+              shotsTaken={album.shotsTaken}
+              memberCount={album.memberCount}
+              scrollY={scrollY}
+              onOpenCamera={() =>
+                router.replace({
+                  pathname: '/(capture)/camera',
+                  params: { eventId: album.event.id },
+                })
+              }
+              onDevelop={album.isHost && album.event.status === 'live' ? develop : undefined}
+              developing={developing}
+            />
+          ) : (
+            <AlbumHero
+              title={album.event.name}
+              photoCount={photos.length}
+              memberCount={album.memberCount}
+              // The event image heads the album (the user, 2026-11-21), not a
+              // random print; the prints are all in the grid below.
+              cover={album.event}
+              scrollY={scrollY}
+              onSaveAll={saveAll}
+              onShare={shareAlbum}
+              saveDisabled={busy}
+            />
+          )
         }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Body small style={styles.centerCopy}>
-              Nobody took a photo.{'\n'}The film came back blank.
+              {developed
+                ? 'Nobody took a photo.\nThe film came back blank.'
+                : 'No photos yet.\nThey show up here as they are taken.'}
             </Body>
           </View>
         }
-        renderItem={({ item, index }) => (
-          <PhotoTile
-            id={item.id}
-            uri={item.thumbUri}
-            accessibilityLabel={`Photo ${index + 1} of ${photos.length}${item.author ? `, by ${item.author}` : ''}${missionByPhoto.has(item.id) ? ', a mission' : ''}`}
-            register={register}
-            onPress={(origin) => setOpen({ index, origin })}
-            style={styles.tile}>
-            {item.author ? (
-              <>
-                <LinearGradient
-                  pointerEvents="none"
-                  colors={T.tile.captionFade}
-                  style={styles.captionFade}
+        extraData={countdownLabel}
+        renderItem={({ item, index }) => {
+          if (isHiddenPhoto(item)) {
+            if (item.kind === 'hidden') {
+              return (
+                <HiddenPhotoTile
+                  blurhash={item.blurhash}
+                  author={item.author}
+                  countdown={countdownLabel}
+                  style={styles.tile}
                 />
-                <Text style={styles.caption} numberOfLines={1}>
-                  {item.author}
-                </Text>
-              </>
-            ) : null}
-            {missionByPhoto.has(item.id) ? (
-              // Glass over the print, never over other glass.
-              <Glass radius={T.tile.missionBadge / 2} style={styles.missionBadge}>
-                <Feather name="target" size={T.tile.missionIcon} color={Colors.text} />
-              </Glass>
-            ) : null}
-          </PhotoTile>
-        )}
+              );
+            }
+            const own = mineBefore.indexOf(item);
+            return (
+              <PhotoTile
+                id={item.id}
+                uri={item.shot.thumbUri}
+                accessibilityLabel={`Your photo ${own + 1} of ${mineBefore.length}`}
+                register={register}
+                onPress={(origin) => setOpen({ index: own, origin })}
+                style={styles.tile}>
+                {item.author ? (
+                  <>
+                    <LinearGradient
+                      pointerEvents="none"
+                      colors={T.tile.captionFade}
+                      style={styles.captionFade}
+                    />
+                    <Text style={styles.caption} numberOfLines={1}>
+                      {item.author}
+                    </Text>
+                  </>
+                ) : null}
+              </PhotoTile>
+            );
+          }
+          return (
+            <PhotoTile
+              id={item.id}
+              uri={item.thumbUri}
+              accessibilityLabel={`Photo ${index + 1} of ${photos.length}${item.author ? `, by ${item.author}` : ''}${missionByPhoto.has(item.id) ? ', a mission' : ''}`}
+              register={register}
+              onPress={(origin) => setOpen({ index, origin })}
+              style={styles.tile}>
+              {item.author ? (
+                <>
+                  <LinearGradient
+                    pointerEvents="none"
+                    colors={T.tile.captionFade}
+                    style={styles.captionFade}
+                  />
+                  <Text style={styles.caption} numberOfLines={1}>
+                    {item.author}
+                  </Text>
+                </>
+              ) : null}
+              {missionByPhoto.has(item.id) ? (
+                // Glass over the print, never over other glass.
+                <Glass radius={T.tile.missionBadge / 2} style={styles.missionBadge}>
+                  <Feather name="target" size={T.tile.missionIcon} color={Colors.text} />
+                </Glass>
+              ) : null}
+            </PhotoTile>
+          );
+        }}
       />
 
       {/* A soft edge where the grid scrolls under the back button, instead of a divider. */}
@@ -697,6 +774,7 @@ export default function AlbumScreen() {
           onIndexChange={follow}
           onClose={() => setOpen(null)}
           renderActions={(_, index) => {
+            if (!developed) return null;
             const photo = photos[index];
             if (!photo) return null;
             return (
@@ -745,7 +823,9 @@ export default function AlbumScreen() {
               bottom:
                 insets.bottom +
                 T.status.bottom +
-                (open && viewerPhotos[viewerIndex]?.mission ? MissionsCamera.caption.statusLift : 0),
+                (open && viewerPhotos[viewerIndex]?.mission
+                  ? MissionsCamera.caption.statusLift
+                  : 0),
             },
           ]}
           pointerEvents="none"

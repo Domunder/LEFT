@@ -120,8 +120,9 @@ private enum ViewerTokens {
 
 /// The frames full screen, newest first like the grid. Chrome floats as glass
 /// over the photo, as in the app: ✕ and "3 / 12" at the top, "Mission · …"
-/// and the "Mission" button at the bottom.
-private struct PhotoViewer: View {
+/// and the "Mission" button at the bottom. Also opened from the gallery before
+/// the reveal (`GalleryView`), on the guest's own photos.
+struct PhotoViewer: View {
   let event: EventInfo
   let zoom: Namespace.ID
   @EnvironmentObject private var model: ClipModel
@@ -263,7 +264,7 @@ private struct PhotoViewer: View {
 
 // MARK: Open from the tile, return to it
 
-private extension View {
+extension View {
   /// A grid tile the viewer zooms out of (iOS 18+; a plain cover before).
   @ViewBuilder func zoomSource(id: String, in ns: Namespace.ID) -> some View {
     if #available(iOS 18.0, *) {
@@ -393,7 +394,7 @@ private struct ZoomablePhoto: View {
   }
 }
 
-private enum PhotoLoader {
+enum PhotoLoader {
   static func load(_ url: URL) async -> UIImage? {
     if url.isFileURL {
       return await Task.detached { UIImage(contentsOfFile: url.path) }.value

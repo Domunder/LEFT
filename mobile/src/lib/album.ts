@@ -2,9 +2,10 @@
  * The album — what `(library)/album/[id]` shows, before and after the reveal.
  *
  * Reads only. Who may see what is decided by RLS: before the event is developed
- * `listPhotos()` returns the caller's own frames and nothing else, so the
- * "developing" state counts photos from the roster (`shots_taken`), which every
- * member can read, never from the photo rows.
+ * `listPhotos()` returns the caller's own frames and nothing else. The gallery
+ * before the reveal (2026-11-23) is the viewer's own frames (`loadMyShots`) and,
+ * for everyone else's, only what `event_gallery()` tells every member: who took
+ * it and its blurhash — never a file.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,7 +16,8 @@ import { Platform, Share } from 'react-native';
 import { track } from './analytics';
 import { getSession } from './auth';
 import { getEvent, isDeveloped, listMembers, type Event } from './events';
-import { listPhotos, type Photo } from './photos';
+import { loadMyShots, type MyShot } from './my-shots';
+import { listEventGallery, listPhotos, type Photo } from './photos';
 import { signedUrls } from './storage';
 
 export type AlbumPhoto = {
@@ -31,6 +33,18 @@ export type AlbumPhoto = {
   mine: boolean;
 };
 
+/** A tile of the gallery before the reveal. */
+export type HiddenPhoto =
+  | { kind: 'mine'; id: string; takenAt: string; shot: MyShot; author?: string }
+  | {
+      kind: 'hidden';
+      id: string;
+      takenAt: string;
+      /** Null: a dark frame (upload on its way, or an older client). */
+      blurhash: string | null;
+      author?: string;
+    };
+
 export type Album = {
   event: Event;
   developed: boolean;
@@ -40,6 +54,8 @@ export type Album = {
   shotsTaken: number;
   /** Empty until the event is developed. */
   photos: AlbumPhoto[];
+  /** Before the reveal: every photo, newest first — the viewer's own sharp. Empty after. */
+  hidden: HiddenPhoto[];
 };
 
 /** Storage signs this many paths per request without complaint. */
@@ -70,11 +86,37 @@ export async function loadAlbum(eventId: string): Promise<Album> {
     memberCount: members.length,
     shotsTaken: members.reduce((sum, member) => sum + member.shots_taken, 0),
   };
-  if (!developed) return { ...base, photos: [] };
+  const names = new Map(members.map((member) => [member.user_id, member.display_name]));
+  if (!developed) {
+    const [mine, rows] = await Promise.all([
+      loadMyShots(eventId),
+      // Without the list the viewer still has their own frames.
+      listEventGallery(eventId).catch(() => []),
+    ]);
+    const me = userId ? names.get(userId) : undefined;
+    const hidden: HiddenPhoto[] = [
+      ...mine.map((shot): HiddenPhoto => ({
+        kind: 'mine',
+        id: shot.id,
+        takenAt: shot.takenAt,
+        shot,
+        author: me,
+      })),
+      ...rows
+        .filter((row) => row.userId !== userId)
+        .map((row): HiddenPhoto => ({
+          kind: 'hidden',
+          id: row.id,
+          takenAt: row.takenAt,
+          blurhash: row.blurhash,
+          author: row.userId ? names.get(row.userId) : undefined,
+        })),
+    ].sort((a, b) => b.takenAt.localeCompare(a.takenAt));
+    return { ...base, photos: [], hidden };
+  }
 
   const rows = await listPhotos(eventId);
   const urls = await signAll(rows.flatMap((row) => (row.thumb_path ? [row.thumb_path] : [])));
-  const names = new Map(members.map((member) => [member.user_id, member.display_name]));
 
   const photos = rows.flatMap((row): AlbumPhoto[] => {
     const thumbUri = row.thumb_path ? urls.get(row.thumb_path) : undefined;
@@ -93,7 +135,7 @@ export async function loadAlbum(eventId: string): Promise<Album> {
     ];
   });
 
-  return { ...base, photos };
+  return { ...base, photos, hidden: [] };
 }
 
 /** A signed URL for one original, or undefined when it cannot be had. */

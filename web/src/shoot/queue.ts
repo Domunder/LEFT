@@ -3,7 +3,8 @@
  * `mobile/src/lib/upload-queue.ts`, on IndexedDB.
  *
  * The shutter only develops the frame and writes it here; claim → tag →
- * upload → mark happen in `drain()`, each step recorded, so a tab closed mid-upload or
+ * upload → mark (with the thumbnail's blurhash, the smudge others see before
+ * the reveal) happen in `drain()`, each step recorded, so a tab closed mid-upload or
  * a venue with no signal loses nothing that was taken: the next visit to the
  * link drains what is left. The photo id is minted at the shutter, which makes
  * the claim idempotent — a retry never spends a second frame.
@@ -12,6 +13,8 @@
  * refused by the server and dropped. And a guest who clears the browser's data
  * before the queue drained loses those frames.
  */
+
+import { encode } from 'blurhash';
 
 import {
   answeredByServer,
@@ -166,6 +169,9 @@ async function send(shot: Shot) {
 
   await tag(shot);
 
+  // The smudge the others see before the reveal. Never in the way of the photo.
+  const smudge = await blurhashOf(shot.thumb);
+
   if (!shot.uploaded) {
     try {
       await uploadJpeg(photoPath(shot.eventId, shot.userId, shot.id), shot.original);
@@ -175,7 +181,7 @@ async function send(shot: Shot) {
       // that meets the refusal may be one whose mark already went through:
       // ask the server, and drop the entry if it holds the photo.
       try {
-        await markPhotoUploaded(shot.id, shot.width, shot.height);
+        await markPhotoUploaded(shot.id, shot.width, shot.height, smudge);
         await finish(shot);
         return;
       } catch {
@@ -186,8 +192,37 @@ async function send(shot: Shot) {
     await update(shot.id, { uploaded: true });
   }
 
-  await markPhotoUploaded(shot.id, shot.width, shot.height);
+  await markPhotoUploaded(shot.id, shot.width, shot.height, smudge);
   await finish(shot);
+}
+
+/** Width of the canvas the thumbnail is shrunk into before encoding. */
+const SMUDGE_WIDTH = 32;
+
+/**
+ * The thumbnail's blurhash (4x3 components): ~30
+ * characters of colour, no recognisable picture. Null when the browser cannot
+ * decode or draw the thumbnail — the photo is sent without it.
+ */
+async function blurhashOf(thumb: Blob): Promise<string | null> {
+  try {
+    const bitmap = await createImageBitmap(thumb);
+    const w = SMUDGE_WIDTH;
+    const h = Math.max(1, Math.round((SMUDGE_WIDTH * bitmap.height) / Math.max(1, bitmap.width)));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      bitmap.close();
+      return null;
+    }
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close();
+    return encode(ctx.getImageData(0, 0, w, h).data, w, h, 4, 3);
+  } catch {
+    return null;
+  }
 }
 
 /**

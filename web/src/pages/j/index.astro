@@ -256,17 +256,29 @@ import '../../styles/shoot.css';
       </div>
     </section>
 
-    <!-- Developing: the roll is used up, or the host or the clock is about to develop -->
-    <section class="screen screen-center" data-screen="developing">
-      <p class="eyebrow" data-bind="event-name"></p>
-      <h1 id="dev-title">Your film is <em>developing.</em></h1>
-      <p class="countdown" id="countdown" aria-live="off"></p>
-      <p class="lede" id="dev-lede"></p>
-      <div class="actions">
-        <a class="pill pill-primary press" id="calendar" download>Remind me</a>
-        <button class="pill pill-ghost press" id="dev-shots" type="button">Your shots</button>
-        <button class="pill pill-ghost press" id="dev-camera" type="button" hidden>Back to the camera</button>
+    <!--
+      Developing: the roll is used up, or the guest came from the countdown.
+      The gallery before the reveal (2026-11-23): the event image, the
+      countdown, then every photo of the film — the guest's own sharp, the
+      others' as a colour smudge with the photographer's name.
+    -->
+    <section class="screen gallery" data-screen="developing">
+      <div class="gallery-backdrop" aria-hidden="true">
+        <img id="dev-cover" alt="" hidden />
       </div>
+      <header class="gallery-head">
+        <p class="eyebrow" id="dev-title">Developing</p>
+        <h1 data-bind="event-name"></h1>
+        <p class="countdown" id="countdown" aria-live="off"></p>
+        <p class="gallery-counts" id="dev-counts"></p>
+        <div class="gallery-actions">
+          <button class="pill pill-primary press" id="dev-camera" type="button" hidden>Back to the camera</button>
+          <a class="pill pill-glass glass press" id="calendar" download>Remind me</a>
+        </div>
+        <p class="fine" id="dev-lede"></p>
+      </header>
+      <ol class="gallery-grid" id="gallery" aria-label="Photos so far"></ol>
+      <p class="gallery-empty lede" id="gallery-empty" hidden>No photos yet. The first one shows up here.</p>
     </section>
 
     <!-- The album -->

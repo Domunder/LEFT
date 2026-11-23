@@ -40,6 +40,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
+import { Image } from 'expo-image';
 import * as Network from 'expo-network';
 import { AppState } from 'react-native';
 
@@ -57,6 +58,9 @@ import {
 } from './photos';
 import { photoPath, thumbPath, uploadJpeg } from './storage';
 import { isSupabaseConfigured } from './supabase';
+
+/** 3 across, 4 down: the shape of a portrait print, about 30 characters. */
+const BLURHASH_COMPONENTS: [number, number] = [3, 4];
 
 const STORAGE_KEY = 'left.upload-queue.v1';
 
@@ -500,6 +504,19 @@ async function develop(item: QueuedShot) {
   raw.delete();
 }
 
+/**
+ * The thumbnail's blurhash, for the gallery before the reveal (2026-11-23):
+ * everyone else sees only this colour smudge until the film is developed.
+ * Undefined when it cannot be made; the photo uploads either way.
+ */
+async function blurhashOf(uri: string): Promise<string | undefined> {
+  try {
+    return (await Image.generateBlurhashAsync(uri, BLURHASH_COMPONENTS)) ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 async function upload(item: QueuedShot) {
   const storagePath = photoPath(item.eventId, item.userId, item.id);
   const thumbStoragePath = thumbPath(item.eventId, item.userId, item.id);
@@ -508,6 +525,8 @@ async function upload(item: QueuedShot) {
   const thumb = await thumbFile(item.id).bytes();
 
   const size = { width: item.width, height: item.height };
+  // The colour smudge others see before the reveal. Never in the way.
+  const blurhash = await blurhashOf(thumbFile(item.id).uri);
 
   try {
     await uploadJpeg(storagePath, original.buffer);
@@ -521,7 +540,7 @@ async function upload(item: QueuedShot) {
       if the row is already attached. Anything else rethrows the upload's error.
     */
     try {
-      await markPhotoUploaded(item.id, size);
+      await markPhotoUploaded(item.id, size, blurhash);
     } catch {
       throw e;
     }
@@ -530,8 +549,8 @@ async function upload(item: QueuedShot) {
     return;
   }
 
-  // The server writes the paths itself; it only needs to be told the size.
-  await markPhotoUploaded(item.id, size);
+  // The server writes the paths itself; it only needs the size and the smudge.
+  await markPhotoUploaded(item.id, size, blurhash);
 
   // Re-tagged from "Your shots" while the files were on their way.
   await settleTagBeforeRemoving(item.id);

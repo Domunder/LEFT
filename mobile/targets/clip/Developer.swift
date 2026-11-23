@@ -11,6 +11,9 @@ struct DevelopedPhoto {
   let thumb: Data
   let width: Int
   let height: Int
+  /// The smudge others see before the reveal (`Blurhash.swift`); nil when it
+  /// could not be computed, which never holds a frame up.
+  let blurhash: String?
 }
 
 enum DevelopError: Error {
@@ -105,8 +108,11 @@ actor Developer {
     else { throw DevelopError.render }
 
     let original = try jpeg(developed, quality: PhotoOutput.quality)
-    let thumb = try jpeg(scaled(developed, longEdge: PhotoOutput.thumbLongEdge), quality: PhotoOutput.thumbQuality)
-    return DevelopedPhoto(original: original, thumb: thumb, width: width, height: height)
+    let thumbImage = try scaled(developed, longEdge: PhotoOutput.thumbLongEdge)
+    let thumb = try jpeg(thumbImage, quality: PhotoOutput.thumbQuality)
+    // From the thumbnail: what the grid shows, so the smudge matches it.
+    let blurhash = Blurhash.encode(thumbImage)
+    return DevelopedPhoto(original: original, thumb: thumb, width: width, height: height, blurhash: blurhash)
   }
 
   private func scaled(_ image: CGImage, longEdge: Int) throws -> CGImage {
