@@ -16,7 +16,9 @@ struct RootView: View {
           eyebrow: "LEFT",
           plain: "Scan an ",
           emphasis: "invite.",
-          message: "Point your camera at the host’s QR code, or open the link they sent you."
+          message: "Point your camera at the host’s QR code, or open the link they sent you.",
+          retry: demoAction,
+          retryLabel: "Try the demo"
         )
       case .name:
         NameScreen()
@@ -43,6 +45,13 @@ struct RootView: View {
     guard model.canRetry else { return nil }
     let model = self.model
     return { model.retry() }
+  }
+
+  /// The clip was opened without a link (2026-11-23: from TestFlight it sat on
+  /// "Scan an invite" with nothing to tap): the demo is always there.
+  private var demoAction: (@MainActor () -> Void)? {
+    let model = self.model
+    return { model.tryDemo() }
   }
 }
 
@@ -919,6 +928,7 @@ struct MessageScreen: View {
   let emphasis: String
   let message: String
   var retry: (@MainActor () -> Void)?
+  var retryLabel = "Try again"
 
   var body: some View {
     VStack(alignment: .leading, spacing: 0) {
@@ -930,7 +940,7 @@ struct MessageScreen: View {
         .padding(.top, 20)
       Spacer()
       if let retry {
-        Button("Try again", action: retry)
+        Button(retryLabel, action: retry)
           .buttonStyle(PillButtonStyle())
           .padding(.bottom, 12)
       }

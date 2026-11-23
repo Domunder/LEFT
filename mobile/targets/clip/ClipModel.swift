@@ -169,7 +169,10 @@ final class ClipModel: ObservableObject {
     }
     Task {
       try? await Task.sleep(nanoseconds: 1_200_000_000)
-      guard phase == .starting else { return }
+      // `code` is set as soon as a link arrived: the demo stays on `.starting`
+      // for its whole round trip, and on a slow network this used to put
+      // "Scan an invite" over it.
+      guard phase == .starting, code == nil else { return }
       if let last = memberships.string(forKey: Self.lastCodeKey) {
         await enter(code: last)
       } else {
@@ -184,6 +187,11 @@ final class ClipModel: ObservableObject {
       return
     }
     Task { await enter(code: code) }
+  }
+
+  /// "Try the demo" on the screen a clip opened without a link shows.
+  func tryDemo() {
+    Task { await enter(code: ClipConfig.demoCode) }
   }
 
   /// Whether "Try again" has anything to try: a link that was not an invite
