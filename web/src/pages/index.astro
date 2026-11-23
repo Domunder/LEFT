@@ -12,6 +12,7 @@ import { HOME_FAQ, LOOKS, SITE, TIERS } from '../site';
 import weddingDance from '../assets/photos/wedding-dance.jpg';
 import weddingCrowd from '../assets/photos/wedding-crowd.jpg';
 import weddingFriends from '../assets/photos/wedding-friends.jpg';
+import weddingCouple from '../assets/photos/wedding-couple.jpg';
 import weddingMono from '../assets/photos/wedding-mono.jpg';
 import partyFlash from '../assets/photos/party-flash.jpg';
 import partyWine from '../assets/photos/party-wine.jpg';
@@ -211,7 +212,7 @@ const jsonLd = [
             LOOKS.map((look) => (
               <li>
                 <Picture
-                  src={weddingFriends}
+                  src={weddingCouple}
                   alt={`The same wedding photo in the ${look.name} look`}
                   formats={['avif', 'webp']}
                   widths={[280, 560]}
@@ -231,7 +232,7 @@ const jsonLd = [
       <div class="looks-phone reveal" data-reveal="right">
         <Phone
           screen="looks"
-          photo={weddingFriends}
+          photo={weddingCouple}
           label="LEFT film picker with four looks: Golden, Chrome, Faded and Mono"
         />
       </div>
