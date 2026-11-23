@@ -1,8 +1,19 @@
 ---
-import { TIERS } from '../site';
+/**
+ * Pricing, as little as it takes (2026-11-23, the user: "just the price and
+ * how many guests"): per tier the group size and the price, nothing else (a
+ * row of dots per ten guests was tried and removed the same day). What every
+ * event has, and what a paid one adds, is said once under the cards.
+ * Past the largest tier: an email (`SITE.eventsEmail`).
+ */
+import { SITE, TIERS } from '../site';
 
 type Props = { highlight?: string };
 const { highlight } = Astro.props;
+
+const PER_DOT = 10;
+const largest = TIERS[TIERS.length - 1].guests;
+const mail = `mailto:${SITE.eventsEmail}?subject=${encodeURIComponent(`An event with more than ${largest} guests`)}`;
 ---
 
 <section id="pricing" class="pricing">
@@ -16,27 +27,23 @@ const { highlight } = Astro.props;
       {
         TIERS.map((tier) => (
           <li class:list={[{ on: tier.id === highlight }]}>
-            <p class="note">{tier.note}</p>
             <p class="guests">
               <small>Up to</small>
               <b>{tier.guests}</b>
               <small>guests</small>
             </p>
             <p class="price">{tier.price === 0 ? 'Free' : `$${tier.price}`}</p>
-            <ul class="features">
-              {tier.features.map((feature) => (
-                <li class:list={{ strong: feature === 'Unlimited photos' }}>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6L9 17l-5-5" /></svg>
-                  {feature}
-                </li>
-              ))}
-            </ul>
           </li>
         ))
       }
     </ul>
+    <p class="more reveal">
+      <span>More than {largest} guests?</span>
+      <a href={mail}>Write to {SITE.eventsEmail}</a>
+    </p>
     <p class="fine reveal">
-      One-time, per event. No subscription. Unlimited means up to 150 photos per guest. Prices are charged in
+      One-time, per event. No subscription. Every event has all four film looks and missions; a free one has
+      rolls of 5 to 36 photos, a paid one can be unlimited (up to 150 photos per guest). Prices are charged in
       the app and may vary slightly by store and country.
     </p>
   </div>
@@ -67,14 +74,6 @@ const { highlight } = Astro.props;
     background: linear-gradient(180deg, rgba(240, 190, 140, 0.1), transparent 70%), var(--card);
   }
 
-  .note {
-    font-size: 0.6875rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--ink-55);
-    margin-bottom: 8px;
-  }
-
   .guests {
     display: flex;
     align-items: baseline;
@@ -102,40 +101,33 @@ const { highlight } = Astro.props;
     font-variant-numeric: tabular-nums;
   }
 
-  .features {
-    list-style: none;
-    margin: 14px 0 0;
-    padding: 16px 0 0;
-    border-top: 1px solid var(--line);
-    display: grid;
-    gap: 10px;
-    color: var(--ink-70);
-    font-size: 0.92rem;
-  }
-
-  .features li {
+  .more {
+    margin-top: 12px;
+    padding: 18px 24px;
+    border: 1px solid var(--line);
+    border-radius: 24px;
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 6px 24px;
   }
 
-  .features .strong {
-    color: var(--ink);
+  .more span {
+    font-family: var(--serif);
+    font-size: 1.35rem;
+  }
+
+  .more a {
+    color: var(--amber);
     font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    text-decoration-color: var(--ink-30);
   }
 
-  .features svg {
-    flex: none;
-    width: 18px;
-    height: 18px;
-    padding: 3px;
-    border-radius: 50%;
-    background: rgba(240, 180, 120, 0.16);
-    fill: none;
-    stroke: var(--amber);
-    stroke-width: 3;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+  .more a:hover {
+    text-decoration-color: currentColor;
   }
 
   .fine {

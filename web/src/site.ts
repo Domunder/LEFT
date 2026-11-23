@@ -35,6 +35,8 @@ export const SITE = {
   /** The app's custom scheme (mobile/app.json → scheme). */
   scheme: 'left',
   contactEmail: 'support@leftmoment.com' as string | null,
+  /** Groups past the largest tier write here (Pricing.astro; the user, 2026-11-23). */
+  eventsEmail: 'hello@leftmoment.com',
 } as const;
 
 export const NAV = [
