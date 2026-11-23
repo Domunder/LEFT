@@ -24,14 +24,14 @@ export const SITE = {
    */
   demoCode: 'TRYLEFT',
   /**
-   * Where the website sends people for the demo (2026-11-23). Not `/j/TRYLEFT`:
-   * that link is taken over by the App Clip and the installed app, and the
-   * released 1.1.0 of both treat TRYLEFT as an invite and fail ("This invite
-   * link doesn’t work any more"). `/try` is the same web camera, outside
-   * `/j/*`, without the clip's card. Once 1.2.0 is the released version this
-   * may go back to `/j/TRYLEFT`.
+   * Where the website sends people for the demo: the badge, its QR code and
+   * the phone mockup's. `/j/TRYLEFT` opens the App Clip on an iPhone and the
+   * app where it is installed — from 1.2.0 on. (The released 1.1.0 of both
+   * treats TRYLEFT as an invite and fails; the user chose this link anyway on
+   * 2026-11-23, with 1.2.0 about to be released.) `/try` is the same demo in
+   * the browser only, without the clip's card: the fallback to switch to.
    */
-  demoPath: '/try',
+  demoPath: '/j/TRYLEFT',
   /** The app's custom scheme (mobile/app.json → scheme). */
   scheme: 'left',
   contactEmail: 'support@leftmoment.com' as string | null,

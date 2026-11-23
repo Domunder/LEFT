@@ -868,12 +868,13 @@ countdown, sample guests already inside, a floating badge on every page.
   `tryBadge`, off on `/j/` and the legal pages): a QR card on wide screens, a
   "Try it now" pill on touch devices, dismissible, hidden while the footer is
   on screen.
-- **The website links to `/try`, not `/j/TRYLEFT`** (2026-11-23, `SITE.demoPath`):
-  the released 1.1.0 clip and app claim `/j/*` and treat TRYLEFT as an invite
-  ("This invite link doesn’t work any more" — seen by the user from the
-  badge's QR). `/try` is the same web camera page without the clip's card;
-  `app.ts` reads it as the demo. Go back to `/j/TRYLEFT` once 1.2.0 is the
-  released version. The badge's dismissal lasts for the visit only.
+- **The website links to `/j/TRYLEFT`** (`SITE.demoPath`; the user,
+  2026-11-23, with 1.2.0 about to be released). The released 1.1.0 clip and
+  app treat TRYLEFT as an invite and fail ("This invite link doesn’t work any
+  more"), so the QR code is broken on iPhones until 1.2.0 is out. `/try` is
+  the same demo in the browser only, without the clip's card (`app.ts` reads
+  it as the demo) — the fallback: set `demoPath` to `/try`. The badge's
+  dismissal lasts for the visit only.
 - **To go live:** the migration on the hosted project, then the seed script
   against it, then push the website; the clip and the app need a new build.
   Until the migration is there, `/j/TRYLEFT` shows "Couldn’t start the demo".
