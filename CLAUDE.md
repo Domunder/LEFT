@@ -77,6 +77,12 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   **published unread** (the user's decision). `web/scripts/check-blog.mjs`
   fails the build on a wrong price, a competitor's name, an external or dead
   link. Rules: `marketing/seo/README.md`.
+- **Built (2026-11-23): the demo** — `leftmoment.com/j/TRYLEFT`, a private
+  demo moment per visitor, and a floating "Try LEFT" badge on the website.
+  Server verified against the local stack over HTTP, the web half walked in a
+  desktop browser; the App Clip half (with its new album) **never compiled**,
+  the app's `(guest)/demo` never run. **Not on the hosted project yet.** See
+  "The demo" below.
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -662,7 +668,7 @@ cannot UPDATE a photo row or DELETE a roster row — `create_event()`,
 
 ## The App Clip (2026-11-16)
 
-**Compiled on EAS since 2026-11-18, never run.** The user is on Windows; the
+**Since 2026-11-23 the clip has the album and the demo — see "The demo"; that code has never compiled.** **Compiled on EAS since 2026-11-18, never run.** The user is on Windows; the
 clip builds only on EAS (the GitHub workflow), and nothing in it has run on a
 phone. Its EAS credentials (the clip's own provisioning profile) were set up
 interactively once with `eas credentials`; a CI build cannot create them. Decided with the user: shoot + developing (no album in
@@ -825,6 +831,46 @@ the clip), hand-off through the App Group, `com.leftmoment.app.clip`,
 - **The user's steps** (App Group identifier, EAS credentials for the clip,
   App Clip experiences in App Store Connect, local experience for testing,
   the size check) are `docs/LAUNCH.md` §7a; device checks in §8.
+
+## The demo (2026-11-23)
+
+Decided with the user: a private demo per visitor, "Develop now" instead of a
+countdown, sample guests already inside, a floating badge on every page.
+
+- **`TRYLEFT` is a reserved code, not an invite.** A client that meets it
+  signs in anonymously and calls `start_demo()` instead of `join_event()`:
+  the app (`+native-intent.ts` → `(guest)/demo`, `lib/demo.ts`), the web
+  camera (`openDemo()` in `web/src/shoot/app.ts`) and the clip
+  (`ClipModel.startDemo`). All three skip name, intro and waiting and open
+  the camera.
+- **`start_demo()`** (migration `20261123010000_demo.sql`) returns the
+  caller's demo — the one still running, the one developed within the last
+  hour (so the link reopens its album), else a new one: live, roll 5, 24 h,
+  the caller is the **host**. That is why "Develop now" is the ordinary
+  `end_event()` and no policy changed. Five a day per user
+  (`hint = 'demo_limit'`).
+- **The sample guests live in one template event** (`events.demo =
+  'template'`, invite `LEFTDEMPLATE`, a host nobody can sign in as). Four
+  anonymous users joined and uploaded ten stock photos through the normal
+  doors: `node web/scripts/seed-demo.mjs LEFTDEMPLATE` (publishable key; a
+  second run is refused with "full"). A visitor's demo (`demo = 'visitor'`)
+  copies the roster and the photo **rows**; the files are never copied — the
+  rows point into the template's folder, which one storage policy lets any
+  signed-in user read. So a `storage_path` is not always under its own
+  event's folder: sign what the row says.
+- **Retention:** a visitor's demo is purged 7 days after it developed
+  (`demo_retention()`), the template never. Demos enqueue no notifications.
+- **The clip has an album now** (replacing "the album is the full app's"):
+  once any moment is developed, the clip shows the prints three to a row, the
+  viewer, and "Get LEFT". No save, share, delete or report there. The web
+  camera and the clip show "Develop now" to whoever is `host_id`.
+- **The badge** is `web/src/components/TryBadge.astro` (`Base.astro`'s
+  `tryBadge`, off on `/j/` and the legal pages): a QR card on wide screens, a
+  "Try it now" pill on touch devices, dismissible, hidden while the footer is
+  on screen.
+- **To go live:** the migration on the hosted project, then the seed script
+  against it, then push the website; the clip and the app need a new build.
+  Until the migration is there, `/j/TRYLEFT` shows "Couldn’t start the demo".
 
 ## Missions (2026-11-17)
 

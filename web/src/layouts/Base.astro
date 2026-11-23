@@ -8,6 +8,7 @@ import { Image } from 'astro:assets';
 import logo from '../assets/left-logo.png';
 import { NAV, SITE } from '../site';
 import { GUIDES } from '../guides';
+import TryBadge from '../components/TryBadge.astro';
 // The four faces every page shows above the fold. Preloaded so they are there
 // for the first layout: each one that arrives later re-lays the whole page.
 import newsreader from '@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2?url';
@@ -34,6 +35,11 @@ type Props = {
    * "Open" starts the native camera without installing the app.
    */
   appClip?: boolean;
+  /**
+   * The floating "Try LEFT" badge (the demo, `/j/TRYLEFT`). On by default,
+   * never on an `app` page; the legal texts switch it off.
+   */
+  tryBadge?: boolean;
 };
 
 const {
@@ -45,6 +51,7 @@ const {
   bare = false,
   app = false,
   appClip = false,
+  tryBadge = true,
 } = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, SITE.url).href;
@@ -200,6 +207,8 @@ const year = new Date().getFullYear();
       <p class="wrap legal">© {year} LEFT</p>
     </footer>
     )}
+
+    {!app && tryBadge && <TryBadge />}
 
     <script is:inline>
       (() => {

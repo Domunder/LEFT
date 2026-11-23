@@ -14,6 +14,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../generated/database';
+import { SITE } from '../site';
 
 type Tables = Database['public']['Tables'];
 export type Event = Tables['events']['Row'];
@@ -113,6 +114,55 @@ export class EventClosedError extends Error {
   }
 }
 
+// ---------------------------------------------------------------------------
+// The demo ("Try LEFT") and the host's "Develop now"
+// ---------------------------------------------------------------------------
+
+/**
+ * The reserved code behind `leftmoment.com/j/TRYLEFT`: never a real invite.
+ * It opens a private demo moment for the visitor (`start_demo()`).
+ */
+export const DEMO_CODE: string = SITE.demoCode;
+
+/** Too many demos were started today (`hint = 'demo_limit'`). */
+export class DemoLimitError extends Error {
+  constructor() {
+    super('The demo is taking a break for today. Come back tomorrow, or get the app.');
+    this.name = 'DemoLimitError';
+  }
+}
+
+/** `events.demo` ('visitor' on a demo moment) is not in the generated types yet. */
+export function isDemo(event: Event | null): boolean {
+  return !!(event as (Event & { demo?: string | null }) | null)?.demo;
+}
+
+/**
+ * The caller's own demo moment: they are its host and a member, it is live,
+ * and sample guests have already taken photos. Calling it again returns the
+ * demo that is still running instead of a new one. Throws `DemoLimitError`.
+ */
+export async function startDemo(name: string | null = null): Promise<Event> {
+  const { data, error } = await untyped().rpc('start_demo', name ? { p_display_name: name } : {});
+  if (error) {
+    if (error.hint === 'demo_limit') throw new DemoLimitError();
+    throw error;
+  }
+  // One row, whether the function returns `events` or `setof events`.
+  const row = (Array.isArray(data) ? data[0] : data) as Event | null;
+  if (!row?.id) throw new Error('The demo did not start');
+  return row;
+}
+
+/** The host's "Develop now" (`end_event()`): the event, now developed. Host only. */
+export async function endEvent(eventId: string): Promise<Event> {
+  const { data, error } = await db().rpc('end_event', { p_event_id: eventId });
+  if (error) throw error;
+  const row = (Array.isArray(data) ? data[0] : data) as Event | null;
+  if (!row?.id) throw new Error('The film was not developed');
+  return row;
+}
+
 /** Spend one frame. Idempotent per `photoId`; anything but the two refusals is retryable. */
 export async function claimShot(eventId: string, photoId: string, takenAt: string) {
   const { data, error } = await db().rpc('claim_shot', {
@@ -146,8 +196,8 @@ export async function uploadJpeg(path: string, body: Blob): Promise<void> {
 }
 
 /**
- * The doors added on 2026-11-23 (`20261123000000_gallery_before_develop.sql`)
- * are not in the generated types yet (they are copied from the app's
+ * The doors added on 2026-11-23 (`20261123000000_gallery_before_develop.sql`,
+ * and `start_demo()`) are not in the generated types yet (they are copied from the app's
  * `types/database.ts`, regenerated there). Untyped until then.
  */
 function untyped(): SupabaseClient {
@@ -363,6 +413,7 @@ export function answeredByServer(error: unknown): boolean {
  * so `String(e)` would print "[object Object]".
  */
 export function messageFor(e: unknown): string {
+  if (e instanceof DemoLimitError) return e.message;
   if (e && typeof e === 'object') {
     const err = e as { hint?: string; code?: string; message?: string };
     if (err.hint === 'full') return 'This group is full. Ask the host to make room.';

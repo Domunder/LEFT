@@ -174,7 +174,14 @@ struct CameraScreen: View {
   private var header: some View {
     HStack(alignment: .top, spacing: 0) {
       // The app's close button lives here; the clip has nowhere to go back to.
-      Color.clear.frame(width: CameraTokens.headerSideWidth, height: 1)
+      // A demo says so in its place.
+      ZStack(alignment: .topLeading) {
+        Color.clear.frame(width: CameraTokens.headerSideWidth, height: 1)
+        if model.isDemo {
+          DemoTag().padding(.top, CameraTokens.countdownTop)
+        }
+      }
+      .frame(width: CameraTokens.headerSideWidth, alignment: .topLeading)
 
       VStack(spacing: 2) {
         Text(event.name.uppercased())

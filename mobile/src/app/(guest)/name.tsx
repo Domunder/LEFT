@@ -71,6 +71,7 @@ import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
 import { Colors, Guest, MissionsJoin, Radii, Spacing } from '@/constants/theme';
 import { FontFamily } from '@/constants/typography';
 import { getSession, resolveDisplayName, setDisplayName, signInAnonymously } from '@/lib/auth';
+import { isDemoCode } from '@/lib/demo-code';
 import { joinEvent } from '@/lib/events';
 import {
   claimName,
@@ -120,6 +121,8 @@ export default function GuestNameScreen() {
   */
   useEffect(() => {
     if (!code) router.replace('/(modals)/join');
+    // The demo's QR, read by 08's scanner: not an invite, nothing to ask.
+    else if (isDemoCode(code)) router.replace('/(guest)/demo');
   }, [code, router]);
 
   /*

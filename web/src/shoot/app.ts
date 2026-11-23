@@ -4,6 +4,9 @@
  * app's `(guest)/intro` is once per moment and phone. The page's markup is `src/pages/j/index.astro`; this file switches
  * `data-view` and fills it.
  *
+ * `/j/TRYLEFT` is the demo ("Try LEFT"): no gate, no name, no waiting —
+ * `start_demo()` gives the visitor a moment of their own and the camera opens.
+ *
  * Every number shown comes from the server (`api.ts`): the roll is
  * `rollSize − shots_taken` minus the frames still waiting in the queue to be
  * claimed, floored at zero — as `useCameraSession` counts it in the app.
@@ -15,6 +18,8 @@ import {
   claimName,
   currentUserId,
   deletePhoto,
+  DEMO_CODE,
+  endEvent,
   ensureGuest,
   eventCoverUrl,
   eventGallery,
@@ -24,6 +29,7 @@ import {
   getMyMember,
   getMyMissions,
   isConfigured,
+  isDemo,
   isDeveloped,
   joinEvent,
   listMembers,
@@ -36,6 +42,7 @@ import {
   reportPhoto,
   setPhotoMission,
   signedUrls,
+  startDemo,
   type Event,
   type GalleryPhoto,
   type Mission,
@@ -158,6 +165,8 @@ export async function start() {
   setUpIntro();
   setUpWaiting();
 
+  if (state.code === DEMO_CODE) return openDemo();
+
   try {
     const userId = await currentUserId();
     const known = store.get(`left:web:event:${state.code}`);
@@ -174,6 +183,46 @@ export async function start() {
   // The app first; the browser only on request. A guest who already joined
   // here went straight back in above.
   show('get-app');
+}
+
+// ---------------------------------------------------------------------------
+// The demo — `/j/TRYLEFT`
+// ---------------------------------------------------------------------------
+
+/** The demo this browser last started (an event id): running, or developed and now an album. */
+const DEMO_KEY = 'left:web:demo';
+
+/**
+ * No "app first", no name, no waiting: anonymous sign-in → `start_demo()` →
+ * the camera of the visitor's own moment. Opening the link again goes back
+ * into the same demo while it runs (the server returns it) and to its album
+ * once developed (remembered here); a demo that is gone starts a new one.
+ */
+async function openDemo() {
+  show('loading');
+  try {
+    state.userId = await ensureGuest();
+    // The server decides which demo this is: the one still running, the one
+    // developed within the last hour (its album), else a fresh one. Offline or
+    // refused, the last one this browser saw is still worth opening.
+    const known = store.get(DEMO_KEY);
+    const event = await startDemo().catch(async (e) => {
+      if (known && (await getMyMember(known, state.userId!).catch(() => null))) return null;
+      throw e;
+    });
+    if (!event) return enter(known!);
+    store.set(DEMO_KEY, event.id);
+    // The moment's real link opens it in this browser too.
+    store.set(`left:web:event:${event.invite_code}`, event.id);
+    return enter(event.id);
+  } catch (e) {
+    return fail('Couldn’t <em>start the demo.</em>', messageFor(e), () => void openDemo());
+  }
+}
+
+/** A small, quiet "Demo" wherever the moment's name is written. */
+function bindDemo(demo: boolean) {
+  document.querySelectorAll<HTMLElement>('[data-bind="demo"]').forEach((el) => (el.hidden = !demo));
 }
 
 function openJoin() {
@@ -304,6 +353,10 @@ async function enter(eventId: string) {
     return fail('Couldn’t <em>open the film.</em>', messageFor(e), () => void enter(eventId));
   }
   bindEventName(state.event.name);
+  const demo = isDemo(state.event);
+  bindDemo(demo);
+  // A demo goes straight to the camera: no intro in between.
+  if (demo) store.set(introKey(state.event.id), '1');
   startQueue();
   if (!listening) listening = onQueue((change) => {
     if (change.kind === 'dropped' && change.reason === 'roll_empty') toast('Your roll was already used up.');
@@ -424,6 +477,7 @@ async function showCamera() {
   renderEndsIn();
   startTick();
   void showLastShot();
+  demoHint();
   void loadMissions().then(() => {
     // First time on this event: the list opens once, with the explanation.
     const key = `left:web:missions-intro:${state.event!.id}`;
@@ -433,6 +487,17 @@ async function showCamera() {
     }
   });
   await openCamera();
+}
+
+/** Once per demo: what to do, in one line. */
+function demoHint() {
+  const event = state.event;
+  if (!event || !isDemo(event)) return;
+  const key = `left:web:demo-hint:${event.id}`;
+  if (store.get(key) !== null) return;
+  store.set(key, '1');
+  const roll = event.roll_size === null ? 'Take a few photos' : `${event.roll_size} photos`;
+  toast(`A demo: ${roll}, then develop the film.`);
 }
 
 async function openCamera(facing = camera.facing) {
@@ -609,8 +674,12 @@ async function showLastShot() {
 }
 
 async function invite() {
-  const url = `${location.origin}/j/${state.code}`;
-  const text = `Join "${state.event?.name ?? 'the film'}" on LEFT — one roll of photos each, developed together when it ends.`;
+  // A demo is the visitor's own: what is worth passing on is the demo link, not this moment.
+  const demo = isDemo(state.event);
+  const url = `${location.origin}/j/${demo ? DEMO_CODE : state.code}`;
+  const text = demo
+    ? 'Try LEFT: a disposable camera for events — one roll of photos each, developed together when it ends.'
+    : `Join "${state.event?.name ?? 'the film'}" on LEFT — one roll of photos each, developed together when it ends.`;
   try {
     if (navigator.share) {
       await navigator.share({ title: 'LEFT', text, url });
@@ -801,15 +870,21 @@ function paintCover(img: HTMLImageElement, event: Event) {
 
 function setUpDeveloping() {
   $('dev-camera').addEventListener('click', () => void showCamera());
+  $('dev-develop').addEventListener('click', () => void developNow());
 }
 
 function showDeveloping(empty: boolean) {
   const event = state.event!;
   $('dev-title').textContent = empty ? 'That’s your roll · developing in' : 'Developing in';
   const when = new Date(event.ends_at);
-  $('dev-lede').textContent =
-    `Everyone’s photos appear ${formatEndDate(when)} at ${formatEndTime(when)}. ` +
-    'The web has no notifications, so set a reminder and open this link again then.';
+  const demo = isDemo(event);
+  $('dev-lede').textContent = demo
+    ? 'A demo with sample guests. Their photos stay hidden, like everyone’s at a real event, until the film is developed. ' +
+      'Here you are the host, so you can develop it now.'
+    : `Everyone’s photos appear ${formatEndDate(when)} at ${formatEndTime(when)}. ` +
+      'The web has no notifications, so set a reminder and open this link again then.';
+  // Nothing to be reminded of: a demo is developed by hand, in a minute.
+  $('calendar').hidden = demo;
   devEmpty = empty;
   renderDevActions();
   paintCover($<HTMLImageElement>('dev-cover'), event);
@@ -826,7 +901,45 @@ let devEmpty = false;
 /** "Back to the camera" while the guest still has frames and the cameras are open — as before. */
 function renderDevActions() {
   const event = state.event;
-  $('dev-camera').hidden = devEmpty || !event || event.status !== 'live' || shotsLeft() === 0;
+  const back = $('dev-camera');
+  back.hidden = devEmpty || !event || event.status !== 'live' || shotsLeft() === 0;
+
+  // The host's "Develop now" (the app's, on its developing state). On the web
+  // the host is in practice the visitor of a demo. The one primary button is
+  // the camera while there are frames left, this one after.
+  const develop = $('dev-develop');
+  develop.hidden = !event || event.host_id !== state.userId || event.status !== 'live' || isDeveloped(event);
+  develop.classList.toggle('pill-primary', back.hidden);
+  develop.classList.toggle('pill-glass', !back.hidden);
+  develop.classList.toggle('glass', !back.hidden);
+}
+
+let developingNow = false;
+
+/** Confirm, `end_event()`, then the album. */
+async function developNow() {
+  const event = state.event;
+  if (!event || developingNow) return;
+  if (!confirm('Develop the film now?\n\nEveryone sees every photo at once. This can’t be undone.')) return;
+
+  developingNow = true;
+  const button = $<HTMLButtonElement>('dev-develop');
+  button.disabled = true;
+  button.textContent = 'Developing…';
+  try {
+    // Frames still on their way go first, for a few seconds at most; whatever
+    // is left is sent afterwards and joins the album then.
+    await Promise.race([drain(), wait(4000)]);
+    state.event = { ...event, ...(await endEvent(event.id)) };
+  } catch (e) {
+    toast(messageFor(e));
+    return;
+  } finally {
+    developingNow = false;
+    button.disabled = false;
+    button.textContent = 'Develop now';
+  }
+  await route();
 }
 
 type Tile =
@@ -1192,6 +1305,11 @@ async function showAlbum() {
 
   const firstVisit = store.get(`left:reveal-seen:${event.id}`) === null;
   store.set(`left:reveal-seen:${event.id}`, '1');
+
+  // After a demo, one thing to do next: get the app. (Every other album keeps its quiet footer.)
+  const demo = isDemo(event);
+  $('demo-cta').hidden = !demo;
+  $('album-foot').hidden = demo;
 
   renderHero();
   renderPrints(firstVisit);

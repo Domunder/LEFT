@@ -2,8 +2,10 @@ import SwiftUI
 
 /*
   LEFT's App Clip. Scanning an invite QR code (`https://leftmoment.com/j/{CODE}`)
-  opens this without installing the app: a name, the camera, the roll, and the
-  developing countdown. The album is the full app's (and the web camera's).
+  opens this without installing the app: a name, the camera, the roll, the
+  gallery while the film develops, and the group's album once it is developed
+  (looking only; saving and sharing are the full app's). `/j/TRYLEFT` is the
+  demo: a moment of the visitor's own, with sample guests in it.
 
   SwiftUI and system frameworks only — no React Native, no packages — so the
   clip stays far under the 15 MB a QR-invoked clip may weigh. See CLAUDE.md →

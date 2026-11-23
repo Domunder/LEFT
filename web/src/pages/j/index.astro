@@ -16,6 +16,12 @@
  *    who already joined in this browser goes straight back in. Android sees
  *    it too ("Coming soon to Google Play" until the listing exists).
  *
+ * `/j/TRYLEFT` is the demo ("Try LEFT", the floating badge on the rest of the
+ * site): a reserved code, never a real invite. No gate, no name, no waiting —
+ * `start_demo()` gives the visitor their own live moment with sample guests,
+ * the camera opens, and as its host they can "Develop now" from the gallery.
+ * Screens of a demo carry a small "Demo" tag; its album ends in "get the app".
+ *
  * Everything below is one screen at a time, switched by `data-view` on
  * `.shoot` from `src/shoot/app.ts`. Screens carry the states the app's do:
  * loading, error, waiting for the host, permission denied, roll empty,
@@ -213,7 +219,7 @@ import '../../styles/shoot.css';
     <!-- The camera -->
     <section class="screen camera" data-screen="camera">
       <header class="cam-head">
-        <p class="cam-title" data-bind="event-name"></p>
+        <p class="cam-title"><span class="demo-tag" data-bind="demo" hidden>Demo</span><span data-bind="event-name"></span></p>
         <p class="cam-count" aria-live="polite"><b id="shots-left">–</b> <span>left</span></p>
         <button class="pill pill-glass glass press mission-capsule" id="missions" type="button" hidden></button>
       </header>
@@ -267,12 +273,15 @@ import '../../styles/shoot.css';
         <img id="dev-cover" alt="" hidden />
       </div>
       <header class="gallery-head">
+        <span class="demo-tag" data-bind="demo" hidden>Demo</span>
         <p class="eyebrow" id="dev-title">Developing</p>
         <h1 data-bind="event-name"></h1>
         <p class="countdown" id="countdown" aria-live="off"></p>
         <p class="gallery-counts" id="dev-counts"></p>
         <div class="gallery-actions">
           <button class="pill pill-primary press" id="dev-camera" type="button" hidden>Back to the camera</button>
+          <!-- The host only (in practice: a demo's visitor). Confirmed, then `end_event()`. -->
+          <button class="pill pill-glass glass press" id="dev-develop" type="button" hidden>Develop now</button>
           <a class="pill pill-glass glass press" id="calendar" download>Remind me</a>
         </div>
         <p class="fine" id="dev-lede"></p>
@@ -286,13 +295,24 @@ import '../../styles/shoot.css';
       <div class="hero" id="hero">
         <img id="hero-img" alt="" />
         <div class="hero-text">
+          <span class="demo-tag" data-bind="demo" hidden>Demo</span>
           <h1 data-bind="event-name"></h1>
           <p id="album-counts"></p>
         </div>
       </div>
+      <!-- After a demo: the one thing to do next. -->
+      <aside class="demo-cta" id="demo-cta" hidden>
+        <p class="eyebrow">That was the demo</p>
+        <h2>Now with <em>your people.</em></h2>
+        <p class="lede">
+          Start a moment for your wedding, party or trip, share the link, and let everyone shoot.
+          Free for up to 50 guests.
+        </p>
+        <StoreButtons />
+      </aside>
       <ol class="prints" id="prints"></ol>
       <p class="album-empty lede" id="album-empty" hidden>No photos on this film.</p>
-      <footer class="album-foot">
+      <footer class="album-foot" id="album-foot">
         <p class="fine">Want the next one in your pocket?</p>
         <StoreButtons />
       </footer>

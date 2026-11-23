@@ -18,7 +18,8 @@ final class ClipModel: ObservableObject {
     case waiting(EventInfo)
     /// 13: shooting.
     case camera(EventInfo)
-    /// The album's developing state: countdown, then "get the app".
+    /// The album: the gallery before the reveal while the film develops, the
+    /// group's album once it is developed.
     case developing(EventInfo)
     case failed(String)
   }
@@ -58,10 +59,26 @@ final class ClipModel: ObservableObject {
   /// smudges, newest first. The guest's own are `shots`.
   @Published private(set) var theirTiles: [GalleryTile] = []
 
+  /// The album of a developed moment: every uploaded photo, oldest first, and
+  /// the guest's own frames still on their way up.
+  @Published private(set) var album: [AlbumItem] = []
+  @Published private(set) var albumState: AlbumState = .loading
+  /// How many people are on the roster, for the album's "M people".
+  @Published private(set) var rosterCount = 0
+  /// The signed-in guest, for "is this the host?".
+  @Published private(set) var userId: String?
+  /// "Develop now" is on its way to the server.
+  @Published private(set) var ending = false
+  @Published var endError: String?
+
   /// The server's last answer, kept for when it cannot be asked (no signal).
   private var serverMissions: [Mission] = []
   /// Storage path → signed URL, so a frame is signed once.
   private var signed: [String: URL] = [:]
+  /// The event `album` belongs to.
+  private var albumEventId: String?
+  /// When the oldest URL in `signed` was made: they are valid for an hour.
+  private var signedSince = Date()
   /// The roster's names by user id, for the gallery's tiles.
   private var rosterNames: [String: String] = [:]
 
@@ -125,6 +142,22 @@ final class ClipModel: ObservableObject {
   /// The code the guest joined with, for 12's invite QR.
   var inviteCode: String? { code }
 
+  /// The caller hosts this moment: the gallery offers "Develop now". True in
+  /// a demo; just as true for a host who opens their own invite in the clip.
+  var isHost: Bool {
+    guard let host = event?.hostId, let userId else { return false }
+    return host == userId
+  }
+
+  /// The demo (`start_demo()`). Remembered per event on this phone, because
+  /// only the rows the two RPCs return say so.
+  var isDemo: Bool {
+    guard let event else { return false }
+    return event.demo != nil || memberships.bool(forKey: Self.demoKey(event.id))
+  }
+
+  private static func demoKey(_ eventId: String) -> String { "left.clip.demo.\(eventId)" }
+
   // MARK: Invocation
 
   /// The clip is opened by its invocation URL; give it a moment to arrive
@@ -164,11 +197,17 @@ final class ClipModel: ObservableObject {
 
   private func enter(code: String) async {
     self.code = code
-    memberships.set(code, forKey: Self.lastCodeKey)
     guard ClipConfig.isConfigured else {
       phase = .failed(messageFor(ClipError.notConfigured))
       return
     }
+    // The demo's code is not an invite: nothing is joined, and it is asked
+    // for again every time the link is opened.
+    if code == ClipConfig.demoCode {
+      await startDemo()
+      return
+    }
+    memberships.set(code, forKey: Self.lastCodeKey)
     guard let eventId = memberships.string(forKey: "left.clip.event.\(code)"),
           await Server.shared.userId != nil
     else {
@@ -178,10 +217,35 @@ final class ClipModel: ObservableObject {
     await load(eventId: eventId, code: code)
   }
 
+  /// `start_demo()`: a live moment of the visitor's own with the sample
+  /// guests' photos in it — or the demo they already have (running, or just
+  /// developed). No name, no waiting, no intro: straight to the camera, and
+  /// from there on under the event's real id and invite code.
+  private func startDemo() async {
+    if phase != .starting { phase = .starting }
+    busy = true
+    do {
+      _ = try await Server.shared.ensureGuest()
+      let event = try await Server.shared.startDemo()
+      let real = event.inviteCode ?? ClipConfig.demoCode
+      code = real
+      memberships.set(real, forKey: Self.lastCodeKey)
+      memberships.set(event.id, forKey: "left.clip.event.\(real)")
+      memberships.set(true, forKey: Self.demoKey(event.id))
+      memberships.set(true, forKey: Self.introKey(event.id))
+      busy = false
+      await load(eventId: event.id, code: real)
+    } catch {
+      busy = false
+      phase = .failed(messageFor(error))
+    }
+  }
+
   private func load(eventId: String, code: String) async {
     busy = true
     defer { busy = false }
     do {
+      userId = await Server.shared.userId
       // Membership first: RLS hides the event from a non-member, so asking
       // for the event first read "no such event" — "this invite link doesn't
       // work" — for a guest whose roster row is gone (2026-11-19: the old
@@ -384,8 +448,10 @@ final class ClipModel: ObservableObject {
       phase = .camera(fresh)
     case .developing:
       phase = .developing(fresh)
-      // The gallery fills in as the group shoots.
-      if !fresh.isDeveloped() {
+      // The gallery fills in as the group shoots; the album as late uploads land.
+      if fresh.isDeveloped() {
+        await loadAlbum()
+      } else {
         await loadShots()
         await loadGallery()
       }
@@ -460,6 +526,9 @@ final class ClipModel: ObservableObject {
       await recount(event)
       if reason == "event_closed" { await refresh() }
       await loadShots()
+      // A frame that was still uploading when the film was developed is in
+      // the album now.
+      if self.event?.isDeveloped() == true { await loadAlbum() }
     }
   }
 
@@ -473,6 +542,12 @@ final class ClipModel: ObservableObject {
   /// Ask the server, then lay the queue's unsent tags over its answer.
   func loadMissions() async {
     guard let event else { return }
+    // No missions in a demo.
+    if isDemo {
+      serverMissions = []
+      missions = []
+      return
+    }
     if let fresh = try? await Server.shared.myMissions(eventId: event.id) { serverMissions = fresh }
     await applyQueueTags()
   }
@@ -526,10 +601,7 @@ final class ClipModel: ObservableObject {
     let queuedIds = Set(items.map(\.id))
     do {
       let remote = try await Server.shared.myPhotos(eventId: event.id).filter { !queuedIds.contains($0.id) }
-      let unsigned = remote.flatMap { [$0.thumbPath, $0.storagePath].compactMap { $0 } }.filter { signed[$0] == nil }
-      if !unsigned.isEmpty, let urls = try? await Server.shared.signedURLs(unsigned) {
-        signed.merge(urls) { $1 }
-      }
+      await sign(remote.flatMap { [$0.thumbPath, $0.storagePath].compactMap { $0 } })
       items += remote.map {
         ShotItem(id: $0.id, takenAt: parseTimestamp($0.takenAt) ?? .distantPast,
                  thumb: $0.thumbPath.flatMap { signed[$0] }, full: $0.storagePath.flatMap { signed[$0] },
@@ -539,6 +611,137 @@ final class ClipModel: ObservableObject {
       items += shots.filter { !$0.queued && !queuedIds.contains($0.id) }
     }
     shots = items.sorted { $0.takenAt < $1.takenAt }
+  }
+
+  /// Sign what is not signed yet, a batch at a time. A failed batch leaves
+  /// its paths unsigned (the tiles stay dark) and is asked for again next time.
+  private func sign(_ paths: [String]) async {
+    if Date().timeIntervalSince(signedSince) > ClipConfig.signedURLLifetime {
+      signed = [:]
+    }
+    if signed.isEmpty { signedSince = Date() }
+    var missing: [String] = []
+    var seen = Set<String>()
+    for path in paths where signed[path] == nil && !seen.contains(path) {
+      seen.insert(path)
+      missing.append(path)
+    }
+    var start = 0
+    while start < missing.count {
+      let end = min(start + ClipConfig.signBatch, missing.count)
+      let batch = Array(missing[start..<end])
+      if let urls = try? await Server.shared.signedURLs(batch) {
+        signed.merge(urls) { _, new in new }
+      }
+      start = end
+    }
+  }
+
+  // MARK: Develop now
+
+  /// The host develops the film early (`end_event()`), then the album. Frames
+  /// still in the queue keep uploading — the server takes claims and uploads
+  /// after the developing — and the album reloads as each one lands.
+  func developNow() {
+    guard case let .developing(event) = phase, isHost, !ending, !event.isDeveloped() else { return }
+    ending = true
+    endError = nil
+    Task {
+      defer { ending = false }
+      do {
+        let fresh = try await Server.shared.endEvent(event.id)
+        guard self.event?.id == fresh.id else { return }
+        if fresh.demo != nil { memberships.set(true, forKey: Self.demoKey(fresh.id)) }
+        phase = .developing(fresh)
+        await loadAlbum()
+      } catch {
+        endError = messageFor(error)
+      }
+    }
+  }
+
+  // MARK: The album
+
+  /// "M people": the roster, or — before it is known — everyone with a photo.
+  var albumPeople: Int {
+    max(rosterCount, Set(album.compactMap(\.userId)).count)
+  }
+
+  /// Photo id → the photographer's name, for the viewer's caption.
+  var albumAuthors: [String: String] {
+    var names: [String: String] = [:]
+    for item in album { names[item.id] = item.author }
+    return names
+  }
+
+  /// "Try again" on the album's error state.
+  func reloadAlbum() {
+    Task { await loadAlbum() }
+  }
+
+  /// Every uploaded photo of the developed moment (RLS opens them all to a
+  /// member after the reveal), the roster's names, and signed URLs for the
+  /// paths exactly as the rows give them. The guest's own frames still in the
+  /// queue are in it too, from their files. A failed reload keeps what is shown.
+  func loadAlbum() async {
+    guard let event, event.isDeveloped() else { return }
+    if albumEventId != event.id {
+      // Another moment's album has nothing to say here.
+      albumEventId = event.id
+      album = []
+      rosterCount = 0
+      albumState = .loading
+    } else if albumState != .loaded {
+      albumState = .loading
+    }
+    do {
+      let rows = try await Server.shared.albumPhotos(eventId: event.id)
+      if let names = try? await Server.shared.roster(eventId: event.id) {
+        rosterNames = names
+        rosterCount = names.count
+      }
+      await sign(rows.flatMap { [$0.thumbPath, $0.storagePath].compactMap { $0 } })
+      let me = await Server.shared.userId
+      var local: [LocalShot] = []
+      if let me { local = await UploadQueue.shared.local(eventId: event.id, userId: me) }
+      // The phase may have moved on while the server answered.
+      guard self.event?.id == event.id else { return }
+
+      var items: [AlbumItem] = []
+      for row in rows {
+        let author: String
+        if let id = row.userId, let name = rosterNames[id] {
+          author = name
+        } else {
+          author = "A guest"
+        }
+        var thumb: URL?
+        if let path = row.thumbPath { thumb = signed[path] }
+        var full: URL?
+        if let path = row.storagePath { full = signed[path] }
+        items.append(AlbumItem(
+          shot: ShotItem(id: row.id, takenAt: parseTimestamp(row.takenAt) ?? .distantPast,
+                         thumb: thumb ?? full, full: full ?? thumb, queued: false),
+          userId: row.userId, author: author
+        ))
+      }
+      let uploaded = Set(items.map(\.id))
+      for frame in local where !uploaded.contains(frame.shot.id) {
+        var author = memberName ?? "You"
+        if let me, let name = rosterNames[me] { author = name }
+        items.append(AlbumItem(
+          shot: ShotItem(id: frame.shot.id, takenAt: parseTimestamp(frame.shot.takenAt) ?? .distantPast,
+                         thumb: frame.thumb, full: frame.original, queued: true),
+          userId: me, author: author
+        ))
+      }
+      items.sort { $0.shot.takenAt < $1.shot.takenAt }
+      if items != album { album = items }
+      albumState = .loaded
+    } catch {
+      // What is on screen stays; only a first load says what went wrong.
+      if albumState != .loaded { albumState = .failed(messageFor(error)) }
+    }
   }
 
   // MARK: The gallery before the reveal
@@ -594,6 +797,22 @@ struct GalleryTile: Identifiable, Equatable {
   let userId: String?
   let takenAt: Date
   let kind: Kind
+}
+
+/// One print of a developed album: the photo and who took it.
+struct AlbumItem: Identifiable, Equatable {
+  let shot: ShotItem
+  /// The photographer; nil when their account is gone.
+  let userId: String?
+  let author: String
+
+  var id: String { shot.id }
+}
+
+enum AlbumState: Equatable {
+  case loading
+  case loaded
+  case failed(String)
 }
 
 /// A frame in Your shots. `thumb` and `full` are files while it is queued,

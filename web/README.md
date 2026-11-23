@@ -86,6 +86,39 @@ app's guest half on the same server doors — nothing new in Supabase:
   (bounded by `max_members`; the CAPTCHA item covers it) and loses frames still
   in the queue.
 
+## Demo ("Try LEFT")
+
+`/j/TRYLEFT` is a demo, not an invite: `TRYLEFT` is a reserved code
+(`SITE.demoCode`). Decided 2026-11-23.
+
+- **The page** (`src/shoot/app.ts` → `openDemo()`): no "app first", no name,
+  no waiting, no intro. Anonymous sign-in → `start_demo()` → the camera of the
+  visitor's own moment, in which they are the host and sample guests have
+  already taken photos (smudges in the gallery, like anyone's before the
+  reveal). The demo's id is remembered in localStorage (`left:web:demo`), so
+  opening the link again returns to the same demo while it runs and to its
+  album once developed; a demo that no longer exists starts a new one.
+  A failed `start_demo()` (also `hint = 'demo_limit'`) is the error screen
+  with "Try again".
+- **"Develop now"** is in the gallery before the reveal for any event whose
+  `host_id` is the signed-in user — in practice the demo. A confirm, then
+  `end_event()`, then the album.
+- **A demo is marked** by `events.demo` (`isDemo()` in `api.ts`): a small
+  "Demo" tag in the camera, the gallery and the album; no calendar reminder;
+  the invite tile shares `/j/TRYLEFT` instead of the moment's own link; the
+  album shows one call to action, the store buttons, above the prints.
+- **The badge** (`src/components/TryBadge.astro`, from `Base.astro` unless
+  `app` or `tryBadge={false}` — the web camera and the legal texts): a card
+  with a build-time QR code (plain modules, the `qrcode` dev dependency) on
+  wide screens with a mouse, a "Try it now" pill on narrow or touch screens.
+  Closing it is remembered (`left:try-dismissed`); it steps aside while the
+  footer is on screen.
+- `start_demo()` and `events.demo` are not in `src/generated/database.ts`
+  until the app's types are regenerated; `api.ts` calls them untyped.
+- **Outside this folder:** an iPhone that scans the code is offered the App
+  Clip, and a phone with the app opens the app — both get `TRYLEFT` as an
+  invite code and must know what to do with it.
+
 ## Placeholders to fill before launch
 
 | What | Where | Needs |

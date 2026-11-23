@@ -432,9 +432,9 @@ private struct InviteSheet: View {
 // MARK: Developing
 
 /// The developing state. Until the film is developed it is the gallery
-/// before the reveal (`GalleryView`, 2026-11-23); once it is, the album is the
-/// full app's, so this says so and offers LEFT. The clock decides the switch,
-/// to the second, as `is_event_developed()` does.
+/// before the reveal (`GalleryView`, 2026-11-23); once it is, the group's
+/// album (`AlbumView`, the same day, replacing "the album is the full app's").
+/// The clock decides the switch, to the second, as `is_event_developed()` does.
 struct DevelopingScreen: View {
   let event: EventInfo
   @State private var showStore = false
@@ -442,7 +442,7 @@ struct DevelopingScreen: View {
   var body: some View {
     TimelineView(.periodic(from: .now, by: 1)) { context in
       if event.isDeveloped(now: context.date) {
-        DevelopedView(event: event, showStore: $showStore)
+        AlbumView(event: event, showStore: $showStore)
       } else {
         GalleryView(event: event, now: context.date, showStore: $showStore)
       }
@@ -453,26 +453,176 @@ struct DevelopingScreen: View {
   }
 }
 
-/// The film is developed: the photos are in the full app.
-private struct DevelopedView: View {
+/// The album of a developed moment (2026-11-23, the user): the event image
+/// with the name and "N photos · M people", "Get LEFT" as the one glass
+/// capsule, then every photo three to a row, oldest first, the photographer's
+/// name small on each print. A tap opens the viewer Your photos uses. Looking
+/// only — saving, sharing and moderation are the full app's.
+private struct AlbumView: View {
   let event: EventInfo
   @Binding var showStore: Bool
+  @EnvironmentObject private var model: ClipModel
+  @State private var open: AlbumItem?
+  @Namespace private var zoom
+
+  private let columns = Array(
+    repeating: GridItem(.flexible(), spacing: GalleryTokens.gap),
+    count: GalleryTokens.columns
+  )
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Eyebrow(text: event.name).padding(.top, 48)
-      Headline(plain: "The film is\n", emphasis: "developed.", size: 44).padding(.top, 14)
-      Text("Get LEFT to see everyone’s photos. This event is waiting there, with your photos in it.")
-        .font(Fonts.body(15))
-        .foregroundStyle(Theme.textMuted)
-        .padding(.top, 20)
-      Spacer()
-      Button("Get LEFT") { showStore = true }
-        .buttonStyle(PillButtonStyle())
+    let items = model.album
+    GeometryReader { geo in
+      let full = geo.size.height + geo.safeAreaInsets.top + geo.safeAreaInsets.bottom
+      let cover = (full * GalleryTokens.coverRatio).rounded()
+      ZStack(alignment: .top) {
+        // Behind the page, from the physical top edge; the grid slides over it.
+        CoverImage(event: event)
+          .frame(width: geo.size.width, height: cover)
+          .overlay(LinearGradient(gradient: GalleryTokens.coverFade, startPoint: .top, endPoint: .bottom))
+          .clipped()
+          .offset(y: -geo.safeAreaInsets.top)
+          .allowsHitTesting(false)
+
+        ScrollView {
+          VStack(alignment: .leading, spacing: 0) {
+            header(count: items.count)
+              .padding(.horizontal, Theme.gutter)
+              .padding(.top, max(48, cover * GalleryTokens.titleAt - geo.safeAreaInsets.top))
+            prints(items)
+              .padding(.top, GalleryTokens.gridTop)
+              .padding(.bottom, 24)
+              .frame(maxWidth: .infinity)
+              .background(Theme.bg)
+          }
+        }
+        .scrollIndicators(.hidden)
+      }
     }
-    .padding(.horizontal, Theme.gutter)
-    .padding(.bottom, 12)
+    .task(id: event.id) {
+      await model.loadAlbum()
+    }
+    .fullScreenCover(item: $open) { item in
+      PhotoViewer(start: item.id, event: event, zoom: zoom,
+                  items: model.album.map(\.shot), authors: model.albumAuthors)
+        .environmentObject(model)
+    }
+  }
+
+  // MARK: Header
+
+  @ViewBuilder private func header(count: Int) -> some View {
+    let people = model.albumPeople
+    VStack(alignment: .leading, spacing: 0) {
+      HStack(spacing: AlbumTokens.demoGap) {
+        Eyebrow(text: "Developed")
+        if model.isDemo { DemoTag() }
+      }
+      Text(event.name)
+        .font(Fonts.display(GalleryTokens.titleSize))
+        .foregroundStyle(Theme.text)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.top, 10)
+
+      // Nothing to count: the page under it says why.
+      if count > 0 {
+        Text("\(count) \(count == 1 ? "photo" : "photos") · \(people) \(people == 1 ? "person" : "people")")
+          .font(Fonts.medium(15))
+          .monospacedDigit()
+          .foregroundStyle(Theme.text)
+          .padding(.top, GalleryTokens.countsTop)
+      }
+
+      Button { showStore = true } label: {
+        HStack(spacing: AlbumTokens.capsuleGap) {
+          Image(systemName: "arrow.down.circle")
+            .font(.system(size: AlbumTokens.capsuleIcon, weight: .medium))
+          Text("Get LEFT")
+            .font(Fonts.medium(16))
+        }
+        .foregroundStyle(Theme.text)
+        .padding(.horizontal, AlbumTokens.capsulePaddingX)
+        .frame(height: AlbumTokens.capsuleHeight)
+        .glass(Capsule(), interactive: true)
+      }
+      .buttonStyle(PressScaleStyle())
+      .padding(.top, GalleryTokens.actionsTop)
+      .accessibilityHint("Shows LEFT in the App Store")
+
+      Text(model.isDemo
+        ? "That was the demo. Get LEFT to start a moment of your own."
+        : "Save and share in the app.")
+        .font(Fonts.body(14))
+        .foregroundStyle(Theme.textMuted)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.top, AlbumTokens.noteTop)
+    }
     .frame(maxWidth: .infinity, alignment: .leading)
+  }
+
+  // MARK: Prints
+
+  @ViewBuilder private func prints(_ items: [AlbumItem]) -> some View {
+    if !items.isEmpty {
+      LazyVGrid(columns: columns, spacing: GalleryTokens.gap) {
+        ForEach(items) { item in
+          printTile(item)
+        }
+      }
+    } else if case let .failed(message) = model.albumState {
+      VStack(spacing: AlbumTokens.stateGap) {
+        Text(message)
+          .font(Fonts.body(14))
+          .foregroundStyle(Theme.textMuted)
+          .multilineTextAlignment(.center)
+        Button("Try again") { model.reloadAlbum() }
+          .buttonStyle(PillButtonStyle(light: false))
+          .frame(width: AlbumTokens.retryWidth)
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.horizontal, Theme.gutter)
+      .padding(.top, AlbumTokens.stateTop)
+    } else if model.albumState == .loading {
+      ProgressView()
+        .tint(Theme.textMuted)
+        .frame(maxWidth: .infinity)
+        .padding(.top, AlbumTokens.stateTop)
+        .accessibilityLabel("Loading the photos")
+    } else {
+      Text("No photos were taken.")
+        .font(Fonts.body(14))
+        .foregroundStyle(Theme.textMuted)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Theme.gutter)
+        .padding(.top, AlbumTokens.stateTop)
+    }
+  }
+
+  private func printTile(_ item: AlbumItem) -> some View {
+    Button { open = item } label: {
+      GalleryTokens.tileBg
+        .aspectRatio(GalleryTokens.tileAspect, contentMode: .fit)
+        .overlay { GalleryThumb(url: item.shot.thumb) }
+        .overlay(alignment: .bottom) {
+          ZStack(alignment: .bottomLeading) {
+            LinearGradient(colors: GalleryTokens.tileScrim, startPoint: .top, endPoint: .bottom)
+              .frame(height: GalleryTokens.tileScrimHeight)
+            Text(item.author)
+              .font(Fonts.medium(GalleryTokens.tileNameSize))
+              .foregroundStyle(GalleryTokens.tileName)
+              .lineLimit(1)
+              .padding(GalleryTokens.tilePadding)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .allowsHitTesting(false)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: GalleryTokens.tileRadius, style: .continuous))
+    }
+    .buttonStyle(PressScaleStyle(scale: 0.97))
+    .zoomSource(id: item.id, in: zoom)
+    .accessibilityLabel("Photo by \(item.author)")
+    .accessibilityHint("Opens the photo")
   }
 }
 
@@ -488,6 +638,8 @@ private struct GalleryView: View {
   @Binding var showStore: Bool
   @EnvironmentObject private var model: ClipModel
   @State private var open: ShotItem?
+  /// The host's "Develop now" asks first.
+  @State private var confirmEnd = false
   @Namespace private var zoom
 
   private let columns = Array(
@@ -532,6 +684,12 @@ private struct GalleryView: View {
       PhotoViewer(start: shot.id, event: event, zoom: zoom)
         .environmentObject(model)
     }
+    .alert("Develop now?", isPresented: $confirmEnd) {
+      Button("Develop now") { model.developNow() }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text("Everyone’s photos are revealed right away. This can’t be undone.")
+    }
   }
 
   // MARK: Header
@@ -540,7 +698,10 @@ private struct GalleryView: View {
     let parts = galleryCountdownParts(to: event.endsAt, now: now)
     let people = model.galleryPeople
     VStack(alignment: .leading, spacing: 0) {
-      Eyebrow(text: "Developing")
+      HStack(spacing: AlbumTokens.demoGap) {
+        Eyebrow(text: "Developing")
+        if model.isDemo { DemoTag() }
+      }
       Text(event.name)
         .font(Fonts.display(GalleryTokens.titleSize))
         .foregroundStyle(Theme.text)
@@ -581,8 +742,30 @@ private struct GalleryView: View {
         }
         Button("Get LEFT") { showStore = true }
           .buttonStyle(PillButtonStyle(light: model.shotsLeft == 0))
+        // The host need not wait for the clock (`end_event()`); in a demo
+        // that is the visitor.
+        if model.isHost {
+          Button { confirmEnd = true } label: {
+            Text(model.ending ? "Developing…" : "Develop now")
+              .font(Fonts.medium(16))
+              .foregroundStyle(Theme.text)
+              .frame(maxWidth: .infinity, minHeight: Theme.pillHeight)
+              .glass(Capsule(), interactive: true)
+          }
+          .buttonStyle(PressScaleStyle(scale: 0.97))
+          .disabled(model.ending)
+          .accessibilityHint("Reveals everyone’s photos now")
+        }
       }
       .padding(.top, GalleryTokens.actionsTop)
+
+      if let failure = model.endError {
+        Text(failure)
+          .font(Fonts.body(14))
+          .foregroundStyle(Theme.textMuted)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(.top, GalleryTokens.ledeTop)
+      }
 
       Text(model.shotsLeft == 0
         ? "That was your last photo. Everyone else’s clear up when the film is developed."
@@ -691,8 +874,8 @@ private struct TheirTile: View {
   }
 }
 
-/// One of the guest's own frames in the gallery: a file while it is queued, a
-/// signed URL once uploaded. Loaded once into state (the gallery redraws every
+/// A photo on a tile of the gallery or the album: a file while it is queued,
+/// a signed URL once uploaded, decoded small. Loaded once into state (the gallery redraws every
 /// second for its countdowns) and kept in a small cache across tiles.
 private struct GalleryThumb: View {
   let url: URL?
@@ -711,7 +894,7 @@ private struct GalleryThumb: View {
     .task(id: url) {
       guard let url else { image = nil; return }
       if let hit = ThumbCache.images[url] { image = hit; return }
-      guard let loaded = await PhotoLoader.load(url) else { return }
+      guard let loaded = await PhotoLoader.thumbnail(url, maxPixel: GalleryTokens.thumbPixels) else { return }
       ThumbCache.store(loaded, for: url)
       image = loaded
     }
@@ -723,7 +906,7 @@ private enum ThumbCache {
   static var images: [URL: UIImage] = [:]
 
   static func store(_ image: UIImage, for url: URL) {
-    if images.count >= 200 { images.removeAll(keepingCapacity: true) }
+    if images.count >= GalleryTokens.thumbCacheLimit { images.removeAll(keepingCapacity: true) }
     images[url] = image
   }
 }

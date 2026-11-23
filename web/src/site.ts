@@ -18,6 +18,11 @@ export const SITE = {
    * through the `apple-itunes-app` meta tag (Base.astro → `appClip`).
    */
   appClipBundleId: 'com.leftmoment.app.clip',
+  /**
+   * The demo ("Try LEFT"): `/j/TRYLEFT` opens a private demo moment for the
+   * visitor (`start_demo()`). A reserved code, never a real invite.
+   */
+  demoCode: 'TRYLEFT',
   /** The app's custom scheme (mobile/app.json → scheme). */
   scheme: 'left',
   contactEmail: 'support@leftmoment.com' as string | null,

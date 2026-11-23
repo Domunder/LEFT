@@ -136,6 +136,34 @@ enum GalleryTokens {
   /// A smudge is decoded this small and stretched to the tile.
   static let smudgeShort = 24
   static let smudgeLong = 32
+
+  /// A tile's picture is decoded at most this many pixels along its long edge
+  /// (an album can hold hundreds), and this many stay in memory.
+  static let thumbPixels = 400
+  static let thumbCacheLimit = 150
+}
+
+/// The album of a developed moment (2026-11-23), under the gallery's header
+/// and on its grid: what it adds to `GalleryTokens`.
+enum AlbumTokens {
+  /// "Get LEFT": the one glass capsule, over the event image's fade.
+  static let capsuleHeight: CGFloat = 48
+  static let capsulePaddingX: CGFloat = 22
+  static let capsuleGap: CGFloat = 8
+  static let capsuleIcon: CGFloat = 15
+  static let noteTop: CGFloat = 12
+  /// Loading, empty and error, in the grid's place.
+  static let stateTop: CGFloat = 40
+  static let stateGap: CGFloat = 16
+  static let retryWidth: CGFloat = 180
+
+  /// "Demo": a quiet tag beside an eyebrow, and in the camera's header.
+  static let demoGap: CGFloat = 8
+  static let demoPaddingX: CGFloat = 8
+  static let demoHeight: CGFloat = 20
+  static let demoSize: CGFloat = 10
+  static let demoTracking: CGFloat = 1.2
+  static let demoBg = Color.white.opacity(0.1)
 }
 
 /// The developing state's countdown: days, hours and minutes; minutes and
@@ -246,6 +274,21 @@ struct Eyebrow: View {
       .font(Fonts.label())
       .tracking(1.6)
       .foregroundStyle(Theme.textFaint)
+  }
+}
+
+/// "Demo" — marks the moment `start_demo()` made, so nobody takes the sample
+/// guests for their own.
+struct DemoTag: View {
+  var body: some View {
+    Text("DEMO")
+      .font(Fonts.label(AlbumTokens.demoSize))
+      .tracking(AlbumTokens.demoTracking)
+      .foregroundStyle(Theme.textMuted)
+      .padding(.horizontal, AlbumTokens.demoPaddingX)
+      .frame(height: AlbumTokens.demoHeight)
+      .background(AlbumTokens.demoBg, in: Capsule())
+      .accessibilityLabel("Demo")
   }
 }
 

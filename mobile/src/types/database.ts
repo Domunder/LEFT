@@ -115,6 +115,7 @@ export type Database = {
         Row: {
           cover: string | null
           created_at: string
+          demo: string | null
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
@@ -131,6 +132,7 @@ export type Database = {
         Insert: {
           cover?: string | null
           created_at?: string
+          demo?: string | null
           developed_at?: string | null
           ends_at: string
           event_type?: Database["public"]["Enums"]["event_type"]
@@ -147,6 +149,7 @@ export type Database = {
         Update: {
           cover?: string | null
           created_at?: string
+          demo?: string | null
           developed_at?: string | null
           ends_at?: string
           event_type?: Database["public"]["Enums"]["event_type"]
@@ -528,6 +531,7 @@ export type Database = {
         Returns: {
           cover: string | null
           created_at: string
+          demo: string | null
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
@@ -553,6 +557,10 @@ export type Database = {
         Args: { p_event_id: string; p_user_id: string }
         Returns: boolean
       }
+      demo_daily_limit: { Args: never; Returns: number }
+      demo_length: { Args: never; Returns: string }
+      demo_retention: { Args: never; Returns: string }
+      demo_template_id: { Args: never; Returns: string }
       develop_expired_events: { Args: never; Returns: number }
       dispatch_notifications: { Args: never; Returns: boolean }
       dispatch_purge: { Args: never; Returns: boolean }
@@ -561,6 +569,7 @@ export type Database = {
         Returns: {
           cover: string | null
           created_at: string
+          demo: string | null
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
@@ -705,6 +714,7 @@ export type Database = {
         Returns: {
           cover: string | null
           created_at: string
+          demo: string | null
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
@@ -729,11 +739,38 @@ export type Database = {
         Args: { p_mission_id?: string; p_photo_id: string }
         Returns: undefined
       }
+      start_demo: {
+        Args: { p_display_name?: string }
+        Returns: {
+          cover: string | null
+          created_at: string
+          demo: string | null
+          developed_at: string | null
+          ends_at: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          host_id: string
+          id: string
+          invite_code: string
+          look: Database["public"]["Enums"]["film_look"]
+          max_members: number
+          missions_per_guest: number | null
+          name: string
+          roll_size: number | null
+          status: Database["public"]["Enums"]["event_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       start_event: {
         Args: { p_event_id: string }
         Returns: {
           cover: string | null
           created_at: string
+          demo: string | null
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]

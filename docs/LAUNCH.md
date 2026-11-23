@@ -245,6 +245,23 @@ jedem iOS-Build gebaut und in die App eingebettet. Vor dem ersten Build:
   Entwickler-Einstellungen gehen nur mit einer per Xcode installierten
   Clip, nicht mit TestFlight.)
 
+### 7b · Die Demo (seit 2026-11-23, lokal geprüft, noch nicht live)
+
+`leftmoment.com/j/TRYLEFT` und das schwebende „Try LEFT“-Badge auf der Website.
+Reihenfolge — vorher zeigt der Link nur „Couldn’t start the demo“:
+
+1. Migration `20261123010000_demo.sql` (und davor `20261123000000_gallery_before_develop.sql`)
+   auf das gehostete Projekt: `npm run db:push`.
+2. Die Beispielgäste einmal anlegen (Publishable Key genügt):
+   `SUPABASE_URL=… SUPABASE_KEY=… node web/scripts/seed-demo.mjs LEFTDEMPLATE`
+   in `web/`. Ein zweiter Lauf wird mit „full“ abgelehnt — das ist richtig so.
+3. Website pushen (Badge + Demo im Browser sind dann live).
+4. Neuer EAS-Build: erst damit öffnet der QR-Code den App Clip in der Demo
+   (ältere Clips melden „This invite link doesn’t work“). Der Clip-Code der
+   Demo und des neuen Albums wurde noch nie kompiliert.
+5. Auf dem iPhone prüfen: QR vom Desktop scannen → Clip → 5 Fotos →
+   „Develop now“ → Album → „Get LEFT“.
+
 ## 8 · Auf dem Gerät prüfen (noch nie gesehen)
 
 - ☐ Glas über dem Sucher (Blitz/Zähler/Wechsel oben, Shots/Zoom/Einladung unten)

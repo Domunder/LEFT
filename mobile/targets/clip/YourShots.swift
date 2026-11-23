@@ -1,3 +1,4 @@
+import ImageIO
 import SwiftUI
 import UIKit
 
@@ -121,10 +122,16 @@ private enum ViewerTokens {
 /// The frames full screen, newest first like the grid. Chrome floats as glass
 /// over the photo, as in the app: ✕ and "3 / 12" at the top, "Mission · …"
 /// and the "Mission" button at the bottom. Also opened from the gallery before
-/// the reveal (`GalleryView`), on the guest's own photos.
+/// the reveal (`GalleryView`), on the guest's own photos, and from the album
+/// of a developed moment (`AlbumView`) with `items`: everyone's photos, in the
+/// order given, each with its photographer's name (`authors`).
 struct PhotoViewer: View {
   let event: EventInfo
   let zoom: Namespace.ID
+  /// nil: the guest's own frames, newest first, live from the model.
+  let items: [ShotItem]?
+  /// Photo id → who took it; empty for the guest's own.
+  let authors: [String: String]
   @EnvironmentObject private var model: ClipModel
   @Environment(\.dismiss) private var dismiss
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -136,14 +143,20 @@ struct PhotoViewer: View {
   /// iOS 17's drag down to close.
   @State private var drag: CGSize = .zero
 
-  init(start: String, event: EventInfo, zoom: Namespace.ID) {
+  init(start: String, event: EventInfo, zoom: Namespace.ID,
+       items: [ShotItem]? = nil, authors: [String: String] = [:]) {
     self.event = event
     self.zoom = zoom
+    self.items = items
+    self.authors = authors
     _current = State(initialValue: start)
   }
 
-  private var canTag: Bool { !model.missions.isEmpty && !event.isDeveloped() }
-  private var shots: [ShotItem] { model.shots.reversed() }
+  private var canTag: Bool { items == nil && !model.missions.isEmpty && !event.isDeveloped() }
+  private var shots: [ShotItem] {
+    if let items { return items }
+    return model.shots.reversed()
+  }
   private var index: Int { shots.firstIndex { $0.id == current } ?? 0 }
   /// 0…1 while dragged down: the backdrop and chrome fade with it.
   private var dragProgress: CGFloat { min(1, max(0, drag.height) / 400) }
@@ -231,6 +244,16 @@ struct PhotoViewer: View {
   @ViewBuilder private func bottomBar(_ shot: ShotItem) -> some View {
     let mission = model.mission(for: shot.id)
     VStack(spacing: ViewerTokens.chromeGap) {
+      if let author = authors[shot.id] {
+        Text(author)
+          .font(Fonts.medium(14))
+          .foregroundStyle(Theme.text)
+          .lineLimit(1)
+          .padding(.horizontal, 14)
+          .frame(height: 36)
+          .glass(Capsule())
+          .accessibilityLabel("Photo by \(author)")
+      }
       if let mission {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
           Image(systemName: "scope").font(.system(size: 12)).foregroundStyle(Theme.textMuted)
@@ -395,6 +418,29 @@ private struct ZoomablePhoto: View {
 }
 
 enum PhotoLoader {
+  /// A small copy for a grid tile, decoded at most `maxPixel` along its long
+  /// edge — a full thumbnail per tile is too much memory for a whole album.
+  static func thumbnail(_ url: URL, maxPixel: Int) async -> UIImage? {
+    var data: Data?
+    if url.isFileURL {
+      data = await Task.detached { try? Data(contentsOf: url) }.value
+    } else if let response = try? await URLSession.shared.data(from: url) {
+      data = response.0
+    }
+    guard let data else { return nil }
+    return await Task.detached { () -> UIImage? in
+      let options: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+      ]
+      guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+            let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+      else { return nil }
+      return UIImage(cgImage: image)
+    }.value
+  }
+
   static func load(_ url: URL) async -> UIImage? {
     if url.isFileURL {
       return await Task.detached { UIImage(contentsOfFile: url.path) }.value

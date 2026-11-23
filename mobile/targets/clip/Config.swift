@@ -15,6 +15,16 @@ enum ClipConfig {
   /// As `MAX_NAME_LENGTH` in the app and `event_members.display_name`.
   static let maxNameLength = 60
 
+  /// The reserved code of the demo (`https://leftmoment.com/j/TRYLEFT`): not an
+  /// invite — it is never joined, `start_demo()` answers it with a moment of
+  /// the visitor's own (`20261123010000_demo.sql`).
+  static let demoCode = "TRYLEFT"
+
+  /// Signed URLs are valid for an hour; the model's cache forgets them sooner.
+  static let signedURLLifetime: TimeInterval = 3000
+  /// How many paths go into one signing request.
+  static let signBatch = 100
+
   /// How often the waiting and developing screens ask the server again.
   static let pollSeconds: UInt64 = 15
 

@@ -66,12 +66,24 @@ struct EventInfo: Decodable, Equatable {
   /// The event image (`20261121162520_event_cover.sql`): nil, `sample-N` or
   /// `upload` (the file at `photos/{id}/cover.jpg`). See `EventCover.swift`.
   let cover: String?
+  /// The host's user id: who may develop early (`end_event()`). Optional so a
+  /// row without the column still decodes.
+  let hostId: String?
+  /// The event's own invite code. A demo is entered through the reserved code
+  /// and continues under this one.
+  let inviteCode: String?
+  /// `events.demo` (`20261123010000_demo.sql`): "visitor" on a demo. Only the
+  /// rows `start_demo()` and `end_event()` return carry it — `getEvent()` does
+  /// not ask for the column, so the clip keeps working on a server without it.
+  let demo: String?
 
   enum CodingKeys: String, CodingKey {
-    case id, name, look, status, cover
+    case id, name, look, status, cover, demo
     case endsAt = "ends_at"
     case rollSize = "roll_size"
     case missionsPerGuest = "missions_per_guest"
+    case hostId = "host_id"
+    case inviteCode = "invite_code"
   }
 
   init(from decoder: Decoder) throws {
@@ -88,6 +100,9 @@ struct EventInfo: Decodable, Equatable {
     rollSize = try c.decodeIfPresent(Int.self, forKey: .rollSize)
     missionsPerGuest = try c.decodeIfPresent(Int.self, forKey: .missionsPerGuest)
     cover = try c.decodeIfPresent(String.self, forKey: .cover)
+    hostId = try c.decodeIfPresent(String.self, forKey: .hostId)
+    inviteCode = try c.decodeIfPresent(String.self, forKey: .inviteCode)
+    demo = try c.decodeIfPresent(String.self, forKey: .demo)
   }
 
   /// As `is_event_developed()` decides it: by status or by the clock.
@@ -151,6 +166,27 @@ struct OwnPhoto: Decodable {
   }
 }
 
+/// One photo of a developed event: after the reveal RLS lets a member read
+/// every row. The paths are signed as the row gives them — a demo's sample
+/// photos live in the template's folder, not the event's own.
+struct AlbumPhoto: Decodable {
+  let id: String
+  let userId: String?
+  let storagePath: String?
+  let thumbPath: String?
+  let width: Int?
+  let height: Int?
+  let takenAt: String
+
+  enum CodingKeys: String, CodingKey {
+    case id, width, height
+    case userId = "user_id"
+    case storagePath = "storage_path"
+    case thumbPath = "thumb_path"
+    case takenAt = "taken_at"
+  }
+}
+
 /// One row of `event_gallery()`. `width`/`height`/`blurhash` are null while
 /// the upload is on its way (`status` "pending").
 struct GalleryPhoto: Decodable, Equatable {
@@ -205,6 +241,8 @@ func messageFor(_ error: Error) -> String {
     case .missionNameTaken: return "That name is taken. Pick another."
     case let .server(_, code, hint, message):
       if hint == "full" { return "This group is full. Ask the host to make room." }
+      if hint == "demo_limit" { return "You’ve tried the demo a few times today. Come back tomorrow." }
+      if hint == "demo_unavailable" { return "The demo isn’t available right now. Try again later." }
       if code == "P0002" { return "This invite link doesn’t work any more. Ask the host for a new one." }
       if message.localizedCaseInsensitiveContains("anonymous") { return "Joining isn’t available right now." }
       return message.isEmpty ? "Something went wrong. Try again." : message
@@ -336,11 +374,40 @@ actor Server {
   }
 
   func getEvent(_ id: String) async throws -> EventInfo {
-    let data = try await send("rest/v1/events?id=eq.\(id)&select=id,name,look,status,ends_at,roll_size,missions_per_guest,cover")
+    let data = try await send(
+      "rest/v1/events?id=eq.\(id)" +
+        "&select=id,name,look,status,ends_at,roll_size,missions_per_guest,cover,host_id,invite_code"
+    )
     guard let event = try JSONDecoder().decode([EventInfo].self, from: data).first else {
       throw ClipError.server(status: 404, code: "P0002", hint: nil, message: "No such event")
     }
     return event
+  }
+
+  /// The demo (`start_demo()`, reached through `ClipConfig.demoCode`): a live
+  /// moment of the caller's own, with the sample guests' photos already in it.
+  /// Called again it returns the caller's running demo, or the one they just
+  /// developed. Refuses with `hint` "demo_limit" / "demo_unavailable".
+  func startDemo() async throws -> EventInfo {
+    let data = try await send("rest/v1/rpc/start_demo", method: "POST", json: ["p_display_name": NSNull()])
+    return try Self.parseEventRow(data)
+  }
+
+  /// The host's "Develop now" (`end_event()`): returns the developed event.
+  func endEvent(_ id: String) async throws -> EventInfo {
+    let data = try await send("rest/v1/rpc/end_event", method: "POST", json: ["p_event_id": id])
+    return try Self.parseEventRow(data)
+  }
+
+  /// A function returning `public.events` answers with one object; an array
+  /// (should it ever become `setof`) is read too.
+  private static func parseEventRow(_ data: Data) throws -> EventInfo {
+    let decoder = JSONDecoder()
+    if let one = try? decoder.decode(EventInfo.self, from: data) { return one }
+    guard let first = try decoder.decode([EventInfo].self, from: data).first else {
+      throw ClipError.server(status: 500, code: nil, hint: nil, message: "")
+    }
+    return first
   }
 
   /// The caller's roster row, or nil when they are not a member.
@@ -438,6 +505,16 @@ actor Server {
         "&select=id,storage_path,thumb_path,taken_at&order=taken_at"
     )
     return try JSONDecoder().decode([OwnPhoto].self, from: data)
+  }
+
+  /// Every uploaded photo of the event, oldest first. Before the reveal RLS
+  /// returns only the caller's own; after it, the whole album.
+  func albumPhotos(eventId: String) async throws -> [AlbumPhoto] {
+    let data = try await send(
+      "rest/v1/photos?event_id=eq.\(eventId)&status=eq.uploaded" +
+        "&select=id,user_id,storage_path,thumb_path,width,height,taken_at&order=taken_at"
+    )
+    return try JSONDecoder().decode([AlbumPhoto].self, from: data)
   }
 
   /// `path -> URL`, valid for an hour. The bucket's select policy decides

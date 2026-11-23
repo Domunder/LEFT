@@ -1,0 +1,293 @@
+---
+/**
+ * "Try LEFT": the floating way into the demo (`/j/TRYLEFT`, see
+ * `src/pages/j/index.astro`), on every page except the web camera and the
+ * legal texts (Base.astro → `tryBadge`).
+ *
+ *  - wide screens with a mouse: a small card, bottom right, with a QR code to
+ *    scan with a phone;
+ *  - narrow or touch screens: a pill, "Try it now", that opens the demo here.
+ *
+ * Dismissible, remembered in localStorage (`left:try-dismissed`). It steps
+ * aside while the footer is on screen, so it never covers the footer's links.
+ *
+ * The copy says only what holds on every phone: nothing is installed (an
+ * iPhone is offered the App Clip, everything else shoots in the browser).
+ *
+ * The QR code is made at build time and is plain square modules on purpose:
+ * a restyled code was tried in the app and reverted, to be safe for scanners.
+ */
+import QRCode from 'qrcode';
+import { SITE } from '../site';
+
+const path = `/j/${SITE.demoCode}`;
+const qr = QRCode.create(`${SITE.url}${path}`, { errorCorrectionLevel: 'M' }).modules;
+let modules = '';
+for (let row = 0; row < qr.size; row++) {
+  for (let col = 0; col < qr.size; col++) {
+    if (qr.get(row, col)) modules += `M${col} ${row}h1v1h-1z`;
+  }
+}
+/** The quiet zone, in modules, on every side. */
+const quiet = 3;
+const box = `${-quiet} ${-quiet} ${qr.size + quiet * 2} ${qr.size + quiet * 2}`;
+---
+
+<script is:inline>
+  // Before the badge is drawn: a visitor who closed it never sees it flash.
+  try {
+    if (localStorage.getItem('left:try-dismissed') === '1') document.documentElement.classList.add('try-off');
+  } catch (e) {
+    /* no storage: the badge shows, and closing it lasts for this page */
+  }
+</script>
+
+<aside class="try" id="try-left" aria-label="Try LEFT">
+  <div class="try-card glass">
+    <a class="try-qr" href={path} aria-label="Open the LEFT demo in this browser">
+      <svg viewBox={box} shape-rendering="crispEdges" aria-hidden="true">
+        <path d={modules}></path>
+      </svg>
+    </a>
+    <div class="try-text">
+      <p class="eyebrow">Try LEFT</p>
+      <p class="try-line">Scan to try it. <em>No install.</em></p>
+      <p class="try-fine">A demo camera on your phone: a few photos, then develop the film.</p>
+    </div>
+    <button class="try-close" type="button" data-try-close aria-label="Hide “Try LEFT”">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"></path></svg>
+    </button>
+  </div>
+
+  <div class="try-pill glass">
+    <a href={path}>
+      Try it now
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+    </a>
+    <button class="try-close" type="button" data-try-close aria-label="Hide “Try it now”">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"></path></svg>
+    </button>
+  </div>
+</aside>
+
+<script is:inline>
+  (() => {
+    const badge = document.getElementById('try-left');
+    if (!badge) return;
+
+    badge.querySelectorAll('[data-try-close]').forEach((button) =>
+      button.addEventListener('click', () => {
+        document.documentElement.classList.add('try-off');
+        try {
+          localStorage.setItem('left:try-dismissed', '1');
+        } catch (e) {
+          /* private mode: gone for this page at least */
+        }
+      }),
+    );
+
+    // Out of the way while the footer is on screen: its links stay free.
+    const footer = document.querySelector('.site-footer');
+    if (footer && 'IntersectionObserver' in window) {
+      new IntersectionObserver((entries) => {
+        for (const entry of entries) badge.classList.toggle('away', entry.isIntersecting);
+      }).observe(footer);
+    }
+  })();
+</script>
+
+<style>
+  .try {
+    --try-edge: 20px;
+    --try-qr: 104px;
+    --try-close: 32px;
+
+    position: fixed;
+    right: calc(var(--try-edge) + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--try-edge) + env(safe-area-inset-bottom, 0px));
+    z-index: 45;
+    transition:
+      opacity 0.3s var(--ease),
+      transform 0.3s var(--ease),
+      visibility 0.3s;
+  }
+
+  :global(html.try-off) .try {
+    display: none;
+  }
+
+  .try.away {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(10px);
+    pointer-events: none;
+  }
+
+  /* It arrives a moment after the page, quietly. */
+  @media (prefers-reduced-motion: no-preference) {
+    .try-card,
+    .try-pill {
+      animation: try-in 0.6s var(--ease) 0.9s both;
+    }
+  }
+
+  @keyframes try-in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .try {
+      transition: none;
+    }
+    .try.away {
+      transform: none;
+    }
+  }
+
+  /* Over page content, so nearly solid: text must stay readable on any photo. */
+  .try-card,
+  .try-pill {
+    background: rgba(20, 18, 16, 0.88);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  /* ------------------------------------------------- The card (wide, mouse) */
+
+  .try-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 318px;
+    padding: 12px 40px 12px 12px;
+    border-radius: 24px;
+  }
+
+  .try-qr {
+    flex: none;
+    display: block;
+    width: var(--try-qr);
+    height: var(--try-qr);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--ink);
+  }
+
+  .try-qr svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: var(--ink-dark);
+  }
+
+  .try-text {
+    display: grid;
+    gap: 6px;
+  }
+
+  .try-line {
+    font-family: var(--serif);
+    font-weight: 340;
+    font-size: 1.3rem;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .try-line em {
+    font-style: italic;
+    white-space: nowrap;
+  }
+
+  .try-fine {
+    color: var(--ink-55);
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+
+  .try-close {
+    display: grid;
+    place-items: center;
+    width: var(--try-close);
+    height: var(--try-close);
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: none;
+    color: var(--ink-55);
+    cursor: pointer;
+    transition: color 0.2s var(--ease);
+  }
+
+  .try-close:hover {
+    color: var(--ink);
+  }
+
+  .try-close svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+  }
+
+  .try-card .try-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+  }
+
+  /* --------------------------------------------- The pill (narrow or touch) */
+
+  .try-pill {
+    display: none;
+    align-items: center;
+    min-height: 48px;
+    padding-right: 6px;
+    border-radius: 999px;
+  }
+
+  .try-pill a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    padding: 0 6px 0 20px;
+    color: var(--ink);
+    font: 600 0.9rem/1 var(--sans);
+    text-decoration: none;
+  }
+
+  .try-pill a svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .try-pill a:active {
+    opacity: 0.7;
+  }
+
+  .try-pill .try-close {
+    --try-close: 40px;
+  }
+
+  @media (max-width: 899px), (hover: none), (pointer: coarse) {
+    .try {
+      --try-edge: 14px;
+    }
+    .try-card {
+      display: none;
+    }
+    .try-pill {
+      display: inline-flex;
+    }
+  }
+</style>

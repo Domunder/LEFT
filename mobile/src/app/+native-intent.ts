@@ -20,13 +20,19 @@
  * picks the first — which is 06, a screen that writes a name with no session and
  * fails with "Auth session missing!". Every href to either must name its group.
  *
+ * One code is reserved: `TRYLEFT` is the website's demo (lib/demo.ts) and goes
+ * to `(guest)/demo`, which asks nothing.
+ *
  * This runs before the router resolves the URL. Returning the path unchanged lets
  * every other link (including expo-router's own) route normally.
  */
 
+import { isDemoCode } from '@/lib/demo-code';
 import { parseInviteUrl } from '@/lib/invite';
 
 export function redirectSystemPath({ path }: { path: string; initial: boolean }): string {
   const code = parseInviteUrl(path);
+  // The website's "try LEFT" link has an invite's shape and is not one.
+  if (isDemoCode(code)) return '/(guest)/demo';
   return code ? `/(guest)/name?code=${encodeURIComponent(code)}` : path;
 }
