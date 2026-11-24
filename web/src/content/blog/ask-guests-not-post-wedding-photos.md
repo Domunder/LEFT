@@ -4,8 +4,8 @@ description: Copy-and-paste wording to ask guests not to post wedding photos, by
 date: 2026-11-24
 keyword: how to ask guests not to post wedding photos
 cluster: Weddings
-photo: invite-card
-photoAlt: A blank cream card on white linen, framed by sprigs of eucalyptus
+photo: app-clip-header
+photoAlt: A cream card on white linen framed by eucalyptus sprigs, reading "You're on the list." with a small red heart
 look: faded
 faq:
   - q: Is it rude to ask guests not to post wedding photos?
