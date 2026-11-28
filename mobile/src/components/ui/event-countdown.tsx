@@ -18,6 +18,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Camera } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { countdownParts } from '@/lib/event-end';
 
 type EventCountdownProps = {
@@ -50,7 +51,9 @@ export function EventCountdown({ endsAt }: EventCountdownProps) {
       style={styles.root}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={`${parts[0].value} ${parts[0].unit}, ${parts[1].value} ${parts[1].unit} left to shoot`}>
+      accessibilityLabel={t('camera.countdownA11y', {
+        time: `${parts[0].value} ${parts[0].unit}, ${parts[1].value} ${parts[1].unit}`,
+      })}>
       {parts.map((part, index) => (
         <View key={part.unit} style={styles.unit}>
           <Text style={[styles.value, { color: Camera.countdown.valueColor[index] }]}>

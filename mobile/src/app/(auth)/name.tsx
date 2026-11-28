@@ -33,6 +33,7 @@ import { ScreenHeader } from '@/components/ui/screen-header';
 import { TextField } from '@/components/ui/text-field';
 import { Body, Caption, Display } from '@/components/ui/typography';
 import { Colors, SignUp, Spacing, VideoOverlay } from '@/constants/theme';
+import { t } from '@/i18n';
 import { setDisplayName } from '@/lib/auth';
 import { messageFor } from '@/lib/auth-errors';
 import { destinationAfterSignIn } from '@/lib/entry';
@@ -78,14 +79,14 @@ export default function NameScreen() {
 
           <View style={styles.center}>
             <Display size="xl" style={styles.headline}>
-              What should we{'\n'}call you?
+              {t('auth.nameHeadline')}
             </Display>
-            <Body color={Colors.textMuted}>This is how your group will see you.</Body>
+            <Body color={Colors.textMuted}>{t('auth.nameBody')}</Body>
           </View>
 
           <View style={styles.actions}>
             <TextField
-              label="Your name"
+              label={t('auth.nameLabel')}
               value={name}
               onChangeText={setName}
               serif={false}
@@ -98,7 +99,7 @@ export default function NameScreen() {
               onSubmitEditing={() => void handleSubmit()}
             />
             <PillButton
-              label={busy ? 'Working…' : 'Continue'}
+              label={busy ? t('auth.working') : t('common.continue')}
               onPress={() => void handleSubmit()}
               disabled={!name.trim() || busy}
               style={styles.cta}

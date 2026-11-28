@@ -109,6 +109,7 @@ import {
   type EventMission,
   type HostMissions,
 } from '@/lib/missions';
+import { t } from '@/i18n';
 
 /* Rows cross-fade in and out — no travel, so this stays on under reduced
    motion — and the list closes up behind them on the default spring, which
@@ -133,9 +134,6 @@ type LoadState =
   | { kind: 'error'; message: string }
   | { kind: 'ready'; data: Data };
 
-function plural(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
-}
 
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
@@ -147,9 +145,9 @@ function isDuplicate(e: unknown): boolean {
 /** A write's failure, as a sentence. */
 function describeWriteError(e: unknown): string {
   if (e instanceof MissionsLockedError) {
-    return 'The event has started, so the missions are locked.';
+    return t('missions.lockedStartedError');
   }
-  if (isDuplicate(e)) return 'That name is already on the list.';
+  if (isDuplicate(e)) return t('missions.nameDuplicate');
 
   // The count limits ("an event can have at most 200 missions") are raised with
   // hint 'limit' and a message written to be read; capitalise it and show it.
@@ -199,7 +197,7 @@ export default function MissionsScreen() {
 
     try {
       const event = eventId ? await getEvent(eventId) : (await listMyEvents())[0];
-      if (!event) throw new Error('No event to show.');
+      if (!event) throw new Error(t('missions.noEvent'));
 
       const [missions, roster, session] = await Promise.all([
         listHostMissions(event.id),
@@ -303,7 +301,7 @@ export default function MissionsScreen() {
 
   const selectToggle = canSelect ? (
     <TextButton
-      label={selecting ? 'Done' : 'Select'}
+      label={selecting ? t('common.done') : t('missions.select')}
       strong={selecting}
       onPress={() => {
         setSelecting((on) => !on);
@@ -333,11 +331,12 @@ export default function MissionsScreen() {
           {state.kind === 'error' ? (
             <>
               <Body small color={Colors.textDim} style={styles.centerText}>
-                Couldn&rsquo;t load the missions.{'\n'}
+                {t('missions.loadFailed')}
+                {'\n'}
                 {state.message}
               </Body>
               <PillButton
-                label="Try again"
+                label={t('common.tryAgain')}
                 variant="secondary"
                 onPress={() => {
                   setState({ kind: 'loading' });
@@ -350,7 +349,7 @@ export default function MissionsScreen() {
             <View style={styles.loadingRow}>
               <ActivityIndicator size="small" color={Colors.textMuted} />
               <Body small color={Colors.textDim}>
-                Loading missions…
+                {t('missions.loading')}
               </Body>
             </View>
           )}
@@ -366,7 +365,7 @@ export default function MissionsScreen() {
         <Intro />
         <View style={styles.centerState}>
           <Body small color={Colors.textDim} style={styles.centerText}>
-            Only the host can change this event&rsquo;s missions.
+            {t('missions.hostOnly')}
           </Body>
         </View>
       </Screen>
@@ -408,8 +407,10 @@ export default function MissionsScreen() {
   const waitingCount = people.filter((p) => !p.claimed_by).length;
   const guestsLine =
     joinedCount === 0 && waitingCount === 0
-      ? 'Nobody has joined yet'
-      : `${joinedCount} joined${waitingCount > 0 ? ` · ${waitingCount} not here yet` : ''}`;
+      ? t('missions.nobodyJoined')
+      : waitingCount > 0
+        ? t('missions.joinedAndWaiting', { joined: joinedCount, waiting: waitingCount })
+        : t('missions.joined', { joined: joinedCount });
 
   const selectedIds = missions.map((m) => m.id).filter((id) => selected.has(id));
   const allSelected = missions.length > 0 && selectedIds.length === missions.length;
@@ -422,18 +423,22 @@ export default function MissionsScreen() {
     setPendingPerGuest(next);
     await writeOrToast(
       () => setMissionsPerGuest(event.id, next),
-      next === null ? "Couldn't switch missions off." : "Couldn't change the missions."
+      next === null ? t('missions.switchOffFailed') : t('missions.changeFailed')
     );
     setPendingPerGuest(undefined);
   };
 
   const confirmSwitchOff = () => {
     Alert.alert(
-      'Switch missions off?',
-      'Missions are off. Your list is kept.',
+      t('missions.switchOffTitle'),
+      t('missions.switchOffBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Switch off', style: 'destructive', onPress: () => void changePerGuest(null) },
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('missions.switchOff'),
+          style: 'destructive',
+          onPress: () => void changePerGuest(null),
+        },
       ]
     );
   };
@@ -441,7 +446,7 @@ export default function MissionsScreen() {
   const generate = async () => {
     if (generating) return;
     setGenerating(true);
-    await writeOrToast(() => generateMissions(event.id), "Couldn't generate missions.");
+    await writeOrToast(() => generateMissions(event.id), t('missions.generateFailed'));
     setGenerating(false);
   };
 
@@ -474,7 +479,7 @@ export default function MissionsScreen() {
               ? await ensurePersonFor(target.member)
               : (await addPerson(event.id, target.name)).id;
       if (personId !== mission.person_id) await moveMission(mission.id, personId);
-    }, "Couldn't give the mission to them.");
+    }, t('missions.assignFailed'));
     setAssignBusy(false);
     if (done) setAssigning(null);
   };
@@ -482,17 +487,17 @@ export default function MissionsScreen() {
   const confirmDelete = () => {
     const count = selectedIds.length;
     if (count === 0) return;
-    Alert.alert(count === 1 ? 'Delete this mission?' : `Delete ${count} missions?`, undefined, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('missions.deleteConfirm', { count }), undefined, [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Delete',
+        text: t('common.delete'),
         style: 'destructive',
         onPress: () =>
           void (async () => {
             setDeleting(true);
             const ok = await writeOrToast(
               () => deleteMissions(selectedIds),
-              "Couldn't delete the missions."
+              t('missions.deleteManyFailed')
             );
             setDeleting(false);
             if (ok) {
@@ -507,21 +512,19 @@ export default function MissionsScreen() {
   const confirmRemoveName = (person: Person) => {
     const count = person.missions.length;
     Alert.alert(
-      `Remove ${person.name}?`,
-      count > 0
-        ? `${count === 1 ? 'Their mission goes' : `Their ${count} missions go`} back to anyone.`
-        : undefined,
+      t('missions.removeNameTitle', { name: person.name }),
+      count > 0 ? t('missions.removeNameBody', { count }) : undefined,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('common.remove'),
           style: 'destructive',
           onPress: () =>
             void writeOrToast(async () => {
               // Their missions stay on the list, for anyone, rather than vanishing.
               for (const mission of person.missions) await moveMission(mission.id, null);
               await deletePerson(person.id);
-            }, `Couldn't remove ${person.name}.`),
+            }, t('missions.removeNameFailed', { name: person.name })),
         },
       ]
     );
@@ -534,18 +537,25 @@ export default function MissionsScreen() {
     // Android shows three buttons at most, and iOS allows one cancel: build it.
     const first = guest.member
       ? {
-          text: `Unlink from ${guest.member.display_name}`,
+          text: t('missions.unlinkFrom', { name: guest.member.display_name }),
           onPress: () =>
-            void writeOrToast(() => assignPerson(person.id, null), `Couldn't unlink ${person.name}.`),
+            void writeOrToast(
+              () => assignPerson(person.id, null),
+              t('missions.unlinkFailed', { name: person.name })
+            ),
         }
       : unnamed.length > 0
-        ? { text: 'This is someone who joined', onPress: () => setLinkingName(person) }
+        ? { text: t('missions.linkToJoined'), onPress: () => setLinkingName(person) }
         : null;
 
     Alert.alert(person.name, undefined, [
       ...(first ? [first] : []),
-      { text: `Remove ${person.name}`, style: 'destructive', onPress: () => confirmRemoveName(person) },
-      { text: 'Cancel', style: 'cancel' },
+      {
+        text: t('missions.removeName', { name: person.name }),
+        style: 'destructive',
+        onPress: () => confirmRemoveName(person),
+      },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   };
 
@@ -559,10 +569,10 @@ export default function MissionsScreen() {
     <PillButton
       label={
         deleting
-          ? 'Deleting…'
+          ? t('missions.deleting')
           : selectedIds.length > 0
-            ? `Delete ${selectedIds.length}`
-            : 'Tick the missions to delete'
+            ? t('missions.deleteCount', { count: selectedIds.length })
+            : t('missions.tickToDelete')
       }
       icon="trash-2"
       variant="secondary"
@@ -603,7 +613,7 @@ export default function MissionsScreen() {
                   onValueChange={(on) =>
                     on ? void changePerGuest(MISSIONS_PER_GUEST_DEFAULT) : confirmSwitchOff()
                   }
-                  accessibilityLabel="Missions"
+                  accessibilityLabel={t('missions.title')}
                 />
               ) : undefined
             }
@@ -611,7 +621,7 @@ export default function MissionsScreen() {
 
           {stale ? (
             <Caption color={Colors.textMuted} style={styles.stale}>
-              Couldn&rsquo;t refresh — this may be out of date. Pull down to try again.
+              {t('missions.staleNote')}
             </Caption>
           ) : null}
 
@@ -620,8 +630,8 @@ export default function MissionsScreen() {
               <Feather name="lock" size={T.lockNote.iconSize} color={Colors.textMuted} />
               <Body small color={Colors.textMuted} style={styles.flexText}>
                 {event.status === 'setup'
-                  ? 'Locked — this event has ended.'
-                  : 'Locked — the event has started.'}
+                  ? t('missions.lockedEnded')
+                  : t('missions.lockedStarted')}
               </Body>
             </View>
           ) : null}
@@ -633,16 +643,20 @@ export default function MissionsScreen() {
                 <Feather name="target" size={T.empty.iconSize} color={Colors.textMuted} />
               </View>
               <Display size="xxs" style={styles.emptyHeadline}>
-                Missions are off.
+                {t('missions.offHeadline')}
               </Display>
               <Body small color={Colors.textDim} style={styles.centerText}>
                 {locked
-                  ? 'No missions. You can switch them on before the event starts.'
-                  : 'Give every guest a small photo mission. You can edit the list before the event starts.'}
+                  ? t('missions.offBodyLocked')
+                  : t('missions.offBody')}
               </Body>
               {!locked ? (
                 <PillButton
-                  label={pendingPerGuest !== undefined ? 'Switching on…' : 'Switch missions on'}
+                  label={
+                    pendingPerGuest !== undefined
+                      ? t('missions.switchingOn')
+                      : t('missions.switchOn')
+                  }
                   icon="target"
                   disabled={pendingPerGuest !== undefined}
                   onPress={() => void changePerGuest(MISSIONS_PER_GUEST_DEFAULT)}
@@ -659,15 +673,15 @@ export default function MissionsScreen() {
                   <PressScale
                     key="guests"
                     accessibilityRole="button"
-                    accessibilityLabel={`Guests. ${guestsLine}`}
-                    accessibilityHint="Shows everyone, and adds a name"
+                    accessibilityLabel={t('missions.guestsA11y', { status: guestsLine })}
+                    accessibilityHint={t('missions.guestsHint')}
                     disabled={selecting}
                     onPress={() => setGuestsOpen(true)}
                     scale={Press.cardScale}
                     style={styles.cardRow}>
                     <Feather name="users" size={T.row.iconSize} color={Colors.textMuted} />
                     <View style={styles.rowCopy}>
-                      <Text style={styles.rowTitle}>Guests</Text>
+                      <Text style={styles.rowTitle}>{t('missions.guests')}</Text>
                       <Text style={styles.rowDetail}>{guestsLine}</Text>
                     </View>
                     <Feather name="chevron-right" size={T.count.iconSize} color={Colors.textMuted} />
@@ -678,17 +692,21 @@ export default function MissionsScreen() {
               {/* The missions */}
               <View style={styles.section}>
                 <View style={styles.labelRow}>
-                  <Label small>Missions</Label>
+                  <Label small>{t('missions.title')}</Label>
                   {needed > 0 && !locked && !selecting ? (
                     generating ? (
                       <ActivityIndicator size="small" color={Colors.textMuted} />
                     ) : (
-                      <TextButton label={`+ Add ${needed}`} strong onPress={() => void generate()} />
+                      <TextButton
+                        label={t('missions.addCount', { count: needed })}
+                        strong
+                        onPress={() => void generate()}
+                      />
                     )
                   ) : null}
                   {selecting ? (
                     <TextButton
-                      label={allSelected ? 'Deselect all' : 'Select all'}
+                      label={allSelected ? t('missions.deselectAll') : t('missions.selectAll')}
                       onPress={() =>
                         setSelected(allSelected ? new Set() : new Set(missions.map((m) => m.id)))
                       }
@@ -697,15 +715,15 @@ export default function MissionsScreen() {
                 </View>
                 <Caption color={Colors.textFaint} style={styles.caption}>
                   {needed > 0 && !locked
-                    ? `Only ${plural(totalMissions, 'mission', 'missions')} for ${group} guests — some would get none. "Add" fills the list from ideas.`
+                    ? t('missions.tooFew', { count: totalMissions, guests: group })
                     : locked
-                    ? 'Named missions went to that guest. The rest were random.'
-                    : 'Tap a person to assign a mission. The rest are random.'}
+                    ? t('missions.captionLocked')
+                    : t('missions.captionOpen')}
                 </Caption>
 
                 {locked && missions.length === 0 ? (
                   <Body small color={Colors.textDim}>
-                    The list was empty.
+                    {t('missions.listWasEmpty')}
                   </Body>
                 ) : (
                   // Opaque, like the rows that slide over Delete, so the card is one surface.
@@ -728,7 +746,7 @@ export default function MissionsScreen() {
                           onDelete={() =>
                             void writeOrToast(
                               () => deleteMission(mission.id),
-                              "Couldn't delete the mission."
+                              t('missions.deleteOneFailed')
                             )
                           }>
                           <MissionRow
@@ -801,7 +819,7 @@ export default function MissionsScreen() {
                     setLinkingName(null);
                     void writeOrToast(
                       () => assignPerson(person.id, member.user_id),
-                      `Couldn't link ${person.name}.`
+                      t('missions.linkFailed', { name: person.name })
                     );
                   },
                   onCancel: () => setLinkingName(null),
@@ -822,12 +840,12 @@ function Intro({ right }: { right?: React.ReactNode }) {
     <>
       <View style={styles.titleRow}>
         <Display size="md" style={styles.title}>
-          Missions
+          {t('missions.title')}
         </Display>
         {right}
       </View>
       <Body small color={Colors.textDim} style={styles.intro}>
-        Small photo challenges, one card per guest. Edit them until you start the event.
+        {t('missions.intro')}
       </Body>
     </>
   );
@@ -855,7 +873,7 @@ function SwipeToDelete({ enabled, label, onDelete, children }: SwipeProps) {
       renderRightActions={() => (
         <PressScale
           accessibilityRole="button"
-          accessibilityLabel={`Delete mission: ${label}`}
+          accessibilityLabel={t('missions.deleteMissionA11y', { body: label })}
           onPress={() => {
             ref.current?.close();
             onDelete();
@@ -863,7 +881,7 @@ function SwipeToDelete({ enabled, label, onDelete, children }: SwipeProps) {
           scale={Press.cardScale}
           style={styles.swipeAction}>
           <Feather name="trash-2" size={T.swipe.iconSize} color={Colors.text} />
-          <Text style={styles.swipeLabel}>Delete</Text>
+          <Text style={styles.swipeLabel}>{t('common.delete')}</Text>
         </PressScale>
       )}>
       {children}

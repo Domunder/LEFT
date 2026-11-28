@@ -12,31 +12,36 @@
  * Icons are Feather, which is what the rest of the app uses. Feather has no cake,
  * mortarboard or cocktail glyph, so a few are the nearest available match rather
  * than the prototype's custom SVGs.
+ *
+ * Labels and placeholders are translation keys, read with `t()` where they are
+ * drawn: text built here, at import time, would keep the language the app
+ * started in.
  */
 
 import type { Feather } from '@expo/vector-icons';
 
+import { t, type TKey } from '@/i18n';
 import type { EventType } from '@/lib/events';
 
 export type EventTypeOption = {
   value: EventType;
-  label: string;
+  labelKey: TKey;
   icon: React.ComponentProps<typeof Feather>['name'];
   /** Pre-filled placeholder for the "Name your film" field. */
-  placeholder: string;
+  placeholderKey: TKey;
 };
 
 export const EVENT_TYPES: readonly EventTypeOption[] = [
-  { value: 'wedding', label: 'Wedding', icon: 'heart', placeholder: "Sam & Alex's Wedding" },
-  { value: 'birthday', label: 'Birthday', icon: 'gift', placeholder: "Maya's 30th" },
-  { value: 'trip', label: 'Trip', icon: 'send', placeholder: 'Lisbon 2026' },
-  { value: 'party', label: 'Party', icon: 'music', placeholder: "New Year's Eve" },
-  { value: 'company', label: 'Company Event', icon: 'briefcase', placeholder: 'Summer Offsite' },
-  { value: 'graduation', label: 'Graduation', icon: 'award', placeholder: 'Class of 2026' },
-  { value: 'other', label: 'Other', icon: 'circle', placeholder: 'Our Film' },
+  { value: 'wedding', labelKey: 'onboarding.typeWedding', icon: 'heart', placeholderKey: 'onboarding.placeholderWedding' },
+  { value: 'birthday', labelKey: 'onboarding.typeBirthday', icon: 'gift', placeholderKey: 'onboarding.placeholderBirthday' },
+  { value: 'trip', labelKey: 'onboarding.typeTrip', icon: 'send', placeholderKey: 'onboarding.placeholderTrip' },
+  { value: 'party', labelKey: 'onboarding.typeParty', icon: 'music', placeholderKey: 'onboarding.placeholderParty' },
+  { value: 'company', labelKey: 'onboarding.typeCompany', icon: 'briefcase', placeholderKey: 'onboarding.placeholderCompany' },
+  { value: 'graduation', labelKey: 'onboarding.typeGraduation', icon: 'award', placeholderKey: 'onboarding.placeholderGraduation' },
+  { value: 'other', labelKey: 'onboarding.typeOther', icon: 'circle', placeholderKey: 'onboarding.placeholderOther' },
 ] as const;
 
 /** The placeholder for a type, or a neutral fallback when nothing is picked yet. */
 export function placeholderFor(type: EventType | undefined): string {
-  return EVENT_TYPES.find((t) => t.value === type)?.placeholder ?? 'Our Film';
+  return t(EVENT_TYPES.find((option) => option.value === type)?.placeholderKey ?? 'onboarding.placeholderOther');
 }

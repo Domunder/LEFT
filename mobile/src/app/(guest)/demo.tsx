@@ -13,9 +13,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { PillButton } from '@/components/ui/pill-button';
+import { em } from '@/components/ui/rich';
 import { Screen } from '@/components/ui/screen';
-import { Body, Display, Em } from '@/components/ui/typography';
+import { Body, Display } from '@/components/ui/typography';
 import { Colors, Spacing } from '@/constants/theme';
+import { t } from '@/i18n';
 import { signInAnonymously } from '@/lib/auth';
 import { messageFor } from '@/lib/auth-errors';
 import { DemoLimitError, startDemo } from '@/lib/demo';
@@ -59,17 +61,15 @@ export default function DemoScreen() {
     <Screen style={styles.screen}>
       {error ? (
         <View style={styles.block}>
-          <Display size="md">
-            The demo didn’t <Em>start</Em>.
-          </Display>
+          <Display size="md">{em(t('guest.demoFailedHeadline'))}</Display>
           <Body>{error}</Body>
-          <PillButton label="Try again" onPress={retry} />
-          <PillButton variant="secondary" label="Close" onPress={() => router.replace('/')} />
+          <PillButton label={t('common.tryAgain')} onPress={retry} />
+          <PillButton variant="secondary" label={t('common.close')} onPress={() => router.replace('/')} />
         </View>
       ) : (
         <View style={styles.block}>
           <ActivityIndicator size="small" color={Colors.textMuted} />
-          <Body>Setting up a demo moment…</Body>
+          <Body>{t('guest.demoSettingUp')}</Body>
         </View>
       )}
     </Screen>

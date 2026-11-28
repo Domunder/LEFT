@@ -21,6 +21,7 @@ import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import type { LegalBlock, LegalSection } from '@/constants/legal';
 import { Colors, LegalPage as Token, ScrollEdge as Edge, Spacing } from '@/constants/theme';
+import { locale, t } from '@/i18n';
 
 type LegalPageProps = {
   title: string;
@@ -47,7 +48,9 @@ export function LegalPageView({ title, updated, intro, sections, draftNotice }: 
         // rotation or a keyboard rather than snapping back to the top.
         contentInsetAdjustmentBehavior="automatic">
         <Display size="sm">{title}</Display>
-        <Caption style={styles.updated}>Last updated {formatUpdated(updated)}</Caption>
+        <Caption style={styles.updated}>
+          {t('auth.legalUpdated', { date: formatUpdated(updated) })}
+        </Caption>
 
         {draftNotice ? (
           <Body small color={Colors.textFaint} style={styles.draft}>
@@ -106,7 +109,7 @@ function LegalBlockView({ block }: { block: LegalBlock }) {
 function formatUpdated(iso: string): string {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return iso;
-  return new Intl.DateTimeFormat(undefined, {
+  return new Intl.DateTimeFormat(locale(), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

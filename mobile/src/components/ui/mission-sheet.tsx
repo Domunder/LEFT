@@ -29,19 +29,22 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PillButton } from "./pill-button";
 import { PressScale } from "./press-scale";
+import { em } from "./rich";
 import { Sheet } from "./sheet";
-import { Body, Display, Em, Label } from "./typography";
+import { Body, Display, Label } from "./typography";
 import { Colors, MissionsCamera as M, Press, SheetMotion } from "@/constants/theme";
 import { Typography } from "@/constants/typography";
 import type { Mission } from "@/lib/missions";
+import { t } from "@/i18n";
 
 /**
  * The intro's copy, shown once per event (`left:missions-intro:{eventId}`).
  * The count is not in the sentence: it stands beside the title as "0/1"
  * (2026-11-19, the user).
  */
-export const MISSIONS_INTRO_COPY =
-  "Pick one, then take the photo. Nobody sees them until the film is developed.";
+export function missionsIntroCopy(): string {
+  return t("missions.introCopy");
+}
 
 // --- the frame ---------------------------------------------------------------
 
@@ -186,7 +189,7 @@ function Row({
   const content = (
     <>
       <View style={styles.rowText}>
-        {personal ? <Label small>Just for you</Label> : null}
+        {personal ? <Label small>{t("missions.justForYou")}</Label> : null}
         <Text style={[styles.rowBody, dimmed && styles.rowBodyDone]}>
           {body}
         </Text>
@@ -256,11 +259,14 @@ export function MissionListSheet({
       <View style={styles.block}>
         <View style={styles.titleRow}>
           <Display size="xxs" style={styles.title}>
-            Your <Em>missions.</Em>
+            {em(t("missions.yourMissions"))}
           </Display>
           <Text
             style={styles.count}
-            accessibilityLabel={`${done} of ${missions.length} done`}
+            accessibilityLabel={t("missions.doneOfTotal", {
+              done,
+              total: missions.length,
+            })}
           >
             {done}
             <Text style={styles.countTotal}>/{missions.length}</Text>
@@ -268,10 +274,10 @@ export function MissionListSheet({
         </View>
         <Body small>
           {intro
-            ? MISSIONS_INTRO_COPY
+            ? missionsIntroCopy()
             : done === missions.length
-              ? "All done. Photos stay hidden until the film is developed."
-              : "Pick one, then take the photo."}
+              ? t("missions.allDone")
+              : t("missions.pickOne")}
         </Body>
       </View>
 
@@ -288,9 +294,9 @@ export function MissionListSheet({
               selected={isArmed}
               accessibilityLabel={
                 isDone
-                  ? `${mission.body}. Done.`
+                  ? t("missions.rowDoneA11y", { body: mission.body })
                   : isArmed
-                    ? `${mission.body}. Your next photo is for this.`
+                    ? t("missions.rowArmedA11y", { body: mission.body })
                     : mission.body
               }
               trailing={
@@ -298,13 +304,15 @@ export function MissionListSheet({
                   <View style={styles.trailing}>
                     {icon("check", M.capsule.doneColor)}
                     <Text style={[styles.trailingText, styles.doneText]}>
-                      Done
+                      {t("missions.done")}
                     </Text>
                   </View>
                 ) : isArmed ? (
                   <View style={styles.trailing}>
                     {icon("target")}
-                    <Text style={styles.trailingText}>Next photo</Text>
+                    <Text style={styles.trailingText}>
+                      {t("missions.nextPhoto")}
+                    </Text>
                   </View>
                 ) : (
                   icon("camera", Colors.textMuted)
@@ -316,7 +324,9 @@ export function MissionListSheet({
         })}
       </SheetList>
 
-      {intro ? <PillButton label="Got it" onPress={onClose} /> : null}
+      {intro ? (
+        <PillButton label={t("missions.gotIt")} onPress={onClose} />
+      ) : null}
     </SheetOverlay>
   );
 }
@@ -348,11 +358,10 @@ export function MissionPickerSheet({
     <SheetOverlay onClose={onClose} locked={busy}>
       <View style={styles.block}>
         <Display size="xxs">
-          Which <Em>mission?</Em>
+          {em(t("missions.whichMission"))}
         </Display>
         <Body small>
-          Mark what this photo was for. Nobody sees it until the film is
-          developed.
+          {t("missions.pickerBody")}
         </Body>
       </View>
 
@@ -367,16 +376,16 @@ export function MissionPickerSheet({
               personal={mission.personal}
               detail={
                 elsewhere
-                  ? "Done with another photo. Picking it moves it here."
+                  ? t("missions.doneElsewhere")
                   : undefined
               }
               selected={here}
               disabled={busy}
               accessibilityLabel={
                 here
-                  ? `${mission.body}. This photo.`
+                  ? t("missions.rowHereA11y", { body: mission.body })
                   : elsewhere
-                    ? `${mission.body}. Done with another photo.`
+                    ? t("missions.rowElsewhereA11y", { body: mission.body })
                     : mission.body
               }
               trailing={here ? check : null}
@@ -385,10 +394,10 @@ export function MissionPickerSheet({
           );
         })}
         <Row
-          body="Not a mission"
+          body={t("missions.notAMission")}
           selected={current === null}
           disabled={busy}
-          accessibilityLabel="Not a mission"
+          accessibilityLabel={t("missions.notAMission")}
           trailing={current === null ? check : null}
           onPress={current === null ? onClose : () => onPick(null)}
         />

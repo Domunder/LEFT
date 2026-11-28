@@ -21,6 +21,7 @@ import { useRouter, type Href } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Colors, Press } from '@/constants/theme';
+import { t } from '@/i18n';
 import { Glass } from './glass';
 import { PressScale } from './press-scale';
 
@@ -106,7 +107,7 @@ export function CircleBackButton({ glass = false, fallback }: { glass?: boolean;
     <CircleIconButton
       icon="chevron-left"
       glass={glass}
-      accessibilityLabel="Go back"
+      accessibilityLabel={t('library.goBack')}
       onPress={() => {
         if (router.canGoBack()) router.back();
         else if (fallback) router.replace(fallback);

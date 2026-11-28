@@ -39,8 +39,9 @@ import { Glass } from '@/components/ui/glass';
 import { LookPreview } from '@/components/ui/look-preview';
 import { PillButton } from '@/components/ui/pill-button';
 import { PressScale } from '@/components/ui/press-scale';
+import { em } from '@/components/ui/rich';
 import { Screen } from '@/components/ui/screen';
-import { Body, Display, Em, Label } from '@/components/ui/typography';
+import { Body, Display, Label } from '@/components/ui/typography';
 import {
   Colors,
   Glass as GlassTokens,
@@ -50,6 +51,7 @@ import {
   Waiting,
 } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { useEventCover } from '@/lib/event-cover';
 import { formatEndDate, formatEndTime } from '@/lib/event-end';
 import {
@@ -205,15 +207,25 @@ export default function WaitingScreen() {
           <Label style={styles.eyebrow}>{event?.name ?? ' '}</Label>
 
           <Display size="lg" style={styles.headline}>
-            Almost <Em>there.</Em>
+            {em(t('guest.waitingHeadline'))}
           </Display>
 
           {/* No cards (2026-11-21, the user): the wait, then the facts, on the page itself. */}
           <View style={styles.waitRow}>
             <WaitPing />
             <Body color={Colors.textDim} style={styles.copy}>
-              Waiting for <Body color={Colors.text}>{hostName ?? 'the host'}</Body> to start the
-              event.
+              {/* The marked run is who is waited on, drawn brighter. */}
+              {(hostName ? t('guest.waitingForName') : t('guest.waitingForHost'))
+                .split('*')
+                .map((part, index) =>
+                  index % 2 === 1 ? (
+                    <Body key={index} color={Colors.text}>
+                      {part.replace('{name}', () => hostName ?? '')}
+                    </Body>
+                  ) : (
+                    part
+                  )
+                )}
             </Body>
           </View>
 
@@ -224,13 +236,16 @@ export default function WaitingScreen() {
                   icon="camera"
                   label={
                     event.roll_size === null
-                      ? 'Unlimited photos each'
-                      : `${event.roll_size} photos each`
+                      ? t('guest.rollEachUnlimited')
+                      : t('guest.rollEach', { count: event.roll_size })
                   }
                 />
                 <Fact
                   icon="clock"
-                  label={`Develops ${formatEndDate(ends)} at ${formatEndTime(ends)}`}
+                  label={t('guest.develops', {
+                    date: formatEndDate(ends),
+                    time: formatEndTime(ends),
+                  })}
                 />
               </View>
             </>
@@ -242,12 +257,12 @@ export default function WaitingScreen() {
               <View>
                 <Body small color={Colors.textDim} style={styles.namesCopy}>
                   {mine
-                    ? `You are ${mine.name} on the host's list.`
-                    : 'The host planned something for some of you by name.'}
+                    ? t('guest.onListAs', { name: mine.name })
+                    : t('guest.listHint')}
                 </Body>
                 <PillButton
                   variant="secondary"
-                  label={mine ? 'Change your name' : 'Are you on the list?'}
+                  label={mine ? t('guest.changeName') : t('guest.onTheList')}
                   onPress={() =>
                     router.push({
                       pathname: '/(guest)/name',
@@ -262,7 +277,7 @@ export default function WaitingScreen() {
               <PillButton
                 variant="secondary"
                 icon="info"
-                label="How it works"
+                label={t('guest.howItWorks')}
                 onPress={() =>
                   router.push({
                     pathname: '/(guest)/intro',
@@ -284,8 +299,8 @@ export default function WaitingScreen() {
         <View style={[styles.chrome, { top: insets.top + Waiting.chromeInset }]}>
           <PressScale
             accessibilityRole="button"
-            accessibilityLabel="Invite"
-            accessibilityHint="Shows the QR code and the link to this moment"
+            accessibilityLabel={t('guest.inviteA11y')}
+            accessibilityHint={t('guest.inviteHint')}
             scale={GlassTokens.pressScale}
             onPress={() =>
               router.push({

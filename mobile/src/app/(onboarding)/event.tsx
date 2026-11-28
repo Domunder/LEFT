@@ -21,9 +21,11 @@ import { Rise } from '@/components/ui/rise';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { TextField } from '@/components/ui/text-field';
-import { Display, Em, Label } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Display, Label } from '@/components/ui/typography';
 import { EVENT_TYPES, placeholderFor } from '@/constants/event-types';
 import { Motion, Spacing } from '@/constants/theme';
+import { t } from '@/i18n';
 import type { EventType } from '@/lib/events';
 import { useGlow, useOnboarding, useStep } from '@/lib/onboarding-draft';
 
@@ -67,11 +69,10 @@ export default function EventScreen() {
           <ScreenHeader style={styles.header} backFallback="/(library)/films" />
 
           <Rise>
-            <Label style={styles.eyebrow}>Event</Label>
+            <Label style={styles.eyebrow}>{t('onboarding.eventEyebrow')}</Label>
 
             <Display size="xl" style={styles.headline}>
-              What are you{'\n'}
-              <Em>capturing?</Em>
+              {em(t('onboarding.eventHeadline'))}
             </Display>
           </Rise>
 
@@ -79,7 +80,7 @@ export default function EventScreen() {
             {EVENT_TYPES.map((option) => (
               <ChoicePillButton
                 key={option.value}
-                label={option.label}
+                label={t(option.labelKey)}
                 icon={option.icon}
                 selected={eventType === option.value}
                 onPress={() => setEventType(option.value)}
@@ -94,7 +95,7 @@ export default function EventScreen() {
                 .easing(Easing.bezier(...Motion.bezier).factory())}
               style={styles.field}>
               <TextField
-                label="Name your event"
+                label={t('onboarding.eventNameLabel')}
                 value={filmName}
                 onChangeText={setFilmName}
                 placeholder={placeholder}
@@ -106,7 +107,7 @@ export default function EventScreen() {
           ) : null}
 
           <PillButton
-            label="Continue"
+            label={t('common.continue')}
             icon="arrow-right"
             disabled={!canContinue}
             onPress={handleContinue}

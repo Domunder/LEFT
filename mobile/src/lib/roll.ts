@@ -7,6 +7,8 @@
  * oversold.
  */
 
+import { t } from '@/i18n';
+
 /** `null` is the unlimited roll, as it is in `events.roll_size`. */
 export type RollSize = number | null;
 
@@ -35,7 +37,7 @@ export function rollNumeral(roll: RollSize): string {
 
 /** Spoken form, for accessibility labels: "24 shots each". */
 export function rollWords(roll: RollSize): string {
-  return roll === null ? 'Unlimited photos each' : `${roll} photos each`;
+  return roll === null ? t('onboarding.rollUnlimitedEach') : t('onboarding.rollEach', { count: roll });
 }
 
 /**
@@ -44,5 +46,5 @@ export function rollWords(roll: RollSize): string {
  */
 export function shotsLeftLabel(shotsLeft: number | null): string {
   if (shotsLeft === null) return '∞';
-  return `${shotsLeft} left`;
+  return t('onboarding.shotsLeft', { count: shotsLeft });
 }

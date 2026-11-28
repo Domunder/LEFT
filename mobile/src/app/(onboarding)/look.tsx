@@ -28,9 +28,11 @@ import { PillButton } from '@/components/ui/pill-button';
 import { Rise } from '@/components/ui/rise';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { Display, Em, Label } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Display, Label } from '@/components/ui/typography';
 import { DEFAULT_LOOK, LOOKS } from '@/constants/looks';
 import { LookCard as Tokens, Motion, Spacing } from '@/constants/theme';
+import { t } from '@/i18n';
 import type { FilmLook } from '@/lib/events';
 import { useGlow, useOnboarding, useStep } from '@/lib/onboarding-draft';
 
@@ -90,11 +92,10 @@ export default function LookScreen() {
       <ScreenHeader style={styles.header} />
 
       <Rise>
-        <Label style={styles.eyebrow}>Film</Label>
+        <Label style={styles.eyebrow}>{t('onboarding.lookEyebrow')}</Label>
 
         <Display size="xl" style={styles.headline}>
-          Which film are{'\n'}
-          <Em>you loading?</Em>
+          {em(t('onboarding.lookHeadline'))}
         </Display>
       </Rise>
 
@@ -126,7 +127,7 @@ export default function LookScreen() {
       </ScrollView>
 
       <PillButton
-        label="Continue"
+        label={t('common.continue')}
         icon="arrow-right"
         onPress={handleContinue}
         style={styles.cta}

@@ -31,9 +31,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AuthButton } from '@/components/ui/auth-button';
 import { BackgroundSlideshow } from '@/components/ui/background-slideshow';
+import { em } from '@/components/ui/rich';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { Body, Caption, Display, Em } from '@/components/ui/typography';
+import { Body, Caption, Display } from '@/components/ui/typography';
 import {
   AuthButton as AuthButtonToken,
   Colors,
@@ -41,6 +42,7 @@ import {
   Spacing,
   VideoOverlay,
 } from '@/constants/theme';
+import { t } from '@/i18n';
 import {
   getSession,
   isSignInCancelled,
@@ -91,8 +93,8 @@ export default function KeepScreen() {
       if (!isSignInCancelled(e)) {
         setError(
           e instanceof Error && e.message.toLowerCase().includes('already')
-            ? 'That account is already in use. Try the other option.'
-            : "Couldn't sign in. Check your connection and try again."
+            ? t('errors.accountInUse')
+            : t('errors.signInFailed')
         );
       }
       setBusy(null);
@@ -126,12 +128,10 @@ export default function KeepScreen() {
 
         <View style={styles.center}>
           <Display size="xl" style={styles.headline}>
-            Your film is{'\n'}
-            <Em>ready.</Em>
+            {em(t('auth.keepHeadline'))}
           </Display>
           <Body color={Colors.textMuted} style={styles.subcopy}>
-            You shot as a guest, so it lives on this phone alone. Sign in and it
-            stays yours.
+            {t('auth.keepBody')}
           </Body>
         </View>
 
@@ -167,12 +167,12 @@ export default function KeepScreen() {
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Not now"
+            accessibilityLabel={t('common.notNow')}
             onPress={handleDecline}
             disabled={busy !== null}
             hitSlop={Spacing.md}
             style={({ pressed }) => [styles.decline, pressed && styles.pressed]}>
-            <Caption color={Colors.textFaint}>Not now</Caption>
+            <Caption color={Colors.textFaint}>{t('common.notNow')}</Caption>
           </Pressable>
         </View>
       </View>

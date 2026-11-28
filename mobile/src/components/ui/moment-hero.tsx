@@ -38,6 +38,7 @@ import { PressScale } from './press-scale';
 import { Display } from './typography';
 import { Colors, Films, Press } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import type { Event } from '@/lib/events';
 
 const T = Films.hero;
@@ -132,8 +133,8 @@ export function MomentHero({
   return (
     <Pressable
       accessibilityRole="summary"
-      accessibilityLabel={`${title}, ${status}`}
-      accessibilityActions={[{ name: 'longpress', label: 'More' }]}
+      accessibilityLabel={t('library.heroA11y', { title, status })}
+      accessibilityActions={[{ name: 'longpress', label: t('library.more') }]}
       onAccessibilityAction={onLongPress}
       onPress={quiet ? onAction : undefined}
       onLongPress={onLongPress}

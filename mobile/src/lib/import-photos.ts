@@ -23,6 +23,8 @@
 
 import type * as ImagePickerTypes from 'expo-image-picker';
 
+import { t } from '@/i18n';
+
 import { getSession } from './auth';
 import type { Event } from './events';
 import { getSupabase } from './supabase';
@@ -100,7 +102,7 @@ export async function importPhotos(
   if (!ImagePicker || limit <= 0) return 0;
 
   const userId = (await getSession().catch(() => null))?.user.id;
-  if (!userId) throw new Error('Not signed in.');
+  if (!userId) throw new Error(t('camera.importNotSignedIn'));
 
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],

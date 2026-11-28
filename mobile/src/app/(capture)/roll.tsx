@@ -41,8 +41,10 @@ import { PhotoTile, useTileRegistry } from '@/components/ui/photo-tile';
 import { PhotoViewer, type Rect, type ViewerPhoto } from '@/components/ui/photo-viewer';
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
-import { Body, Display, Em } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Body, Display } from '@/components/ui/typography';
 import { Colors, MissionsCamera as M, ScrollEdge as Edge, Shots as T, Spacing } from '@/constants/theme';
+import { t } from '@/i18n';
 import { getSession } from '@/lib/auth';
 import { getEvent, isDeveloped, type Event } from '@/lib/events';
 import { canImport, importAllowance, importPhotos } from '@/lib/import-photos';
@@ -63,12 +65,12 @@ import { setShotMission, subscribeToQueue } from '@/lib/upload-queue';
 function tagFailure(error: unknown): { message: string; closed: boolean } {
   const hint = (error as { hint?: string } | null)?.hint;
   if (hint === 'event_closed') {
-    return { message: 'The film is developed. Missions are locked.', closed: true };
+    return { message: t('camera.missionsLocked'), closed: true };
   }
   if (hint === 'not_yours') {
-    return { message: 'That mission isn’t one of yours.', closed: false };
+    return { message: t('camera.missionNotYours'), closed: false };
   }
-  return { message: 'Couldn’t save. Try again.', closed: false };
+  return { message: t('camera.missionSaveFailed'), closed: false };
 }
 
 export default function RollScreen() {
@@ -145,7 +147,10 @@ export default function RollScreen() {
     try {
       await importPhotos(event, allowance);
     } catch (e) {
-      Alert.alert("Couldn't add the photos", e instanceof Error ? e.message : 'Try again.');
+      Alert.alert(
+        t('camera.addFailedTitle'),
+        e instanceof Error ? e.message : t('camera.addFailedBody')
+      );
     } finally {
       setImporting(false);
     }
@@ -280,7 +285,7 @@ export default function RollScreen() {
         <View style={styles.header}>
           <CircleIconButton
             icon="chevron-left"
-            accessibilityLabel="Back to the camera"
+            accessibilityLabel={t('camera.backToCamera')}
             onPress={() =>
               router.canGoBack() ? router.back() : router.replace('/(library)/films')
             }
@@ -288,8 +293,8 @@ export default function RollScreen() {
           {allowance > 0 ? (
             <GlassButton
               icon="plus"
-              label="Add"
-              accessibilityLabel={`Add photos from your library, ${allowance} left`}
+              label={t('camera.add')}
+              accessibilityLabel={t('camera.addA11y', { count: allowance })}
               disabled={importing}
               onPress={() => void addPhotos()}
             />
@@ -297,13 +302,11 @@ export default function RollScreen() {
         </View>
 
         <View style={styles.title}>
-          <Display size="md">
-            Your <Em>photos.</Em>
-          </Display>
+          <Display size="md">{em(t('camera.yourPhotosHeadline'))}</Display>
           <Body small>
             {count === 0
-              ? 'Only you can see these until the film is developed.'
-              : `${count} so far. Only you can see these until the film is developed.`}
+              ? t('camera.onlyYouSee')
+              : t('camera.soFarOnlyYouSee', { count })}
           </Body>
         </View>
 
@@ -313,7 +316,7 @@ export default function RollScreen() {
           </View>
         ) : shots.length === 0 ? (
           <View style={styles.center}>
-            <Body small>Nothing yet. Your photos show up here as you take them.</Body>
+            <Body small>{t('camera.nothingYet')}</Body>
           </View>
         ) : (
           <ScrollEdged>
@@ -334,7 +337,15 @@ export default function RollScreen() {
                 <PhotoTile
                   id={item.id}
                   uri={item.thumbUri}
-                  accessibilityLabel={`Photo ${index + 1} of ${count}${mission ? `, for the mission: ${mission.body}` : ''}`}
+                  accessibilityLabel={
+                    mission
+                      ? t('camera.photoOfMission', {
+                          index: index + 1,
+                          count,
+                          mission: mission.body,
+                        })
+                      : t('camera.photoOf', { index: index + 1, count })
+                  }
                   register={register}
                   onPress={(origin) => setOpen({ index, origin })}
                   style={styles.tile}>
@@ -373,11 +384,11 @@ export default function RollScreen() {
               ? (photo) => (
                   <GlassButton
                     icon="target"
-                    label="Mission"
+                    label={t('camera.mission')}
                     accessibilityLabel={
                       photo.mission
-                        ? `Mission: ${photo.mission}. Change it.`
-                        : 'Mark this photo for a mission'
+                        ? t('camera.missionChangeA11y', { mission: photo.mission })
+                        : t('camera.missionMarkA11y')
                     }
                     onPress={() => {
                       setTagError(null);

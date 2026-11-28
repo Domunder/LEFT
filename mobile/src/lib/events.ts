@@ -10,6 +10,7 @@ import { unhideMoment } from './hidden-moments';
 import { subscribeToChanges } from './realtime';
 import type { RollSize } from './roll';
 import { getSupabase } from './supabase';
+import { t } from '@/i18n';
 import type { Database } from '@/types/database';
 
 type Tables = Database['public']['Tables'];
@@ -51,7 +52,7 @@ export type CreateEventInput = {
  */
 export class PurchaseUnsettledError extends Error {
   constructor() {
-    super('Your purchase has not been confirmed yet');
+    super(t('host.purchaseUnsettled'));
     this.name = 'PurchaseUnsettledError';
   }
 }
@@ -91,7 +92,7 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
   });
 
   if (error) throw await describeFunctionError(error);
-  if (!data?.event) throw new Error('The event was not created');
+  if (!data?.event) throw new Error(t('host.eventNotCreated'));
 
   track('event_created', {
     look: input.look,
@@ -163,7 +164,7 @@ export async function joinEvent(inviteCode: string, displayName: string): Promis
  */
 export class EventGoneError extends Error {
   constructor() {
-    super('This moment was deleted.');
+    super(t('host.momentDeleted'));
     this.name = 'EventGoneError';
   }
 }
@@ -186,7 +187,7 @@ export const EVENT_NAME_MAX = 120;
 export async function renameEvent(eventId: string, name: string): Promise<void> {
   const trimmed = name.trim();
   if (trimmed.length === 0 || trimmed.length > EVENT_NAME_MAX) {
-    throw new Error(`A name is 1 to ${EVENT_NAME_MAX} characters.`);
+    throw new Error(t('host.nameLength', { max: EVENT_NAME_MAX }));
   }
   const { data, error } = await getSupabase()
     .from('events')
@@ -194,7 +195,7 @@ export async function renameEvent(eventId: string, name: string): Promise<void> 
     .eq('id', eventId)
     .select('id');
   if (error) throw error;
-  if (!data || data.length === 0) throw new Error('Only the host can rename this moment.');
+  if (!data || data.length === 0) throw new Error(t('host.onlyHostRename'));
 }
 
 /**
@@ -214,7 +215,7 @@ export async function deleteEvent(eventId: string): Promise<void> {
     .eq('id', eventId)
     .select('id');
   if (error) throw error;
-  if (!data || data.length === 0) throw new Error('Only the host can delete this moment.');
+  if (!data || data.length === 0) throw new Error(t('host.onlyHostDelete'));
 }
 
 /** Every event the signed-in user belongs to — the Films library. */

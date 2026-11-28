@@ -26,6 +26,7 @@ import Constants from 'expo-constants';
 import { requireOptionalNativeModule } from 'expo';
 import { Platform } from 'react-native';
 
+import { t } from '@/i18n';
 import { readPrefs } from '@/lib/notification-prefs';
 import { getSupabase, isSupabaseConfigured } from '@/lib/supabase';
 
@@ -115,7 +116,7 @@ export async function syncPush({ ask }: { ask: boolean }): Promise<PushStatus> {
     // Android 13+ only shows its permission prompt once a channel exists.
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL, {
-        name: 'Your events',
+        name: t('auth.pushChannel'),
         importance: Notifications.AndroidImportance.DEFAULT,
       });
     }

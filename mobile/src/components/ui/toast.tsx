@@ -49,6 +49,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { Colors, Shadows, Springs, Toast as T } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { Glass } from './glass';
 
 /** Reduced motion: a fade the system must not skip, or the banner would blink. */
@@ -122,7 +123,7 @@ export function ToastCard({ initials, title, message, visible, onDismiss, onExit
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Dismiss notification"
+            accessibilityLabel={t('library.dismissNotification')}
             onPress={onDismiss}
             // 26pt is under the 44pt minimum; the slop carries it there.
             hitSlop={9}

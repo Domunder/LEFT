@@ -32,8 +32,9 @@ import { Image, StyleSheet, Text, View } from 'react-native';
 import { AuthButton } from '@/components/ui/auth-button';
 import { BackgroundSlideshow } from '@/components/ui/background-slideshow';
 import { PillButton } from '@/components/ui/pill-button';
+import { em } from '@/components/ui/rich';
 import { Screen } from '@/components/ui/screen';
-import { Body, Caption, Display, Em } from '@/components/ui/typography';
+import { Body, Caption, Display } from '@/components/ui/typography';
 import {
   AuthButton as AuthButtonToken,
   Colors,
@@ -43,6 +44,7 @@ import {
   VideoOverlay,
 } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import {
   NATIVE_AUTH_UNAVAILABLE,
   SHOWS_APPLE,
@@ -175,12 +177,11 @@ export default function LandingScreen() {
 
       <View style={styles.panel}>
         <Display size="lg" style={styles.headline}>
-          Only one{'\n'}
-          <Em>moment left?</Em>
+          {em(t('landing.headline'))}
         </Display>
 
         <Body style={styles.subcopy}>
-          Limited photos each. No peeking.{'\n'}Developed together when it ends.
+          {t('landing.subcopy')}
         </Body>
 
         <View style={styles.providers}>
@@ -207,7 +208,7 @@ export default function LandingScreen() {
           sent them a link can get in on a build where the providers cannot work.
         */}
         <PillButton
-          label="Join a Group"
+          label={t('landing.joinGroup')}
           icon="users"
           variant="glass"
           onPress={() => router.push('/(modals)/join')}
@@ -227,7 +228,7 @@ export default function LandingScreen() {
         {/* See handleDevSkip — this signs in anonymously *for real*. */}
         {__DEV__ && NATIVE_AUTH_UNAVAILABLE && (
           <PillButton
-            label={busy ? 'Working…' : 'Skip sign-in (dev)'}
+            label={busy ? t('auth.working') : 'Skip sign-in (dev)'}
             variant="secondary"
             disabled={busy}
             onPress={() => void handleDevSkip()}
@@ -236,14 +237,21 @@ export default function LandingScreen() {
         )}
 
         <Caption style={styles.finePrint}>
-          By continuing you agree to our{' '}
-          <Text style={styles.link} onPress={() => router.push('/(legal)/terms')}>
-            Terms
-          </Text>{' '}
-          and{' '}
-          <Text style={styles.link} onPress={() => router.push('/(legal)/privacy')}>
-            Privacy Policy
-          </Text>
+          {/* The first marked run is the Terms link, the second the Privacy Policy. */}
+          {t('landing.finePrint')
+            .split('*')
+            .map((part, index) =>
+              index % 2 === 1 ? (
+                <Text
+                  key={index}
+                  style={styles.link}
+                  onPress={() => router.push(index === 1 ? '/(legal)/terms' : '/(legal)/privacy')}>
+                  {part}
+                </Text>
+              ) : (
+                part
+              )
+            )}
         </Caption>
       </View>
     </Screen>

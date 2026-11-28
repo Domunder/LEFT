@@ -18,6 +18,8 @@
  * unknown scheme as dead plain text, so anyone without the app gets nothing to tap.
  */
 
+import { t } from '@/i18n';
+
 /** Where invite links point. The one place to change when the domain moves. */
 export const INVITE_HOST = 'https://leftmoment.com';
 
@@ -43,7 +45,11 @@ export function inviteUrl(code: string): string {
  * linkify.
  */
 export function inviteMessage(eventName: string, code: string): string {
-  return `Join "${eventName}" on LEFT — a limited number of photos each, developed together when it ends.\n\n${inviteUrl(code)}\n\nCode: ${code.toUpperCase()}`;
+  return t('host.inviteMessage', {
+    name: eventName,
+    url: inviteUrl(code),
+    code: code.toUpperCase(),
+  });
 }
 
 /** Filename for a QR saved to the camera roll. */

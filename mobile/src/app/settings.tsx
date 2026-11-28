@@ -42,9 +42,11 @@ import type { Session } from '@supabase/supabase-js';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
+  ActionSheetIOS,
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -62,6 +64,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScrollEdged } from '@/components/ui/scroll-edge';
 import { Colors, ScrollEdge as Edge, Settings as S } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import {
+  getLanguageChoice,
+  LANGUAGE_NAMES,
+  LANGUAGES,
+  setLanguage,
+  t,
+  type Language,
+} from '@/i18n';
 import { ANALYTICS_CONFIGURED, isAnalyticsEnabled, setAnalyticsEnabled } from '@/lib/analytics';
 import { getSession, isAnonymous, resolveDisplayName, signOut } from '@/lib/auth';
 import { initialsFor, restorePurchases } from '@/lib/events';
@@ -97,14 +107,14 @@ function profileFrom(session: Session | null): Profile | null {
 
   if (isAnonymous(user)) {
     return {
-      name: 'Guest',
+      name: t('common.guest'),
       initials: '?',
-      detail: 'Not signed in — your moments are tied to this phone.',
+      detail: t('settings.guestDetail'),
       guest: true,
     };
   }
 
-  const name = resolveDisplayName(user) ?? 'You';
+  const name = resolveDisplayName(user) ?? t('common.you');
 
   return {
     name,
@@ -158,6 +168,38 @@ export default function SettingsScreen() {
     }, [])
   );
 
+  const languageChoice = getLanguageChoice();
+
+  function pickLanguage() {
+    const choices: (Language | null)[] = [null, ...LANGUAGES];
+    const labels = choices.map((code) =>
+      code ? LANGUAGE_NAMES[code] : t('settings.languageSystem')
+    );
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: t('settings.languageRow'),
+          options: [...labels, t('common.cancel')],
+          cancelButtonIndex: labels.length,
+          userInterfaceStyle: 'dark',
+        },
+        (index) => {
+          if (index < choices.length) setLanguage(choices[index]);
+        }
+      );
+      return;
+    }
+
+    Alert.alert(t('settings.languageRow'), undefined, [
+      ...choices.map((code, index) => ({
+        text: labels[index],
+        onPress: () => setLanguage(code),
+      })),
+      { text: t('common.cancel'), style: 'cancel' as const },
+    ]);
+  }
+
   const profile = profileFrom(session);
   const userId = session?.user?.id;
 
@@ -190,11 +232,11 @@ export default function SettingsScreen() {
 
         if (value && refusedEarlier && status === 'denied') {
           Alert.alert(
-            'Notifications are off',
-            'Notifications are off. Turn them on in Settings.',
+            t('settings.pushOffTitle'),
+            t('settings.pushOffBody'),
             [
-              { text: 'Not now', style: 'cancel' },
-              { text: 'Open Settings', onPress: () => void Linking.openSettings() },
+              { text: t('common.notNow'), style: 'cancel' },
+              { text: t('common.openSettings'), onPress: () => void Linking.openSettings() },
             ]
           );
         }
@@ -224,14 +266,14 @@ export default function SettingsScreen() {
     if (PURCHASES_UNAVAILABLE) {
       toast.show({
         initials: '!',
-        title: 'Purchases need the full app.',
-        message: 'This is a development build limitation, not an error.',
+        title: t('settings.purchasesNeedApp'),
+        message: t('settings.purchasesNeedAppBody'),
       });
       return;
     }
 
     if (!userId) {
-      toast.show({ initials: '!', title: 'Sign in to restore purchases.' });
+      toast.show({ initials: '!', title: t('settings.signInToRestore') });
       return;
     }
 
@@ -243,17 +285,14 @@ export default function SettingsScreen() {
 
       toast.show({
         initials: '✓',
-        title:
-          count > 0
-            ? `${count} ${count === 1 ? 'purchase' : 'purchases'} restored.`
-            : 'Nothing to restore.',
-        message: count > 0 ? 'They are ready to use on your next event.' : undefined,
+        title: count > 0 ? t('settings.restored', { count }) : t('settings.nothingToRestore'),
+        message: count > 0 ? t('settings.restoredBody') : undefined,
       });
     } catch {
       toast.show({
         initials: '!',
-        title: "Couldn't restore purchases.",
-        message: 'Check your connection and try again.',
+        title: t('settings.restoreFailed'),
+        message: t('common.checkConnection'),
       });
     } finally {
       setRestoring(false);
@@ -264,14 +303,12 @@ export default function SettingsScreen() {
     const guest = profile?.guest ?? false;
 
     Alert.alert(
-      'Log out?',
-      guest
-        ? 'You’re a guest, so there’s no account. You’ll lose access to your moments and photos.'
-        : 'You can sign back in at any time.',
+      t('settings.logOutTitle'),
+      guest ? t('settings.logOutGuestBody') : t('settings.logOutBody'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Log Out',
+          text: t('settings.logOut'),
           style: 'destructive',
           onPress: () => {
             void signOut()
@@ -279,7 +316,7 @@ export default function SettingsScreen() {
               // signed-out settings screen holding the previous user's card.
               .then(() => router.replace('/'))
               .catch(() => {
-                Alert.alert('Could not log out', 'Check your connection and try again.');
+                Alert.alert(t('settings.logOutFailed'), t('common.checkConnection'));
               });
           },
         },
@@ -300,13 +337,13 @@ export default function SettingsScreen() {
             <CircleIconButton
               icon="chevron-left"
               variant="flat"
-              accessibilityLabel="Back"
+              accessibilityLabel={t('common.back')}
               onPress={() => router.back()}
             />
           </View>
 
           <Display size="md" style={styles.headline}>
-            Settings
+            {t('settings.title')}
           </Display>
 
           {profile ? (
@@ -326,25 +363,38 @@ export default function SettingsScreen() {
             </View>
           ) : null}
 
-          <SettingsGroup title="Notifications">
+          <SettingsGroup title={t('settings.language')}>
+            {/*
+              1.3.0. The system's own list: six short options need no sheet of
+              ours. Picking one remounts the app's tree (root layout), which is
+              how every screen behind this one changes too.
+            */}
+            <SettingsListRow label={t('settings.languageRow')} onPress={pickLanguage}>
+              <Text style={styles.value}>
+                {languageChoice ? LANGUAGE_NAMES[languageChoice] : t('settings.languageSystem')}
+              </Text>
+            </SettingsListRow>
+          </SettingsGroup>
+
+          <SettingsGroup title={t('settings.notifications')}>
             {/*
               Both are honoured by the server, per device: the choice travels
               with the push token (lib/push.ts) and `notification_recipients()`
               leaves this phone out of a kind that is switched off.
             */}
-            <SettingsListRow label="Photos are developed">
+            <SettingsListRow label={t('settings.notifyDeveloped')}>
               <ToggleSwitch
                 value={prefs.developed}
                 onValueChange={(next) => setPref('developed', next)}
-                accessibilityLabel="Notify me when an event's photos are developed"
+                accessibilityLabel={t('settings.notifyDevelopedA11y')}
               />
             </SettingsListRow>
 
-            <SettingsListRow label="Reminder before it ends">
+            <SettingsListRow label={t('settings.notifyReminder')}>
               <ToggleSwitch
                 value={prefs.reminder}
                 onValueChange={(next) => setPref('reminder', next)}
-                accessibilityLabel="Remind me about an hour before an event ends"
+                accessibilityLabel={t('settings.notifyReminderA11y')}
               />
             </SettingsListRow>
           </SettingsGroup>
@@ -356,27 +406,27 @@ export default function SettingsScreen() {
             switch would be decoration.
           */}
           {ANALYTICS_CONFIGURED ? (
-            <SettingsGroup title="Privacy">
-              <SettingsListRow label="Share usage data">
+            <SettingsGroup title={t('settings.privacy')}>
+              <SettingsListRow label={t('settings.shareUsage')}>
                 <ToggleSwitch
                   value={usageData}
                   onValueChange={(next) => {
                     setUsageData(next);
                     void setAnalyticsEnabled(next);
                   }}
-                  accessibilityLabel="Share anonymous usage statistics and error reports"
+                  accessibilityLabel={t('settings.shareUsageA11y')}
                 />
               </SettingsListRow>
             </SettingsGroup>
           ) : null}
 
-          <SettingsGroup title="Account">
+          <SettingsGroup title={t('settings.account')}>
             <SettingsListRow
-              label="Terms of Service"
+              label={t('settings.terms')}
               onPress={() => router.push('/(legal)/terms')}
             />
             <SettingsListRow
-              label="Privacy Policy"
+              label={t('settings.privacyPolicy')}
               onPress={() => router.push('/(legal)/privacy')}
             />
             {/*
@@ -385,19 +435,19 @@ export default function SettingsScreen() {
               control slot a toggle would occupy.
             */}
             <SettingsListRow
-              label={restoring ? 'Restoring…' : 'Restore Purchases'}
+              label={restoring ? t('settings.restoring') : t('settings.restore')}
               disabled={restoring}
               onPress={() => void handleRestore()}>
               {restoring ? <ActivityIndicator size="small" color={Colors.textMuted} /> : null}
             </SettingsListRow>
-            <SettingsListRow label="Log Out" destructive onPress={handleLogOut} />
+            <SettingsListRow label={t('settings.logOut')} destructive onPress={handleLogOut} />
             {/*
               Apple 5.1.1(v). A sheet rather than 20's own Alert pattern: the
               consequences take three lines to state honestly, which is more than
               an alert gets read for.
             */}
             <SettingsListRow
-              label="Delete Account"
+              label={t('settings.deleteAccount')}
               destructive
               onPress={() => router.push('/(modals)/delete-account')}
             />
@@ -405,7 +455,7 @@ export default function SettingsScreen() {
 
           {!profile ? (
             <Body small color={Colors.textDim}>
-              You are not signed in.
+              {t('settings.notSignedIn')}
             </Body>
           ) : null}
         </ScrollView>
@@ -472,6 +522,11 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   detail: {
+    ...Typography.metaMd,
+    color: Colors.textFaint,
+  },
+  /** The current choice at the end of a row (Language). */
+  value: {
     ...Typography.metaMd,
     color: Colors.textFaint,
   },

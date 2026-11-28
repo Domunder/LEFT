@@ -40,12 +40,14 @@ import { PillButton } from '@/components/ui/pill-button';
 import { QrCode, QrCodePlaceholder } from '@/components/ui/qr-code';
 import { Screen } from '@/components/ui/screen';
 import { ShareButton } from '@/components/ui/share-button';
-import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Body, Caption, Display, Label } from '@/components/ui/typography';
 import { Colors, Invite, Motion, Spacing } from '@/constants/theme';
 import { useEventCover } from '@/lib/event-cover';
 import { getEvent, listMyEvents, type Event } from '@/lib/events';
 import { inviteMessage, inviteUrl } from '@/lib/invite';
 import { askForPushOnce } from '@/lib/push';
+import { t } from '@/i18n';
 
 const EASING = Easing.bezier(...Motion.bezier).factory();
 
@@ -138,16 +140,16 @@ export default function InviteScreen() {
       if (!permission.granted) {
         setSave({
           kind: 'failed',
-          message: 'Allow photo access in Settings to save the code.',
+          message: t('host.savePermission'),
         });
         return;
       }
 
       const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
       await MediaLibrary.Asset.create(uri);
-      setSave({ kind: 'done', message: 'Saved to your photos.' });
+      setSave({ kind: 'done', message: t('host.saved') });
     } catch {
-      setSave({ kind: 'failed', message: "Couldn't save the code." });
+      setSave({ kind: 'failed', message: t('host.saveFailed') });
     }
   }, [event]);
 
@@ -180,12 +182,12 @@ export default function InviteScreen() {
           icon="x"
           accessibilityLabel={
             fromWaiting
-              ? 'Close'
+              ? t('common.close')
               : fromCamera
-                ? 'Close, back to the camera'
+                ? t('host.closeToCamera')
               : backToGroup
-                ? 'Close, back to your group'
-                : 'Close, back to your moments'
+                ? t('host.closeToGroup')
+                : t('host.closeToMoments')
           }
           onPress={() =>
             (fromCamera || fromGroup) && router.canGoBack()
@@ -210,17 +212,15 @@ export default function InviteScreen() {
       )}
 
       <Display style={styles.headline}>
-        Invite your group.{'\n'}
-        <Em>Let them in.</Em>
+        {em(t('host.inviteHeadline'))}
       </Display>
 
       <Body color={Invite.subcopy} style={styles.subcopy}>
-        Show them the QR or send the link —{'\n'}
         {fromWaiting
-          ? 'they can join before it starts, or during.'
+          ? t('host.inviteSubWaiting')
           : fromCamera
-            ? 'they can join while the film is running.'
-            : 'once they’re in, the cameras can open.'}
+            ? t('host.inviteSubCamera')
+            : t('host.inviteSubHost')}
       </Body>
 
       <Animated.View
@@ -238,14 +238,14 @@ export default function InviteScreen() {
 
         <View style={styles.buttonRow}>
           <ShareButton
-            label="Share Link"
+            label={t('host.shareLink')}
             icon="link"
             onPress={handleShare}
             disabled={!event}
             busy={sharing}
           />
           <ShareButton
-            label="Save QR"
+            label={t('host.saveQr')}
             icon="download"
             onPress={handleSave}
             disabled={!event}
@@ -260,7 +260,7 @@ export default function InviteScreen() {
         */}
         <View style={styles.status}>
           {state.kind === 'error' ? (
-            <Caption color={Colors.textFaint}>Sign in to see this event&rsquo;s invite.</Caption>
+            <Caption color={Colors.textFaint}>{t('host.signInForInvite')}</Caption>
           ) : save.kind === 'done' || save.kind === 'failed' ? (
             <Caption color={save.kind === 'done' ? Colors.textMuted : Colors.textFaint}>
               {save.message}
@@ -271,7 +271,7 @@ export default function InviteScreen() {
 
       {fromCamera ? null : (
         <PillButton
-          label="See who's joined"
+          label={t('host.seeWhoJoined')}
           icon="arrow-right"
           onPress={() =>
             backToGroup

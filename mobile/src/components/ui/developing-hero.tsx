@@ -18,6 +18,7 @@ import { GlassButton } from './glass';
 import { Body, Display } from './typography';
 import { Album, Colors } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import type { Event } from '@/lib/events';
 
 const H = Album.hero;
@@ -38,9 +39,6 @@ type DevelopingHeroProps = {
   onDevelop?: () => void;
   developing: boolean;
 };
-
-const plural = (count: number, one: string, many: string) =>
-  `${count} ${count === 1 ? one : many}`;
 
 export function DevelopingHero({
   title,
@@ -82,7 +80,9 @@ export function DevelopingHero({
           style={styles.countdown}
           accessible
           accessibilityRole="text"
-          accessibilityLabel={`${countdown[0].value} ${countdown[0].unit}, ${countdown[1].value} ${countdown[1].unit} until the film is developed`}>
+          accessibilityLabel={t('album.countdownA11y', {
+            time: `${countdown[0].value} ${countdown[0].unit}, ${countdown[1].value} ${countdown[1].unit}`,
+          })}>
           {countdown.map((part) => (
             <View key={part.unit} style={styles.unit}>
               <Text style={styles.value}>{part.value}</Text>
@@ -92,22 +92,24 @@ export function DevelopingHero({
         </View>
 
         <Body small style={styles.stat}>
-          {plural(shotsTaken, 'photo', 'photos')} so far, from {plural(memberCount, 'person', 'people')}.
-          {'\n'}Everyone&rsquo;s appear when the film is developed.
+          {t('album.soFar', {
+            photos: t('common.photos', { count: shotsTaken }),
+            people: t('common.people', { count: memberCount }),
+          })}
         </Body>
 
         <View style={styles.actions}>
           <GlassButton
             icon="camera"
-            label="Camera"
-            accessibilityLabel="Back to the camera"
+            label={t('album.camera')}
+            accessibilityLabel={t('album.backToCamera')}
             onPress={onOpenCamera}
           />
           {onDevelop ? (
             <GlassButton
               icon="sunrise"
-              label={developing ? 'Developing…' : 'Develop now'}
-              accessibilityLabel="Develop the film now"
+              label={developing ? t('album.developing') : t('album.developNow')}
+              accessibilityLabel={t('album.developNowA11y')}
               disabled={developing}
               onPress={onDevelop}
             />

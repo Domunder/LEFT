@@ -35,9 +35,11 @@ import { Rise } from '@/components/ui/rise';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { TimeWheel } from '@/components/ui/time-wheel';
-import { Body, Display, Em } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Body, Display } from '@/components/ui/typography';
 import { Colors, Ending, Spacing } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { defaultEndsAt, formatEndDate, formatEndTime, formatTimeUntil } from '@/lib/event-end';
 import { useGlow, useOnboarding, useStep } from '@/lib/onboarding-draft';
 
@@ -78,8 +80,7 @@ export default function EndingScreen() {
         alwaysBounceVertical={false}>
         <Rise>
           <Display size="md" style={styles.headline}>
-            When does{'\n'}
-            <Em>the event end?</Em>
+            {em(t('onboarding.endingHeadline'))}
           </Display>
         </Rise>
 
@@ -87,16 +88,23 @@ export default function EndingScreen() {
           style={styles.answer}
           accessible
           accessibilityRole="text"
-          accessibilityLabel={`Ends ${formatEndDate(endsAt)} at ${formatEndTime(endsAt)}, ${
-            until ?? 'which has already passed'
-          }`}>
+          accessibilityLabel={
+            until !== null
+              ? t('onboarding.endingA11y', {
+                  date: formatEndDate(endsAt),
+                  time: formatEndTime(endsAt),
+                  until,
+                })
+              : t('onboarding.endingA11yPast', {
+                  date: formatEndDate(endsAt),
+                  time: formatEndTime(endsAt),
+                })
+          }>
           <Text style={styles.answerText} numberOfLines={1} adjustsFontSizeToFit>
             {formatEndDate(endsAt)} · {formatEndTime(endsAt)}
           </Text>
           <Body small color={isValid ? Colors.textDim : Ending.answer.pastColor}>
-            {isValid
-              ? `The film is developed ${until}.`
-              : 'That has already passed — pick a later time.'}
+            {until !== null ? t('onboarding.endingDeveloped', { until }) : t('onboarding.endingPast')}
           </Body>
         </View>
 
@@ -109,7 +117,7 @@ export default function EndingScreen() {
       </ScrollView>
 
       <PillButton
-        label="Continue"
+        label={t('common.continue')}
         icon="arrow-right"
         onPress={handleContinue}
         disabled={!isValid}

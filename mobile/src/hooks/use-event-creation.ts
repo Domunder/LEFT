@@ -19,6 +19,7 @@
 
 import { useRef, useState } from 'react';
 
+import { t } from '@/i18n';
 import { getSession } from '@/lib/auth';
 import { messageFor } from '@/lib/auth-errors';
 import {
@@ -132,10 +133,10 @@ export function useEventCreation(): EventCreation {
         */
         if (!PURCHASES_UNAVAILABLE) {
           const session = await getSession();
-          if (!session) throw new Error('You need to be signed in to create an event.');
+          if (!session) throw new Error(t('onboarding.errorNeedSignIn'));
           // create_event() refuses a guest; never take their money first.
           if (session.user.is_anonymous) {
-            throw new Error('Sign in with Google or Apple to create an event.');
+            throw new Error(t('onboarding.errorGuestCannotCreate'));
           }
           await identify(session.user.id);
         }

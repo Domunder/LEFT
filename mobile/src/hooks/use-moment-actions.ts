@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { useCallback } from 'react';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
 
+import { t } from '@/i18n';
 import { deleteEvent, renameEvent, type Event } from '@/lib/events';
 import { messageFor } from '@/lib/auth-errors';
 import { hideMoment } from '@/lib/hidden-moments';
@@ -39,9 +40,6 @@ type Handlers = {
   onGone: () => void;
 };
 
-const plural = (count: number, one: string, many: string) =>
-  `${count} ${count === 1 ? one : many}`;
-
 /** Whether the host paid for this moment — only for the warning's copy. */
 function wasPaid(event: MomentActionsTarget['event']): boolean {
   return tierFor(event.max_members, event.roll_size as RollSize) !== null;
@@ -52,19 +50,19 @@ export function useMomentActions({ onRenamed, onGone }: Handlers) {
   const rename = useCallback(
     (target: MomentActionsTarget) => {
       Alert.prompt(
-        'Rename moment',
+        t('library.renameTitle'),
         undefined,
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Save',
+            text: t('common.save'),
             isPreferred: true,
             onPress: (value?: string) => {
               const name = (value ?? '').trim();
               if (name.length === 0 || name === target.event.name) return;
               renameEvent(target.event.id, name)
                 .then(() => onRenamed(name))
-                .catch((e) => Alert.alert("Couldn't rename the moment", messageFor(e)));
+                .catch((e) => Alert.alert(t('library.renameFailed'), messageFor(e)));
             },
           },
         ],
@@ -77,25 +75,28 @@ export function useMomentActions({ onRenamed, onGone }: Handlers) {
 
   const confirmDelete = useCallback(
     (target: MomentActionsTarget) => {
-      const photos = plural(target.photoCount, 'photo is', 'photos are');
-      const people = target.memberCount === 1 ? 'you' : `all ${target.memberCount} people`;
+      const alone = target.memberCount === 1;
+      const counts = { count: target.photoCount, people: target.memberCount };
+      // Whole sentences, one after the other.
       const lines = [
         target.photoCount > 0
-          ? `All ${photos} deleted for ${people}.`
-          : `The moment is deleted for ${people}.`,
-        "This can't be undone.",
+          ? t(alone ? 'library.deletePhotosForYou' : 'library.deletePhotosForAll', counts)
+          : alone
+            ? t('library.deleteEmptyForYou')
+            : t('library.deleteEmptyForAll', counts),
+        t('library.deleteNoUndo'),
       ];
-      if (wasPaid(target.event)) lines.push("Your purchase isn't refunded.");
+      if (wasPaid(target.event)) lines.push(t('library.deleteNoRefund'));
 
-      Alert.alert(`Delete “${target.event.name}”?`, lines.join(' '), [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert(t('library.deleteTitle', { name: target.event.name }), lines.join(' '), [
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             deleteEvent(target.event.id)
               .then(onGone)
-              .catch((e) => Alert.alert("Couldn't delete the moment", messageFor(e)));
+              .catch((e) => Alert.alert(t('library.deleteFailed'), messageFor(e)));
           },
         },
       ]);
@@ -106,17 +107,17 @@ export function useMomentActions({ onRenamed, onGone }: Handlers) {
   const confirmRemove = useCallback(
     (target: MomentActionsTarget) => {
       Alert.alert(
-        `Remove “${target.event.name}”?`,
-        'It disappears from your Moments on this phone. Your photos stay in the group, and the invite link brings it back.',
+        t('library.removeTitle', { name: target.event.name }),
+        t('library.removeBody'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Remove',
+            text: t('common.remove'),
             style: 'destructive',
             onPress: () => {
               hideMoment(target.event.id)
                 .then(onGone)
-                .catch((e) => Alert.alert("Couldn't remove the moment", messageFor(e)));
+                .catch((e) => Alert.alert(t('library.removeFailed'), messageFor(e)));
             },
           },
         ]
@@ -131,19 +132,19 @@ export function useMomentActions({ onRenamed, onGone }: Handlers) {
       const items: Item[] = target.isHost
         ? [
             ...(Platform.OS === 'ios'
-              ? [{ label: 'Rename', run: () => rename(target) }]
+              ? [{ label: t('library.menuRename'), run: () => rename(target) }]
               : []),
             {
-              label: 'Change image',
+              label: t('library.menuChangeImage'),
               run: () =>
                 router.push({ pathname: '/(host)/cover', params: { eventId: target.event.id } }),
             },
-            { label: 'Delete moment', destructive: true, run: () => confirmDelete(target) },
+            { label: t('library.menuDelete'), destructive: true, run: () => confirmDelete(target) },
           ]
-        : [{ label: 'Remove from Moments', destructive: true, run: () => confirmRemove(target) }];
+        : [{ label: t('library.menuRemove'), destructive: true, run: () => confirmRemove(target) }];
 
       if (Platform.OS === 'ios') {
-        const labels = [...items.map((item) => item.label), 'Cancel'];
+        const labels = [...items.map((item) => item.label), t('common.cancel')];
         ActionSheetIOS.showActionSheetWithOptions(
           {
             title: target.event.name,
@@ -163,7 +164,7 @@ export function useMomentActions({ onRenamed, onGone }: Handlers) {
           style: item.destructive ? ('destructive' as const) : ('default' as const),
           onPress: item.run,
         })),
-        { text: 'Cancel', style: 'cancel' as const },
+        { text: t('common.cancel'), style: 'cancel' as const },
       ]);
     },
     [confirmDelete, confirmRemove, rename, router]

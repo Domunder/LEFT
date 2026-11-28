@@ -16,6 +16,7 @@ import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-na
 import { Glass } from './glass';
 import { Album, Colors, PhotoTile } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 
 const T = Album.developing;
 const Tile = Album.tile;
@@ -33,7 +34,11 @@ export function HiddenPhotoTile({ blurhash, author, countdown, style }: HiddenPh
     <View
       style={[styles.tile, style]}
       accessible
-      accessibilityLabel={`A photo${author ? ` by ${author}` : ''}, hidden until the film is developed in ${countdown}`}>
+      accessibilityLabel={
+        author
+          ? t('album.hiddenByA11y', { author, time: countdown })
+          : t('album.hiddenA11y', { time: countdown })
+      }>
       {blurhash ? (
         <>
           <Image

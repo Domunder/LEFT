@@ -35,6 +35,7 @@ import { PressScale } from '@/components/ui/press-scale';
 import { Colors, MissionsEditor as T, Press } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { messageFor } from '@/lib/auth-errors';
+import { t } from '@/i18n';
 
 /**
  * The bounds `event_missions.body` is checked against
@@ -47,9 +48,9 @@ export const MISSION_BODY_MAX = 140;
 /** Null when the text can be saved, else what to say under the input. */
 export function missionBodyProblem(text: string): string | null {
   const length = text.trim().length;
-  if (length === 0) return 'Write the mission first.';
-  if (length < MISSION_BODY_MIN) return `At least ${MISSION_BODY_MIN} characters.`;
-  if (length > MISSION_BODY_MAX) return `At most ${MISSION_BODY_MAX} characters.`;
+  if (length === 0) return t('missions.bodyRequired');
+  if (length < MISSION_BODY_MIN) return t('missions.tooShort', { min: MISSION_BODY_MIN });
+  if (length > MISSION_BODY_MAX) return t('missions.tooLong', { max: MISSION_BODY_MAX });
   return null;
 }
 
@@ -117,13 +118,13 @@ type MissionRowProps = {
 
 export function MissionRow({
   body,
-  addLabel = 'Add a mission',
+  addLabel = t('missions.addMission'),
   locked = false,
   onSave,
   onDelete,
   validate = missionBodyProblem,
   maxLength = MISSION_BODY_MAX,
-  placeholder = 'A photo with…',
+  placeholder = t('missions.bodyPlaceholder'),
   autoCapitalize = 'sentences',
   selecting = false,
   selected = false,
@@ -285,13 +286,13 @@ export function MissionRow({
           placeholder={composer ? placeholder : undefined}
           placeholderTextColor={Colors.textGhost}
           selectionColor={Colors.text}
-          accessibilityLabel={composer ? addLabel : 'Edit mission'}
+          accessibilityLabel={composer ? addLabel : t('missions.editMission')}
           style={[styles.body, styles.input]}
         />
         {/* The + (or ✓ when editing) is the button that adds: where the eye ends. */}
         <SubmitButton
           icon={composer ? 'plus' : 'check'}
-          label={composer ? addLabel : 'Save mission'}
+          label={composer ? addLabel : t('missions.saveMission')}
           busy={busy}
           disabled={problem !== null || unchanged}
           onPress={() => void commit()}
@@ -335,7 +336,7 @@ export function MissionRow({
       <PressScale
         accessibilityRole="button"
         accessibilityLabel={body}
-        accessibilityHint="Edits the mission"
+        accessibilityHint={t('missions.editHint')}
         onPress={open}
         disabled={busy}
         scale={Press.cardScale}
@@ -349,7 +350,7 @@ export function MissionRow({
       ) : onDelete ? (
         <PressScale
           accessibilityRole="button"
-          accessibilityLabel={`Delete mission: ${body}`}
+          accessibilityLabel={t('missions.deleteMissionA11y', { body: body ?? '' })}
           onPress={() => void remove()}
           disabled={busy}
           scale={Press.iconScale}

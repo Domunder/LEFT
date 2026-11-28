@@ -47,7 +47,8 @@ import { RollChoices } from '@/components/ui/roll-choices';
 import { Rise } from '@/components/ui/rise';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Body, Caption, Display, Label } from '@/components/ui/typography';
 import {
   Colors,
   GroupRow,
@@ -59,6 +60,7 @@ import {
 } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { useEventCreation, type CreationPhase } from '@/hooks/use-event-creation';
+import { t } from '@/i18n';
 import { applyCover } from '@/lib/event-cover';
 import { draftToCreateEventInput, useGlow, useOnboarding, useStep } from '@/lib/onboarding-draft';
 import { DEFAULT_GROUP_SIZE, DEFAULT_ROLL_SIZE, type RollSize } from '@/lib/roll';
@@ -95,13 +97,13 @@ const LAYOUT = LinearTransition.springify(Springs.settle.duration).dampingRatio(
 function ctaFor(phase: CreationPhase['kind'], tier: EventTier | null): string {
   switch (phase) {
     case 'purchasing':
-      return 'Opening the store…';
+      return t('onboarding.ctaOpeningStore');
     case 'settling':
-      return 'Confirming your purchase…';
+      return t('onboarding.ctaConfirming');
     case 'creating':
-      return 'Working…';
+      return t('onboarding.ctaWorking');
     default:
-      return tier ? ctaLabel(tier) : 'Create event';
+      return tier ? ctaLabel(tier) : t('onboarding.ctaCreate');
   }
 }
 
@@ -188,8 +190,8 @@ export default function GroupSizeScreen() {
       */
       creation.fail(
         narrowed.problem === 'ended'
-          ? 'That end time has passed. Pick a new one.'
-          : 'Something is missing. Go back and fill it in.',
+          ? t('onboarding.errorEndPassed')
+          : t('onboarding.errorIncomplete'),
         narrowed.problem === 'ended' ? 'ending' : undefined
       );
       return;
@@ -230,12 +232,11 @@ export default function GroupSizeScreen() {
       */}
       <Rise>
         <Display size="sm" style={styles.headline}>
-          How many people{'\n'}
-          <Em>for your event?</Em>
+          {em(t('onboarding.groupHeadline'))}
         </Display>
 
         <Body small style={styles.subcopy}>
-          Everyone gets their own roll of film.
+          {t('onboarding.groupSubcopy')}
         </Body>
       </Rise>
 
@@ -259,7 +260,7 @@ export default function GroupSizeScreen() {
         // child pan the whole view.
         horizontal={false}>
         <Animated.View entering={entering(ENTER_DELAY.group)} layout={LAYOUT}>
-          <Text style={styles.answer}>Up to {groupSize} people</Text>
+          <Text style={styles.answer}>{t('onboarding.groupUpTo', { count: groupSize })}</Text>
 
           <GroupSizeRow value={groupSize} onChange={selectGroup} />
         </Animated.View>
@@ -268,7 +269,7 @@ export default function GroupSizeScreen() {
 
         <Animated.View entering={entering(ENTER_DELAY.roll)} layout={LAYOUT}>
           <Label small style={styles.sectionLabel}>
-            Shots per person
+            {t('onboarding.rollLabel')}
           </Label>
 
           <RollChoices value={rollSize} onChange={selectRoll} />
@@ -280,7 +281,7 @@ export default function GroupSizeScreen() {
           */}
           {tier ? (
             <Caption color={Colors.textFaint} style={styles.price}>
-              No subscription.
+              {t('onboarding.noSubscription')}
             </Caption>
           ) : null}
         </Animated.View>
@@ -299,7 +300,7 @@ export default function GroupSizeScreen() {
           </Caption>
           {creation.phase.recover === 'ending' && (
             <PillButton
-              label="Change ending time"
+              label={t('onboarding.changeEnding')}
               variant="secondary"
               onPress={() => router.replace('/(onboarding)/ending')}
               style={styles.recoverCta}

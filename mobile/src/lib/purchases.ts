@@ -18,6 +18,8 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 
+import { t } from '@/i18n';
+
 import type { EventTier } from './tiers';
 
 /** Same test lib/auth.ts makes for the providers. Constant for the process lifetime. */
@@ -182,7 +184,7 @@ export async function purchaseTier(tier: EventTier): Promise<TierPurchase> {
       .filter((t) => t.productIdentifier === tier.productId)
       .sort((a, b) => Date.parse(b.purchaseDate) - Date.parse(a.purchaseDate))[0];
 
-    if (!latest) throw new Error('The purchase completed but returned no transaction.');
+    if (!latest) throw new Error(t('onboarding.errorNoTransaction'));
 
     return { transactionId: latest.transactionIdentifier, productId: latest.productIdentifier };
   } catch (e) {

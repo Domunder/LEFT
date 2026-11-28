@@ -22,6 +22,7 @@ import Animated, { useAnimatedStyle, type SharedValue } from 'react-native-reani
 
 import { Colors, Films } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 
 const T = Films.stack;
 const P = Films.poster;
@@ -68,7 +69,7 @@ export function PhotoStack({ photos, tint, sample = false, spread, children }: P
 
         {sample ? (
           <View style={styles.sampleTag} pointerEvents="none">
-            <Text style={styles.sampleText}>Sample</Text>
+            <Text style={styles.sampleText}>{t('library.sample')}</Text>
           </View>
         ) : null}
       </View>

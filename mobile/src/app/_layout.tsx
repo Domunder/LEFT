@@ -14,6 +14,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { startUploadQueue } from '@/lib/upload-queue';
 import { Colors } from '@/constants/theme';
 import { useAppFonts } from '@/hooks/use-app-fonts';
+import { initLanguage, useLanguage } from '@/i18n';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -57,6 +58,19 @@ export default function RootLayout() {
    * screen, so a user whose session could not be read can simply sign in again.
    */
   const [sessionChecked, setSessionChecked] = useState(false);
+
+  /*
+    The saved language (1.3.0) is read before anything renders, so no screen
+    shows in the phone's language first and then switches. `language` keys the
+    Stack below: picking another in Settings remounts every screen, which is
+    what lets the whole app call a plain `t()`.
+  */
+  const [languageReady, setLanguageReady] = useState(false);
+  const language = useLanguage();
+
+  useEffect(() => {
+    void initLanguage().finally(() => setLanguageReady(true));
+  }, []);
 
   /*
     Where the session read is *remembered*, as opposed to acted on.
@@ -160,12 +174,12 @@ export default function RootLayout() {
 
   useEffect(() => {
     // Both gates must settle, or the redirect flashes Landing on the way past.
-    if (fontsSettled && sessionChecked) {
+    if (fontsSettled && sessionChecked && languageReady) {
       SplashScreen.hideAsync();
     }
-  }, [fontsSettled, sessionChecked]);
+  }, [fontsSettled, sessionChecked, languageReady]);
 
-  const ready = fontsSettled && sessionChecked;
+  const ready = fontsSettled && sessionChecked && languageReady;
 
   /*
     The redirect, run only once the Stack below is actually mounted.
@@ -222,6 +236,7 @@ export default function RootLayout() {
           */}
           <ToastProvider>
             <Stack
+              key={language}
               screenOptions={{
                 headerShown: false,
                 contentStyle: { backgroundColor: Colors.bg },

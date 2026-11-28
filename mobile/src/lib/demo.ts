@@ -9,6 +9,7 @@
  * server half is `supabase/migrations/20261123010000_demo.sql`.
  */
 
+import { t } from '@/i18n';
 import type { Event } from '@/lib/events';
 import { getSupabase } from '@/lib/supabase';
 
@@ -17,7 +18,7 @@ export { DEMO_CODE, isDemoCode } from '@/lib/demo-code';
 /** The server allows a handful of demos a day per user (`hint = 'demo_limit'`). */
 export class DemoLimitError extends Error {
   constructor() {
-    super('You’ve tried the demo a few times today. Come back tomorrow.');
+    super(t('errors.demoLimit'));
     this.name = 'DemoLimitError';
   }
 }

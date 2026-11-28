@@ -25,6 +25,7 @@ import { PressScale } from './press-scale';
 import { Display } from './typography';
 import { Colors, Films } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { STACK_SIZE } from '@/lib/covers';
 import { memberLabel, photoLabel, type FilmPhase } from '@/lib/film-status';
 
@@ -70,8 +71,15 @@ export function MomentRow({
   return (
     <PressScale
       accessibilityRole="button"
-      accessibilityLabel={`${title}. ${when}. ${photoLabel(photoCount)}, ${memberLabel(members)}.${sampled ? ' Showing sample pictures.' : ''}`}
-      accessibilityActions={onLongPress ? [{ name: 'longpress', label: 'More' }] : undefined}
+      accessibilityLabel={t(sampled ? 'library.rowSampleA11y' : 'library.rowA11y', {
+        title,
+        when,
+        photos: photoLabel(photoCount),
+        people: memberLabel(members),
+      })}
+      accessibilityActions={
+        onLongPress ? [{ name: 'longpress', label: t('library.more') }] : undefined
+      }
       onAccessibilityAction={onLongPress ? () => onLongPress() : undefined}
       scale={T.pressScale}
       onPress={onPress}
@@ -93,7 +101,7 @@ export function MomentRow({
       <PrintStack
         sources={sources}
         dimmed={sampled}
-        badge={sampled ? 'Sample' : more > 0 ? `+${more}` : null}
+        badge={sampled ? t('library.sample') : more > 0 ? `+${more}` : null}
       />
     </PressScale>
   );

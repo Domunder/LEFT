@@ -37,9 +37,10 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AuthButton } from '@/components/ui/auth-button';
 import { BackgroundSlideshow } from '@/components/ui/background-slideshow';
+import { em } from '@/components/ui/rich';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { Body, Caption, Display, Em } from '@/components/ui/typography';
+import { Body, Caption, Display } from '@/components/ui/typography';
 import {
   AuthButton as AuthButtonToken,
   Colors,
@@ -47,6 +48,7 @@ import {
   Spacing,
   VideoOverlay,
 } from '@/constants/theme';
+import { t } from '@/i18n';
 import {
   getSession,
   isSignInCancelled,
@@ -93,8 +95,8 @@ export default function CreateAccountScreen() {
       if (!isSignInCancelled(e)) {
         setError(
           e instanceof Error && e.message.toLowerCase().includes('already')
-            ? 'That account is already in use. Try the other option.'
-            : "Couldn't sign in. Check your connection and try again."
+            ? t('errors.accountInUse')
+            : t('errors.signInFailed')
         );
       }
       setBusy(null);
@@ -118,12 +120,10 @@ export default function CreateAccountScreen() {
 
         <View style={styles.center}>
           <Display size="xl" style={styles.headline}>
-            Start your own{'\n'}
-            <Em>memory.</Em>
+            {em(t('auth.createHeadline'))}
           </Display>
           <Body color={Colors.textMuted} style={styles.subcopy}>
-            Hosting needs an account. Sign in and everything you shot as a guest
-            comes with you.
+            {t('auth.createBody')}
           </Body>
         </View>
 
@@ -160,12 +160,12 @@ export default function CreateAccountScreen() {
           {/* See the note at the top — this declines *hosting*, nothing else. */}
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Not now"
+            accessibilityLabel={t('common.notNow')}
             onPress={() => router.back()}
             disabled={busy !== null}
             hitSlop={Spacing.md}
             style={({ pressed }) => [styles.decline, pressed && styles.pressed]}>
-            <Caption color={Colors.textFaint}>Not now</Caption>
+            <Caption color={Colors.textFaint}>{t('common.notNow')}</Caption>
           </Pressable>
         </View>
       </View>

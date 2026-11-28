@@ -22,8 +22,10 @@ import Animated, {
 
 import { GlassButton } from './glass';
 import { PhotoStack } from './photo-stack';
-import { Body, Display, Em } from './typography';
+import { em } from './rich';
+import { Body, Display } from './typography';
 import { Colors, Films, Springs } from '@/constants/theme';
+import { t } from '@/i18n';
 
 const T = Films.poster;
 const F = Films.fresh;
@@ -102,7 +104,7 @@ export function NewMomentCard({ photos, tint, spread, onStart, onJoin, style }: 
       sample
       spread={spread}
       onPress={onStart}
-      accessibilityLabel="Start a moment"
+      accessibilityLabel={t('library.startMoment')}
       style={style}>
       <View style={styles.fresh}>
         {/* The one light control: creating is the primary action here. */}
@@ -111,18 +113,17 @@ export function NewMomentCard({ photos, tint, spread, onStart, onJoin, style }: 
         </View>
 
         <Display size="poster" style={styles.freshHeadline}>
-          Start your{'\n'}
-          <Em>moment</Em>
+          {em(t('library.startHeadline'))}
         </Display>
 
         <Body small color={Colors.textMuted} style={styles.freshCopy}>
-          Limited photos each. Nothing shows until{'\n'}the film is developed.
+          {t('library.startBody')}
         </Body>
 
         <GlassButton
           icon="users"
-          label="Join a group"
-          accessibilityLabel="Join a group"
+          label={t('library.joinGroup')}
+          accessibilityLabel={t('library.joinGroup')}
           onPress={onJoin}
           style={styles.join}
         />

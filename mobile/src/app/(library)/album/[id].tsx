@@ -53,6 +53,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Body } from '@/components/ui/typography';
 import { Album as T, Colors, Glass as GlassTokens, MissionsCamera } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import {
   ensureCanSave,
   hasSeenReveal,
@@ -88,8 +89,6 @@ type LoadState =
 
 type GridItem = AlbumPhoto | HiddenPhoto;
 const isHiddenPhoto = (item: GridItem): item is HiddenPhoto => 'kind' in item;
-
-const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export default function AlbumScreen() {
   const router = useRouter();
@@ -281,16 +280,16 @@ export default function AlbumScreen() {
 
   const develop = useCallback(() => {
     if (!id) return;
-    Alert.alert('Develop the film now?', 'Closes every camera and shows the photos to everyone.', [
-      { text: 'Not yet', style: 'cancel' },
+    Alert.alert(t('album.developTitle'), t('album.developBody'), [
+      { text: t('album.developNotYet'), style: 'cancel' },
       {
-        text: 'Develop',
+        text: t('album.develop'),
         style: 'destructive',
         onPress: () => {
           setDeveloping(true);
           endEvent(id)
             .then(load)
-            .catch((e) => Alert.alert("Couldn't develop the film", messageFor(e)))
+            .catch((e) => Alert.alert(t('album.developFailed'), messageFor(e)))
             .finally(() => setDeveloping(false));
         },
       },
@@ -317,7 +316,7 @@ export default function AlbumScreen() {
   const menu = album ? (
     <GlassButton
       icon="more-horizontal"
-      accessibilityLabel="More"
+      accessibilityLabel={t('album.more')}
       onPress={() =>
         openMenu({
           event: album.event,
@@ -367,12 +366,12 @@ export default function AlbumScreen() {
     try {
       const added = await importPhotos(albumEvent, allowance);
       if (added > 0) {
-        say(`Adding ${plural(added, 'photo', 'photos')}…`);
+        say(t('album.adding', { count: added }));
         lastQueued.current = id ? pendingCount(id) : 0;
         setQueued(lastQueued.current);
       }
     } catch {
-      say("Couldn't add the photos.");
+      say(t('album.addFailed'));
     } finally {
       setImporting(false);
     }
@@ -386,7 +385,7 @@ export default function AlbumScreen() {
         await work();
       } catch (e) {
         say(
-          e instanceof PhotoAccessDeniedError ? 'Allow photo access in Settings to save.' : failure,
+          e instanceof PhotoAccessDeniedError ? t('album.allowPhotoAccess') : failure,
         );
       } finally {
         setBusy(false);
@@ -399,36 +398,36 @@ export default function AlbumScreen() {
     (photo: AlbumPhoto) =>
       guarded(async () => {
         await ensureCanSave();
-        say('Saving…', true);
+        say(t('album.saving'), true);
         await savePhoto(photo);
-        say('Saved to your photos.');
-      }, "Couldn't save the photo."),
+        say(t('album.saved'));
+      }, t('album.saveFailed')),
     [guarded, say],
   );
 
   const shareOne = useCallback(
     (photo: AlbumPhoto) =>
       guarded(async () => {
-        say('Preparing…', true);
+        say(t('album.preparing'), true);
         await sharePhoto(photo);
         setStatus(null);
-      }, "Couldn't share the photo."),
+      }, t('album.shareFailed')),
     [guarded, say],
   );
 
   const saveAll = useCallback(() => {
     const total = photos.length;
     if (total === 0) return;
-    Alert.alert(`Save all ${plural(total, 'photo', 'photos')}?`, 'They go to your photo library.', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('album.saveAllTitle', { count: total }), t('album.saveAllBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Save all',
+        text: t('album.saveAll'),
         onPress: () =>
           void guarded(async () => {
             await ensureCanSave();
             let failed = 0;
             for (let i = 0; i < total; i += 1) {
-              say(`Saving ${i + 1} / ${total}`, true);
+              say(t('album.savingProgress', { index: i + 1, count: total }), true);
               try {
                 await savePhoto(photos[i]);
               } catch {
@@ -437,10 +436,10 @@ export default function AlbumScreen() {
             }
             say(
               failed === 0
-                ? `Saved ${plural(total, 'photo', 'photos')}.`
-                : `Saved ${total - failed} of ${total}. Try again for the rest.`,
+                ? t('album.savedAll', { count: total })
+                : t('album.savedSome', { saved: total - failed, count: total }),
             );
-          }, "Couldn't save the photos."),
+          }, t('album.saveAllFailed')),
       },
     ]);
   }, [photos, guarded, say]);
@@ -448,14 +447,16 @@ export default function AlbumScreen() {
   const remove = useCallback(
     (photo: AlbumPhoto) => {
       Alert.alert(
-        'Delete this photo?',
+        t('album.deleteTitle'),
         photo.mine
-          ? 'It is removed from the album for everyone.'
-          : `${photo.author ?? 'Its photographer'} and everyone else lose it too.`,
+          ? t('album.deleteMineBody')
+          : photo.author
+            ? t('album.deleteOthersBody', { author: photo.author })
+            : t('album.deleteUnknownBody'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Delete',
+            text: t('common.delete'),
             style: 'destructive',
             onPress: () =>
               void guarded(async () => {
@@ -471,8 +472,8 @@ export default function AlbumScreen() {
                       }
                     : current,
                 );
-                say('Photo deleted.');
-              }, "Couldn't delete the photo."),
+                say(t('album.photoDeleted'));
+              }, t('album.deleteFailed')),
           },
         ],
       );
@@ -490,18 +491,18 @@ export default function AlbumScreen() {
   const report = useCallback(
     (photo: AlbumPhoto) => {
       Alert.alert(
-        'Report this photo?',
-        'We check reports within 24 hours. The host can also delete it.',
+        t('album.reportTitle'),
+        t('album.reportBody'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Report',
+            text: t('album.report'),
             style: 'destructive',
             onPress: () =>
               void guarded(async () => {
                 await reportPhoto(photo.id);
-                say('Reported. Thank you.');
-              }, "Couldn't send the report."),
+                say(t('album.reported'));
+              }, t('album.reportFailed')),
           },
         ],
       );
@@ -570,22 +571,22 @@ export default function AlbumScreen() {
     return (
       <Screen transparent>
         <View style={styles.plainHeader}>
-          <GlassButton icon="chevron-left" accessibilityLabel="Back" onPress={leave} />
+          <GlassButton icon="chevron-left" accessibilityLabel={t('common.back')} onPress={leave} />
         </View>
         <View style={styles.center}>
           {state.kind === 'loading' ? (
             <Spinner />
           ) : state.kind === 'gone' ? (
             <Body small style={styles.centerCopy}>
-              This moment was deleted.
+              {t('album.gone')}
             </Body>
           ) : (
             <>
               <Body small style={styles.centerCopy}>
-                Couldn&rsquo;t load the album.{'\n'}Check your connection and try again.
+                {t('album.loadFailed')}
               </Body>
               <PillButton
-                label="Try again"
+                label={t('common.tryAgain')}
                 variant="secondary"
                 onPress={() => {
                   setState({ kind: 'loading' });
@@ -604,8 +605,11 @@ export default function AlbumScreen() {
     // The invite link opens the album for every member (app, App Clip or
     // browser) and lets a newcomer join and see it.
     void Share.share({
-      message: `Our photos from ${album.event.name}: ${inviteUrl(album.event.invite_code)}`,
-    }).catch(() => say("Couldn't share the album."));
+      message: t('album.shareMessage', {
+        name: album.event.name,
+        url: inviteUrl(album.event.invite_code),
+      }),
+    }).catch(() => say(t('album.shareAlbumFailed')));
   };
 
   return (
@@ -663,8 +667,8 @@ export default function AlbumScreen() {
           <View style={styles.empty}>
             <Body small style={styles.centerCopy}>
               {developed
-                ? 'Nobody took a photo.\nThe film came back blank.'
-                : 'No photos yet.\nThey show up here as they are taken.'}
+                ? t('album.emptyDeveloped')
+                : t('album.emptyWaiting')}
             </Body>
           </View>
         }
@@ -686,7 +690,10 @@ export default function AlbumScreen() {
               <PhotoTile
                 id={item.id}
                 uri={item.shot.thumbUri}
-                accessibilityLabel={`Your photo ${own + 1} of ${mineBefore.length}`}
+                accessibilityLabel={t('album.yourPhotoOf', {
+                  index: own + 1,
+                  count: mineBefore.length,
+                })}
                 register={register}
                 onPress={(origin) => setOpen({ index: own, origin })}
                 style={styles.tile}>
@@ -709,7 +716,16 @@ export default function AlbumScreen() {
             <PhotoTile
               id={item.id}
               uri={item.thumbUri}
-              accessibilityLabel={`Photo ${index + 1} of ${photos.length}${item.author ? `, by ${item.author}` : ''}${missionByPhoto.has(item.id) ? ', a mission' : ''}`}
+              accessibilityLabel={t(
+                item.author
+                  ? missionByPhoto.has(item.id)
+                    ? 'album.photoOfByMission'
+                    : 'album.photoOfBy'
+                  : missionByPhoto.has(item.id)
+                    ? 'album.photoOfMission'
+                    : 'album.photoOf',
+                { index: index + 1, count: photos.length, author: item.author ?? '' }
+              )}
               register={register}
               onPress={(origin) => setOpen({ index, origin })}
               style={styles.tile}>
@@ -744,13 +760,13 @@ export default function AlbumScreen() {
       />
 
       <View style={[styles.chrome, { top: insets.top + T.chromeInset }]} pointerEvents="box-none">
-        <GlassButton icon="chevron-left" accessibilityLabel="Back" onPress={leave} />
+        <GlassButton icon="chevron-left" accessibilityLabel={t('common.back')} onPress={leave} />
         <View style={styles.chromeRight}>
           {allowance > 0 ? (
             <GlassButton
               icon="plus"
-              label="Add"
-              accessibilityLabel={`Add photos from your library, ${allowance} left`}
+              label={t('album.add')}
+              accessibilityLabel={t('album.addA11y', { count: allowance })}
               disabled={importing}
               onPress={() => void addPhotos()}
             />
@@ -781,22 +797,22 @@ export default function AlbumScreen() {
               <>
                 <GlassButton
                   icon="download"
-                  label="Save"
-                  accessibilityLabel="Save this photo"
+                  label={t('common.save')}
+                  accessibilityLabel={t('album.saveThis')}
                   disabled={busy}
                   onPress={() => void saveOne(photo)}
                 />
                 <GlassButton
                   icon="share"
-                  label="Share"
-                  accessibilityLabel="Share this photo"
+                  label={t('common.share')}
+                  accessibilityLabel={t('album.shareThis')}
                   disabled={busy}
                   onPress={() => void shareOne(photo)}
                 />
                 {album.isHost || photo.mine ? (
                   <GlassButton
                     icon="trash-2"
-                    accessibilityLabel="Delete this photo"
+                    accessibilityLabel={t('album.deleteThis')}
                     color={Colors.destructive}
                     disabled={busy}
                     onPress={() => remove(photo)}
@@ -804,7 +820,7 @@ export default function AlbumScreen() {
                 ) : (
                   <GlassButton
                     icon="flag"
-                    accessibilityLabel="Report this photo"
+                    accessibilityLabel={t('album.reportThis')}
                     disabled={busy}
                     onPress={() => report(photo)}
                   />

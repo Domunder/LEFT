@@ -35,6 +35,7 @@ import Animated, {
 import { Glass } from './glass';
 import { Camera, Colors, Glass as GlassTokens, MissionsCamera as M, Springs } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 
 type CapsuleProps = {
   done: number;
@@ -56,8 +57,8 @@ export function MissionCapsule({ done, total, onPress }: CapsuleProps) {
     <Animated.View style={[styles.capsuleWrap, animated]}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Missions, ${done} of ${total} done`}
-        accessibilityHint="Shows your missions"
+        accessibilityLabel={t('missions.capsuleA11y', { done, total })}
+        accessibilityHint={t('missions.capsuleHint')}
         hitSlop={M.capsule.hitSlop}
         onPressIn={() => {
           pressed.value = withSpring(1, Springs.press);
@@ -72,7 +73,7 @@ export function MissionCapsule({ done, total, onPress }: CapsuleProps) {
             maxFontSizeMultiplier={M.capsule.maxFontScale}
             numberOfLines={1}
             style={[styles.capsuleText, { color }]}>
-            Missions {done}/{total}
+            {t('missions.capsule', { done, total })}
           </Text>
         </Glass>
       </Pressable>
@@ -118,11 +119,11 @@ export function MissionArmedNote({ body, onDisarm }: ArmedNoteProps) {
       accessibilityLiveRegion="polite">
       <Feather name="target" size={M.armed.iconSize} color={Camera.note.color} />
       <Text style={styles.armedText} numberOfLines={M.armed.lines}>
-        Next photo: {body}
+        {t('missions.armed', { body })}
       </Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Don't use the next photo for this mission"
+        accessibilityLabel={t('missions.disarmA11y')}
         hitSlop={M.armed.closeHitSlop}
         onPress={onDisarm}
         style={({ pressed }) => [styles.close, pressed && styles.closePressed]}>

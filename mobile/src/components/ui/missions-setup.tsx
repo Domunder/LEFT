@@ -18,6 +18,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Body } from '@/components/ui/typography';
 import { Colors, MissionsSetup as Tokens } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { MISSIONS_PER_GUEST_DEFAULT } from '@/lib/missions';
 
 type MissionsSetupProps = {
@@ -33,18 +34,18 @@ export function MissionsSetup({ value, onChange, style }: MissionsSetupProps) {
   return (
     <View style={style}>
       <View style={styles.titleRow}>
-        <Text style={styles.title}>Missions</Text>
+        <Text style={styles.title}>{t('onboarding.missionsTitle')}</Text>
         <ToggleSwitch
           value={on}
           onValueChange={(next) => onChange(next ? MISSIONS_PER_GUEST_DEFAULT : null)}
-          accessibilityLabel="Missions"
+          accessibilityLabel={t('onboarding.missionsTitle')}
         />
       </View>
 
       <Body small color={Colors.textFaint} style={styles.explainer}>
         {on
-          ? 'Invite people first, then edit the missions.'
-          : 'Small photo missions for your guests.'}
+          ? t('onboarding.missionsOn')
+          : t('onboarding.missionsOff')}
       </Body>
     </View>
   );

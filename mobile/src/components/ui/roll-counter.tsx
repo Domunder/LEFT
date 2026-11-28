@@ -26,6 +26,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Camera, Colors } from '@/constants/theme';
+import { t } from '@/i18n';
 import { Typography } from '@/constants/typography';
 
 const T = Camera.counter;
@@ -62,7 +63,7 @@ export function RollCounter({ shotsLeft }: { shotsLeft: number | null }) {
       accessible
       accessibilityRole="text"
       accessibilityLabel={
-        unlimited ? 'Unlimited photos' : `${shotsLeft} ${shotsLeft === 1 ? 'photo' : 'photos'} left`
+        unlimited ? t('camera.rollUnlimitedA11y') : t('camera.rollLeftA11y', { count: shotsLeft })
       }>
       <View style={styles.number}>
         {digits.map((d) => (
@@ -71,7 +72,7 @@ export function RollCounter({ shotsLeft }: { shotsLeft: number | null }) {
       </View>
       {unlimited ? null : (
         <Text maxFontSizeMultiplier={MAX_SCALE} style={styles.suffix}>
-          left
+          {t('camera.rollLeft', { count: shotsLeft })}
         </Text>
       )}
     </View>

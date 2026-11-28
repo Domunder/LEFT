@@ -66,10 +66,12 @@ import {
 import { CircleBackButton } from '@/components/ui/circle-back-button';
 import { NamePicker } from '@/components/ui/name-picker';
 import { PillButton } from '@/components/ui/pill-button';
+import { em } from '@/components/ui/rich';
 import { Screen } from '@/components/ui/screen';
-import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
+import { Body, Caption, Display, Label } from '@/components/ui/typography';
 import { Colors, Guest, MissionsJoin, Radii, Spacing } from '@/constants/theme';
 import { FontFamily } from '@/constants/typography';
+import { t } from '@/i18n';
 import { getSession, resolveDisplayName, setDisplayName, signInAnonymously } from '@/lib/auth';
 import { isDemoCode } from '@/lib/demo-code';
 import { joinEvent } from '@/lib/events';
@@ -177,7 +179,7 @@ export default function GuestNameScreen() {
         } else {
           setChosenId((current) => {
             if (current && !list.some((n) => n.id === current)) {
-              setError('Someone else just took that name. Pick another.');
+              setError(t('guest.nameTaken'));
               return null;
             }
             return current;
@@ -256,7 +258,7 @@ export default function GuestNameScreen() {
           // Still a member. The name leaves the list; they choose again.
           const taken = chosenId;
           setChosenId(null);
-          setError('Someone else just took that name. Pick another.');
+          setError(t('guest.nameTaken'));
           setNames((current) => current.filter((n) => n.id !== taken));
           try {
             setNames(await listUnclaimedNames(code));
@@ -294,7 +296,7 @@ export default function GuestNameScreen() {
       <TextInput
         value={name}
         onChangeText={setName}
-        placeholder="Your name"
+        placeholder={t('guest.namePlaceholder')}
         placeholderTextColor={Colors.textGhost}
         selectionColor={Colors.text}
         maxLength={MAX_NAME_LENGTH}
@@ -308,7 +310,7 @@ export default function GuestNameScreen() {
         style={styles.input}
       />
       <Caption color={Guest.helper} style={styles.helper}>
-        This is how the group will see you during the event.
+        {t('guest.nameHelper')}
       </Caption>
     </View>
   );
@@ -335,10 +337,10 @@ export default function GuestNameScreen() {
             </View>
           ) : null}
 
-          <Label style={styles.eyebrow}>{changing ? 'Your name' : 'Welcome'}</Label>
+          <Label style={styles.eyebrow}>{changing ? t('guest.nameEyebrowChange') : t('guest.welcome')}</Label>
 
           <Display size="xxl" style={hasNames ? undefined : styles.headline}>
-            What should{'\n'}we <Em>call you?</Em>
+            {em(t('guest.nameHeadline'))}
           </Display>
 
           {hasNames ? (
@@ -369,7 +371,7 @@ export default function GuestNameScreen() {
         </ScrollView>
 
         <PillButton
-          label={busy ? (changing ? 'Saving…' : 'Joining…') : 'Continue'}
+          label={busy ? (changing ? t('guest.saving') : t('guest.joining')) : t('common.continue')}
           disabled={!canContinue}
           onPress={() => void handleContinue()}
         />
@@ -389,17 +391,17 @@ function describeJoinError(e: unknown): string {
   const message = e instanceof Error ? e.message.toLowerCase() : '';
 
   if (message.includes('invalid invite code')) {
-    return "That invite code doesn't match an event. Ask the host for a fresh link or QR.";
+    return t('errors.joinInvalidCode');
   }
   if (message.includes('already ended')) {
-    return 'This event has already ended.';
+    return t('errors.joinEnded');
   }
   if (message.includes('anonymous') || message.includes('disabled')) {
     // Anonymous sign-ins not enabled in the Supabase dashboard — a setup problem,
     // not something the guest did.
-    return "Joining isn't available right now. Please try again shortly.";
+    return t('errors.joinUnavailable');
   }
-  return "Couldn't join the group. Check your connection and try again.";
+  return t('errors.joinFailed');
 }
 
 const styles = StyleSheet.create({

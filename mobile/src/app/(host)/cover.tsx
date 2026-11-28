@@ -18,12 +18,14 @@ import { CoverPicker } from '@/components/ui/cover-picker';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
-import { Body, Display, Em, Label } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Body, Display, Label } from '@/components/ui/typography';
 import { coverFor } from '@/constants/samples';
 import { Colors, CoverStep as T, Spacing } from '@/constants/theme';
 import { messageFor } from '@/lib/auth-errors';
 import { applyCover, useEventCover, type CoverChoice } from '@/lib/event-cover';
 import { getEvent, type Event } from '@/lib/events';
+import { t } from '@/i18n';
 
 /** The stock picture an event without a choice shows (the seeded fallback). */
 function seededKey(eventId: string): string {
@@ -97,7 +99,7 @@ export default function ChangeCoverScreen() {
       await applyCover(event.id, choice);
       close();
     } catch (e) {
-      Alert.alert("Couldn't change the image", messageFor(e));
+      Alert.alert(t('host.coverFailed'), messageFor(e));
     } finally {
       setSaving(false);
     }
@@ -106,17 +108,17 @@ export default function ChangeCoverScreen() {
   return (
     <Screen transparent>
       <View style={styles.header}>
-        <CircleIconButton icon="x" accessibilityLabel="Close" onPress={close} />
+        <CircleIconButton icon="x" accessibilityLabel={t('common.close')} onPress={close} />
       </View>
 
       <Label numberOfLines={1} style={styles.eyebrow}>
         {event?.name ?? ' '}
       </Label>
       <Display size="xl" style={styles.headline}>
-        Change your <Em>event cover.</Em>
+        {em(t('host.coverHeadline'))}
       </Display>
       <Body small color={Colors.textDim}>
-        Your guests see it while they wait, in your film&rsquo;s look.
+        {t('host.coverBody')}
       </Body>
 
       {event && choice ? (
@@ -131,7 +133,7 @@ export default function ChangeCoverScreen() {
         <View style={styles.center}>
           {failed ? (
             <Body small color={Colors.textDim}>
-              Couldn&rsquo;t load this moment.
+              {t('host.momentLoadFailed')}
             </Body>
           ) : (
             <Spinner />
@@ -140,7 +142,7 @@ export default function ChangeCoverScreen() {
       )}
 
       <PillButton
-        label={saving ? 'Saving…' : 'Save'}
+        label={saving ? t('host.saving') : t('common.save')}
         disabled={!choice || saving}
         onPress={() => void save()}
         style={styles.cta}

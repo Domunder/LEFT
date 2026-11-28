@@ -98,11 +98,13 @@ import { RollCounter } from '@/components/ui/roll-counter';
 import { Screen } from '@/components/ui/screen';
 import { ShutterButton } from '@/components/ui/shutter-button';
 import { Spinner } from '@/components/ui/spinner';
-import { Body, Display, Em, Label } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Body, Display, Label } from '@/components/ui/typography';
 import { ZoomSelector } from '@/components/ui/zoom-selector';
 import { Camera as T, Colors, Glass as GlassTokens } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { useCameraSession } from '@/hooks/use-camera-session';
+import { t } from '@/i18n';
 import type { FilmLook } from '@/lib/events';
 import type { Mission } from '@/lib/missions';
 import { latestShotThumb } from '@/lib/my-shots';
@@ -163,16 +165,11 @@ export default function CameraScreen() {
 
   if (session.status === 'error') {
     return (
-      <StateScreen onClose={leave} eyebrow="No connection">
-        <Display size="md">
-          Can&apos;t reach <Em>your event.</Em>
-        </Display>
-        <Body small>
-          This phone hasn&apos;t opened the event yet, so it needs a connection once. After that the
-          camera works offline.
-        </Body>
+      <StateScreen onClose={leave} eyebrow={t('camera.noConnection')}>
+        <Display size="md">{em(t('camera.cantReachHeadline'))}</Display>
+        <Body small>{t('camera.cantReachBody')}</Body>
         <View style={styles.stateActions}>
-          <PillButton label="Try again" onPress={session.reload} />
+          <PillButton label={t('common.tryAgain')} onPress={session.reload} />
         </View>
       </StateScreen>
     );
@@ -183,16 +180,15 @@ export default function CameraScreen() {
   if (session.developed) {
     return (
       <StateScreen onClose={leave} eyebrow={event.name}>
-        <Display size="md">
-          The film is <Em>developed.</Em>
-        </Display>
+        <Display size="md">{em(t('camera.developedHeadline'))}</Display>
         <Body small>
-          The cameras are closed.
-          {session.pending > 0 ? ` ${uploadingLine(session.pending)} Keep the app open.` : ''}
+          {session.pending > 0
+            ? t('camera.developedBodyUploading', { count: session.pending })
+            : t('camera.developedBody')}
         </Body>
         <View style={styles.stateActions}>
           <PillButton
-            label="Open the album"
+            label={t('camera.openAlbum')}
             icon="arrow-right"
             onPress={() =>
               router.replace({
@@ -209,21 +205,20 @@ export default function CameraScreen() {
   if (session.shotsLeft === 0) {
     return (
       <StateScreen onClose={leave} eyebrow={event.name}>
-        <Display size="md">
-          That was your <Em>last photo.</Em>
-        </Display>
+        <Display size="md">{em(t('camera.lastPhotoHeadline'))}</Display>
         <Body small>
-          Your roll is used up. Everyone&apos;s photos appear together when the film is developed.
-          {session.pending > 0 ? ` ${uploadingLine(session.pending)}` : ''}
+          {session.pending > 0
+            ? t('camera.rollEmptyBodyUploading', { count: session.pending })
+            : t('camera.rollEmptyBody')}
         </Body>
         <View style={styles.stateCountdown}>
-          <Label small>Developed in</Label>
+          <Label small>{t('camera.developedIn')}</Label>
           <EventCountdown endsAt={event.ends_at} />
         </View>
         <View style={styles.stateActions}>
           {/* The album's "developing" state: the count so far, and the host's "develop now". */}
           <PillButton
-            label="See how the film is doing"
+            label={t('camera.seeFilm')}
             icon="arrow-right"
             onPress={() =>
               router.replace({
@@ -232,7 +227,7 @@ export default function CameraScreen() {
               })
             }
           />
-          <PillButton label="Back to your moments" variant="secondary" onPress={leave} />
+          <PillButton label={t('camera.backToMoments')} variant="secondary" onPress={leave} />
         </View>
       </StateScreen>
     );
@@ -241,16 +236,11 @@ export default function CameraScreen() {
   if (!permission.hasPermission) {
     return (
       <StateScreen onClose={leave} eyebrow={event.name}>
-        <Display size="md">
-          LEFT needs <Em>your camera.</Em>
-        </Display>
-        <Body small>
-          It is only used to take photos for this event. Nothing is recorded, and there is no
-          microphone.
-        </Body>
+        <Display size="md">{em(t('camera.permissionHeadline'))}</Display>
+        <Body small>{t('camera.permissionBody')}</Body>
         <View style={styles.stateActions}>
           <PillButton
-            label={permission.canRequestPermission ? 'Allow camera' : 'Open Settings'}
+            label={permission.canRequestPermission ? t('camera.allowCamera') : t('common.openSettings')}
             onPress={() =>
               permission.canRequestPermission
                 ? void requestPermission()
@@ -328,9 +318,7 @@ async function lightTorch(controller: CameraController, device: CameraDevice): P
 }
 
 function uploadingLine(pending: number): string {
-  return pending === 1
-    ? '1 photo is still on its way.'
-    : `${pending} photos are still on their way.`;
+  return t('camera.uploading', { count: pending });
 }
 
 /** The frame every non-camera state shares: a way out, and a block of copy. */
@@ -346,7 +334,7 @@ function StateScreen({
   return (
     <Screen>
       <View style={styles.stateHeader}>
-        <CircleIconButton glass icon="x" accessibilityLabel="Back to your moments" onPress={onClose} />
+        <CircleIconButton glass icon="x" accessibilityLabel={t('camera.backToMoments')} onPress={onClose} />
       </View>
       <View style={styles.stateBody}>
         {eyebrow ? <Label>{eyebrow}</Label> : null}
@@ -724,15 +712,15 @@ function Viewfinder({
   const note = failed
     ? {
         icon: 'alert-circle' as const,
-        text: "The camera didn't start. Switch cameras to retry.",
+        text: t('camera.noteFailed'),
       }
     : missed
       ? {
           icon: 'alert-circle' as const,
-          text: "That one didn't save. Try again.",
+          text: t('camera.noteMissed'),
         }
       : offline
-        ? { icon: 'wifi-off' as const, text: 'Offline. Your photos are saved.' }
+        ? { icon: 'wifi-off' as const, text: t('camera.noteOffline') }
         : null;
 
   return (
@@ -786,7 +774,7 @@ function Viewfinder({
               <CircleIconButton
                 glass
                 icon="x"
-                accessibilityLabel="Back to your moments"
+                accessibilityLabel={t('camera.backToMoments')}
                 onPress={onClose}
               />
             </View>
@@ -814,7 +802,7 @@ function Viewfinder({
             <View style={[styles.headerSide, styles.headerRight]}>
               <PressScale
                 accessibilityRole="button"
-                accessibilityLabel="See how the film is doing"
+                accessibilityLabel={t('camera.seeFilm')}
                 hitSlop={T.header.countdownHitSlop}
                 onPress={onOpenFilm}
                 style={styles.headerCountdown}>
@@ -846,7 +834,7 @@ function Viewfinder({
             <GlassButton
               icon={flash ? 'zap' : 'zap-off'}
               color={at(T.controls.flashColor, flash)}
-              accessibilityLabel={flash ? 'Flash on' : 'Flash off'}
+              accessibilityLabel={flash ? t('camera.flashOn') : t('camera.flashOff')}
               onPress={() => setFlash((on) => !on)}
             />
             {stops.length > 0 || (selected === '' && liveLabel !== '') ? (
@@ -867,7 +855,7 @@ function Viewfinder({
                 }}
               />
             ) : null}
-            <GlassButton icon="refresh-cw" accessibilityLabel="Switch camera" onPress={flip} />
+            <GlassButton icon="refresh-cw" accessibilityLabel={t('camera.switchCamera')} onPress={flip} />
           </View>
         </View>
       </GestureDetector>
@@ -876,8 +864,8 @@ function Viewfinder({
         <View style={styles.bottomSide}>
           <PressScale
             accessibilityRole="button"
-            accessibilityLabel="Your photos"
-            accessibilityHint="Shows the photos you have taken"
+            accessibilityLabel={t('camera.yourPhotos')}
+            accessibilityHint={t('camera.yourPhotosHint')}
             hitSlop={8}
             scale={GlassTokens.pressScale}
             onPress={onOpenShots}>
@@ -911,8 +899,8 @@ function Viewfinder({
           ) : null}
           <PressScale
             accessibilityRole="button"
-            accessibilityLabel="Invite"
-            accessibilityHint="Shows the QR code and the link to this event"
+            accessibilityLabel={t('camera.invite')}
+            accessibilityHint={t('camera.inviteHint')}
             hitSlop={8}
             scale={GlassTokens.pressScale}
             onPress={onOpenInvite}>

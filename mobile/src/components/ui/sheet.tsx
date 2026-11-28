@@ -15,6 +15,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BlurIntensity, Colors, Radii, SheetMotion, Spacing } from '@/constants/theme';
+import { t } from '@/i18n';
 import { SheetDrag } from './sheet-drag';
 
 type SheetProps = PropsWithChildren<{
@@ -48,7 +49,7 @@ export function Sheet({
       <Pressable
         style={StyleSheet.absoluteFill}
         onPress={locked ? undefined : dismiss}
-        accessibilityLabel="Dismiss"
+        accessibilityLabel={t('auth.dismiss')}
       />
       <BlurView intensity={BlurIntensity.scrim} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
       <View style={styles.scrim} pointerEvents="none" />

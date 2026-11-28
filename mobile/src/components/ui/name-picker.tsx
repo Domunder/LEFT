@@ -23,6 +23,7 @@ import { PressScale } from '@/components/ui/press-scale';
 import { Body, Caption } from '@/components/ui/typography';
 import { Colors, MissionsJoin, Press, Radii } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import type { MissionName } from '@/lib/missions';
 
@@ -57,9 +58,9 @@ export function NamePicker({
       travel. A view, not glass, so fading it is fine.
     */
     <Animated.View entering={fade(MissionsJoin.fadeMs)} style={styles.section}>
-      <Body color={Colors.text}>Are you one of these?</Body>
+      <Body color={Colors.text}>{t('guest.pickerTitle')}</Body>
       <Caption color={Colors.textFaint} style={styles.sub}>
-        The host planned something for you.
+        {t('guest.pickerSub')}
       </Caption>
 
       <View accessibilityRole="radiogroup" style={styles.rows}>
@@ -83,7 +84,7 @@ export function NamePicker({
           {typing ? (
             <Animated.View entering={fade(MissionsJoin.fadeMs)}>{field}</Animated.View>
           ) : (
-            <NameRow label="Add your name" add selected={false} disabled={disabled} onPress={onAdd} />
+            <NameRow label={t('guest.pickerAdd')} add selected={false} disabled={disabled} onPress={onAdd} />
           )}
         </Animated.View>
       </View>
@@ -109,7 +110,7 @@ function NameRow({
     <PressScale
       accessibilityRole={add ? 'button' : 'radio'}
       accessibilityState={add ? { disabled } : { checked: selected, disabled }}
-      accessibilityLabel={add ? 'Not on the list. Add your name' : label}
+      accessibilityLabel={add ? t('guest.pickerAddA11y') : label}
       disabled={disabled}
       onPress={() => {
         if (!selected) haptic.select();

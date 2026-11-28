@@ -16,6 +16,8 @@
  * a smaller tier than its group needs, is refused by the RPC.
  */
 
+import { t } from '@/i18n';
+
 import type { RollSize } from './roll';
 
 /** The largest group that costs nothing. Mirrors `public.free_max_members()`. */
@@ -58,5 +60,5 @@ export function tierFor(maxMembers: number, rollSize: RollSize): EventTier | nul
 
 /** The paid CTA. Names the price: a button that opens a store sheet must. */
 export function ctaLabel(tier: EventTier): string {
-  return `Continue · ${tier.price}`;
+  return t('onboarding.ctaPaid', { price: tier.price });
 }

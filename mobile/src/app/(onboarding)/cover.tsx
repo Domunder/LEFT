@@ -20,9 +20,11 @@ import { PillButton } from '@/components/ui/pill-button';
 import { Rise } from '@/components/ui/rise';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
-import { Body, Display, Em, Label } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Body, Display, Label } from '@/components/ui/typography';
 import { DEFAULT_LOOK } from '@/constants/looks';
 import { Colors, CoverStep as T, Spacing } from '@/constants/theme';
+import { t } from '@/i18n';
 import { DEFAULT_COVER, type CoverChoice } from '@/lib/event-cover';
 import { useGlow, useOnboarding, useStep } from '@/lib/onboarding-draft';
 
@@ -44,12 +46,12 @@ export default function CoverScreen() {
       <ScreenHeader style={styles.header} />
 
       <Rise>
-        <Label style={styles.eyebrow}>Event cover</Label>
+        <Label style={styles.eyebrow}>{t('onboarding.coverEyebrow')}</Label>
         <Display size="xl" style={styles.headline}>
-          Choose your <Em>event cover.</Em>
+          {em(t('onboarding.coverHeadline'))}
         </Display>
         <Body small color={Colors.textDim}>
-          Your guests see it while they wait, in your film&rsquo;s look.
+          {t('onboarding.coverBody')}
         </Body>
       </Rise>
 
@@ -62,7 +64,7 @@ export default function CoverScreen() {
       />
 
       <PillButton
-        label="Continue"
+        label={t('common.continue')}
         icon="arrow-right"
         onPress={() => {
           patch({ cover: choice });

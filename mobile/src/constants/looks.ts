@@ -16,8 +16,13 @@ import type { FilmLook } from '@/lib/events';
 export type LookOption = {
   id: FilmLook;
   name: string;
-  /** One line a host can choose from. No jargon. */
-  blurb: string;
+  /**
+   * One line a host can choose from. No jargon. A translation key, read with
+   * `t()` where it is drawn — never text built at import time. Spelt out
+   * rather than typed as `TKey`: this file is copied to the website and
+   * transpiled for the App Clip, so it must not import `@/i18n`.
+   */
+  blurbKey: `onboarding.look${'Golden' | 'Chrome' | 'Faded' | 'Mono'}Blurb`;
 };
 
 /*
@@ -27,10 +32,10 @@ export type LookOption = {
   the UI — the ids are the enum's, the names are ours.
 */
 export const LOOKS: readonly LookOption[] = [
-  { id: 'golden', name: 'Golden', blurb: 'Warm and nostalgic. Soft, sunny colour.' },
-  { id: 'chrome', name: 'Chrome', blurb: 'Cool and calm. Muted greens and blues.' },
-  { id: 'faded', name: 'Faded', blurb: 'Washed out and gentle, like an old print.' },
-  { id: 'mono', name: 'Mono', blurb: 'Clean black and white. Timeless.' },
+  { id: 'golden', name: 'Golden', blurbKey: 'onboarding.lookGoldenBlurb' },
+  { id: 'chrome', name: 'Chrome', blurbKey: 'onboarding.lookChromeBlurb' },
+  { id: 'faded', name: 'Faded', blurbKey: 'onboarding.lookFadedBlurb' },
+  { id: 'mono', name: 'Mono', blurbKey: 'onboarding.lookMonoBlurb' },
 ] as const;
 
 export const DEFAULT_LOOK: FilmLook = 'golden';

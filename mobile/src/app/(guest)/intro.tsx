@@ -41,18 +41,17 @@ import { LookPreview } from '@/components/ui/look-preview';
 import { MiniCamera } from '@/components/ui/mini-camera';
 import { PillButton } from '@/components/ui/pill-button';
 import { ProgressDots } from '@/components/ui/progress-dots';
+import { em } from '@/components/ui/rich';
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
-import { Body, Display, Em, Label } from '@/components/ui/typography';
+import { Body, Display, Label } from '@/components/ui/typography';
 import { samplesFor } from '@/constants/samples';
 import { Colors, GuestIntro as T, Spacing } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { formatEndDate, formatEndTime } from '@/lib/event-end';
 import { getEvent, isDeveloped, type Event } from '@/lib/events';
 import { hasSeenIntro, markIntroSeen } from '@/lib/guest-intro';
-
-/** One of the general missions, as an example. */
-const EXAMPLE_MISSION = 'A photo with someone you’ve never met';
 
 export default function GuestIntroScreen() {
   const router = useRouter();
@@ -135,10 +134,10 @@ export default function GuestIntroScreen() {
         {last ? null : (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Skip the introduction"
+            accessibilityLabel={t('guest.introSkipA11y')}
             hitSlop={T.skipHitSlop}
             onPress={finish}>
-            <Text style={styles.skip}>Skip</Text>
+            <Text style={styles.skip}>{t('guest.introSkip')}</Text>
           </Pressable>
         )}
       </View>
@@ -165,7 +164,7 @@ export default function GuestIntroScreen() {
       <View style={styles.footer}>
         <ProgressDots step={page + 1} total={pages.length} />
         <PillButton
-          label={last ? 'Got it' : 'Next'}
+          label={last ? t('guest.introGotIt') : t('guest.introNext')}
           onPress={() => {
             if (last) {
               finish();
@@ -195,24 +194,14 @@ function RollPage({ event }: { event: Event }) {
         />
       </View>
       <View style={styles.text}>
-        <Text style={styles.numeral} accessibilityLabel={unlimited ? 'Unlimited' : undefined}>
+        <Text style={styles.numeral} accessibilityLabel={unlimited ? t('guest.introUnlimited') : undefined}>
           {unlimited ? '∞' : event.roll_size}
         </Text>
         <Display size="md" style={styles.centered}>
-          {unlimited ? (
-            <>
-              Shoot <Em>freely.</Em>
-            </>
-          ) : (
-            <>
-              photos. That&rsquo;s your <Em>whole roll.</Em>
-            </>
-          )}
+          {em(unlimited ? t('guest.introFreelyHeadline') : t('guest.introRollHeadline'))}
         </Display>
         <Body small color={Colors.textDim} style={styles.centered}>
-          {unlimited
-            ? 'No roll to run out of. Use the camera, or add some from your phone.'
-            : 'No retakes. Use the camera, or add some from your phone.'}
+          {unlimited ? t('guest.introFreelyBody') : t('guest.introRollBody')}
         </Body>
       </View>
     </>
@@ -236,7 +225,7 @@ function HiddenPage({ event }: { event: Event }) {
         <View style={styles.print}>
           <LookPreview look={event.look} />
           <View style={styles.yoursTag}>
-            <Text style={styles.yoursText}>Yours</Text>
+            <Text style={styles.yoursText}>{t('guest.introYours')}</Text>
           </View>
         </View>
         <View style={[styles.print, styles.printSide]}>
@@ -251,10 +240,10 @@ function HiddenPage({ event }: { event: Event }) {
       </View>
       <View style={styles.text}>
         <Display size="md" style={styles.centered}>
-          Hidden until <Em>the end.</Em>
+          {em(t('guest.introHiddenHeadline'))}
         </Display>
         <Body small color={Colors.textDim} style={styles.centered}>
-          You can look at your own photos. Everyone else&rsquo;s stay dark until the film develops.
+          {t('guest.introHiddenBody')}
         </Body>
       </View>
     </>
@@ -266,20 +255,20 @@ function MissionsPage({ count }: { count: number }) {
     <>
       <View style={[styles.visual, styles.missionVisual]}>
         <View style={styles.missionCapsule}>
-          <Text style={styles.missionCapsuleText}>Example</Text>
+          <Text style={styles.missionCapsuleText}>{t('guest.introExample')}</Text>
         </View>
         <View style={styles.missionNote}>
           <Feather name="target" size={T.missionIcon} color={Colors.text} />
-          <Text style={styles.missionNoteText}>{EXAMPLE_MISSION}</Text>
+          {/* One of the general missions, as an example. */}
+          <Text style={styles.missionNoteText}>{t('guest.introExampleMission')}</Text>
         </View>
       </View>
       <View style={styles.text}>
         <Display size="md" style={styles.centered}>
-          Your <Em>missions.</Em>
+          {em(t('guest.introMissionsHeadline'))}
         </Display>
         <Body small color={Colors.textDim} style={styles.centered}>
-          Your missions for this film: {count === 1 ? 'one photo' : `${count} photos`} to take,
-          like this one. They show up in the camera when it starts.
+          {t('guest.introMissionsBody', { count })}
         </Body>
       </View>
     </>
@@ -296,10 +285,10 @@ function DevelopPage({ event }: { event: Event }) {
       </View>
       <View style={styles.text}>
         <Display size="md" style={styles.centered}>
-          Developed <Em>together.</Em>
+          {em(t('guest.introDevelopHeadline'))}
         </Display>
         <Body small color={Colors.textDim} style={styles.centered}>
-          Then the cameras close and everyone sees every photo at once. We&rsquo;ll let you know.
+          {t('guest.introDevelopBody')}
         </Body>
       </View>
     </>

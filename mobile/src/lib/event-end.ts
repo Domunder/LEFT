@@ -9,6 +9,8 @@
  * the rows follow the device locale instead of a hardcoded en-GB-ish format.
  */
 
+import { locale, t } from '@/i18n';
+
 /** The hour filming ends on the default day — late enough to cover an evening event. */
 const DEFAULT_END_HOUR = 23;
 
@@ -39,27 +41,40 @@ export function mergeDateAndTime(date: Date, time: Date): Date {
 }
 
 // Built on first use and kept: constructing a formatter is the slow part.
-let endDateFormat: Intl.DateTimeFormat | undefined;
-let endTimeFormat: Intl.DateTimeFormat | undefined;
-let hour24: boolean | undefined;
+// Keyed by `locale()`, so a change of language rebuilds them.
+let endDateFormat: { tag: string; format: Intl.DateTimeFormat } | undefined;
+let endTimeFormat: { tag: string; format: Intl.DateTimeFormat } | undefined;
+let hour24: { tag: string; value: boolean } | undefined;
 
 /** "Sat, 22 Aug" — the Ending Date row's value. */
 export function formatEndDate(value: Date): string {
-  endDateFormat ??= new Intl.DateTimeFormat(undefined, {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
-  return endDateFormat.format(value);
+  const tag = locale();
+  if (endDateFormat?.tag !== tag) {
+    endDateFormat = {
+      tag,
+      format: new Intl.DateTimeFormat(tag, {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      }),
+    };
+  }
+  return endDateFormat.format.format(value);
 }
 
 /** "23:00" — the Ending Time row's value, in the locale's 12/24-hour convention. */
 export function formatEndTime(value: Date): string {
-  endTimeFormat ??= new Intl.DateTimeFormat(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  return endTimeFormat.format(value);
+  const tag = locale();
+  if (endTimeFormat?.tag !== tag) {
+    endTimeFormat = {
+      tag,
+      format: new Intl.DateTimeFormat(tag, {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    };
+  }
+  return endTimeFormat.format.format(value);
 }
 
 /**
@@ -68,12 +83,13 @@ export function formatEndTime(value: Date): string {
  * Drives whether the time grid shows 0-23 hours or 1-12 plus an AM/PM row.
  */
 export function prefersHour24(): boolean {
-  if (hour24 !== undefined) return hour24;
-  const parts = new Intl.DateTimeFormat(undefined, { hour: '2-digit' }).formatToParts(
+  const tag = locale();
+  if (hour24?.tag === tag) return hour24.value;
+  const parts = new Intl.DateTimeFormat(tag, { hour: '2-digit' }).formatToParts(
     new Date(2020, 0, 1, 13, 0, 0)
   );
-  hour24 = !parts.some((part) => part.type === 'dayPeriod');
-  return hour24;
+  hour24 = { tag, value: !parts.some((part) => part.type === 'dayPeriod') };
+  return hour24.value;
 }
 
 /**
@@ -151,12 +167,11 @@ export function lastSelectableDay(from: Date = new Date()): Date {
 export function weekStartsOn(): number {
   type WeekInfo = { firstDay?: number };
   try {
-    const tag = new Intl.DateTimeFormat().resolvedOptions().locale;
-    const locale = new Intl.Locale(tag) as Intl.Locale & {
+    const info = new Intl.Locale(locale()) as Intl.Locale & {
       weekInfo?: WeekInfo;
       getWeekInfo?: () => WeekInfo;
     };
-    const firstDay = locale.getWeekInfo?.().firstDay ?? locale.weekInfo?.firstDay;
+    const firstDay = info.getWeekInfo?.().firstDay ?? info.weekInfo?.firstDay;
     // 7 is Sunday there and 0 here; every other value is the same number.
     if (typeof firstDay === 'number') return firstDay % 7;
   } catch {
@@ -193,7 +208,7 @@ export function monthMatrix(month: Date, firstDay: number = weekStartsOn()): Dat
  * stays unambiguous and still fits the cell.
  */
 export function weekdayLabels(firstDay: number = weekStartsOn()): string[] {
-  const format = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+  const format = new Intl.DateTimeFormat(locale(), { weekday: 'short' });
   // 2024-01-07 was a Sunday, so the offset walks the week from Sunday.
   return Array.from({ length: 7 }, (_, i) =>
     format.format(new Date(2024, 0, 7 + ((firstDay + i) % 7))).slice(0, 2)
@@ -202,7 +217,7 @@ export function weekdayLabels(firstDay: number = weekStartsOn()): string[] {
 
 /** "August 2026" — the calendar's title row. */
 export function formatMonthTitle(month: Date): string {
-  return new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' }).format(month);
+  return new Intl.DateTimeFormat(locale(), { month: 'long', year: 'numeric' }).format(month);
 }
 
 /** Hours the time wheel offers — 0-23, or 1-12 on a 12-hour locale. */
@@ -272,19 +287,19 @@ export function countdownParts(
 
   if (days > 0) {
     return [
-      { value: pad(days), unit: 'd' },
-      { value: pad(hours), unit: 'h' },
+      { value: pad(days), unit: t('dates.unitDays') },
+      { value: pad(hours), unit: t('dates.unitHours') },
     ];
   }
   if (hours > 0) {
     return [
-      { value: pad(hours), unit: 'h' },
-      { value: pad(minutes), unit: 'm' },
+      { value: pad(hours), unit: t('dates.unitHours') },
+      { value: pad(minutes), unit: t('dates.unitMinutes') },
     ];
   }
   return [
-    { value: pad(minutes), unit: 'm' },
-    { value: pad(seconds), unit: 's' },
+    { value: pad(minutes), unit: t('dates.unitMinutes') },
+    { value: pad(seconds), unit: t('dates.unitSeconds') },
   ];
 }
 
@@ -324,9 +339,10 @@ export type DayLabel = {
  * day per render, which is what made 04 slow to open.
  */
 export function labelDays(days: Date[]): DayLabel[] {
-  const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
-  const month = new Intl.DateTimeFormat(undefined, { month: 'short' });
-  const spoken = new Intl.DateTimeFormat(undefined, {
+  const tag = locale();
+  const weekday = new Intl.DateTimeFormat(tag, { weekday: 'short' });
+  const month = new Intl.DateTimeFormat(tag, { month: 'short' });
+  const spoken = new Intl.DateTimeFormat(tag, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -352,8 +368,14 @@ export function formatTimeUntil(endsAt: Date, now: Date = new Date()): string | 
   const hours = Math.floor((minutes % 1440) / 60);
   const mins = minutes % 60;
 
-  if (days >= 2) return `in ${days} days`;
-  if (days === 1) return hours > 0 ? `in 1 day ${hours} h` : 'in 1 day';
-  if (hours > 0) return mins > 0 ? `in ${hours} h ${mins} min` : `in ${hours} h`;
-  return `in ${mins} min`;
+  if (days >= 2) return t('dates.untilDays', { count: days });
+  if (days === 1) {
+    return hours > 0 ? t('dates.untilDayHours', { hours }) : t('dates.untilDays', { count: 1 });
+  }
+  if (hours > 0) {
+    return mins > 0
+      ? t('dates.untilHoursMinutes', { hours, minutes: mins })
+      : t('dates.untilHours', { hours });
+  }
+  return t('dates.untilMinutes', { minutes: mins });
 }

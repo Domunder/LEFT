@@ -54,6 +54,7 @@ import {
   Viewer as T,
 } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { clamp, clampWithRubber, project } from '@/lib/motion';
 
 export type Rect = { x: number; y: number; width: number; height: number };
@@ -548,10 +549,10 @@ export function PhotoViewer({
       <Animated.View
         style={[styles.top, { top: insets.top + T.chromeInset }, chromeStyle]}
         pointerEvents={chromeShown ? 'box-none' : 'none'}>
-        <GlassButton icon="x" accessibilityLabel="Close photo" onPress={() => close()} />
+        <GlassButton icon="x" accessibilityLabel={t('album.closePhoto')} onPress={() => close()} />
 
         <Glass radius={GlassTokens.capsuleHeight / 2} style={styles.counter}>
-          <Text style={styles.counterText} accessibilityLabel={`Photo ${index + 1} of ${count}`}>
+          <Text style={styles.counterText} accessibilityLabel={t('album.photoOf', { index: index + 1, count })}>
             {index + 1} / {count}
           </Text>
           {photo?.caption ? (
@@ -579,8 +580,8 @@ export function PhotoViewer({
               <Text
                 style={styles.missionText}
                 numberOfLines={MissionTokens.caption.lines}
-                accessibilityLabel={`Mission: ${photo.mission}`}>
-                <Text style={styles.missionLabel}>Mission · </Text>
+                accessibilityLabel={t('album.missionA11y', { mission: photo.mission })}>
+                <Text style={styles.missionLabel}>{t('album.missionLabel')}</Text>
                 {photo.mission}
               </Text>
             </Glass>

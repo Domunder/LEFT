@@ -15,6 +15,8 @@
  * would otherwise sit at "00m 00s left" indefinitely. It reads "Ended" instead.
  */
 
+import { t } from '@/i18n';
+
 import { countdownParts, hasEnded } from './event-end';
 import { isDeveloped, type Event } from './events';
 
@@ -34,16 +36,18 @@ export type FilmDestination =
 export function statusLabel(event: Event, now: Date = new Date()): string {
   switch (event.status) {
     case 'setup':
-      return 'Not started';
+      return t('library.statusNotStarted');
     case 'live': {
       const endsAt = new Date(event.ends_at);
       // The clock has run out and the status has not caught up yet.
-      if (hasEnded(endsAt, now)) return 'Developed';
+      if (hasEnded(endsAt, now)) return t('library.statusDeveloped');
       const [first, second] = countdownParts(endsAt, now);
-      return `${first.value}${first.unit} ${second.value}${second.unit} left`;
+      return t('library.statusTimeLeft', {
+        time: `${first.value}${first.unit} ${second.value}${second.unit}`,
+      });
     }
     case 'developed':
-      return 'Developed';
+      return t('library.statusDeveloped');
   }
 }
 
@@ -58,7 +62,7 @@ export function filmPhase(event: Event, now: Date = new Date()): FilmPhase {
 
 /** "42 photos" / "1 photo" — beside the group size on a moment's card. */
 export function photoLabel(count: number): string {
-  return `${count} ${count === 1 ? 'photo' : 'photos'}`;
+  return t('common.photos', { count });
 }
 
 /** Whether this card's badge counts down, and so needs a ticking clock. */
@@ -117,5 +121,5 @@ export function destinationFor(event: Event, userId: string | undefined): FilmDe
 
 /** "5 people" / "1 person" — the card's left-hand badge. */
 export function memberLabel(count: number): string {
-  return `${count} ${count === 1 ? 'person' : 'people'}`;
+  return t('common.people', { count });
 }

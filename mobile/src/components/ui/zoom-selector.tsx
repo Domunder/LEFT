@@ -23,6 +23,7 @@
 
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { t } from '@/i18n';
 import { haptic } from '@/lib/haptics';
 import Animated, {
   Easing,
@@ -70,7 +71,7 @@ export function ZoomSelector({ stops, selected, live, onSelect, onReset }: ZoomS
             <ZoomPill
               stop={{ label: live, zoom: 0 }}
               selected
-              accessibilityLabel={`Zoom ${live}. Back to 1×`}
+              accessibilityLabel={t('camera.zoomResetA11y', { zoom: live })}
               onPress={onReset}
             />
           </Animated.View>
@@ -115,7 +116,7 @@ function ZoomPill({
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ selected }}
-      accessibilityLabel={accessibilityLabel ?? `Zoom ${stop.label}`}
+      accessibilityLabel={accessibilityLabel ?? t('camera.zoomA11y', { zoom: stop.label })}
       onPress={() => {
         haptic.select();
         onPress();

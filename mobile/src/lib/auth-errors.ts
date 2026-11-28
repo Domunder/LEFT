@@ -15,6 +15,8 @@
  * button for every failure it could have.
  */
 
+import { t } from '@/i18n';
+
 /** The shape both `postgrest-js` and `gotrue-js` failures arrive in. */
 type ErrorLike = {
   message?: unknown;
@@ -131,7 +133,7 @@ export function messageFor(e: unknown): string {
     not a message anyone should meet in the normal flow.
   */
   if (fieldOf(e, 'hint') === 'anonymous') {
-    return 'Sign in with Google or Apple to start a memory of your own.';
+    return t('errors.signInToHost');
   }
 
   return raw + diagnostics(e);

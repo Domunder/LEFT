@@ -15,6 +15,7 @@
  */
 
 import { getSupabase } from './supabase';
+import { t } from '@/i18n';
 import type { Database } from '@/types/database';
 
 type Tables = Database['public']['Tables'];
@@ -41,7 +42,7 @@ export const MAX_EVENT_MISSIONS = 200;
 /** Someone else already claimed that name. */
 export class MissionNameTakenError extends Error {
   constructor() {
-    super('Someone else is already using that name');
+    super(t('missions.nameTaken'));
     this.name = 'MissionNameTakenError';
   }
 }
@@ -49,7 +50,7 @@ export class MissionNameTakenError extends Error {
 /** The cards were dealt; the guest can no longer pick or change their name. */
 export class MissionsDealtError extends Error {
   constructor() {
-    super('Your missions were already dealt');
+    super(t('missions.alreadyDealt'));
     this.name = 'MissionsDealtError';
   }
 }
@@ -57,7 +58,7 @@ export class MissionsDealtError extends Error {
 /** The host's list is fixed once the event has started. */
 export class MissionsLockedError extends Error {
   constructor() {
-    super('The missions are fixed once the event has started');
+    super(t('missions.fixedOnceStarted'));
     this.name = 'MissionsLockedError';
   }
 }

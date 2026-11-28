@@ -17,6 +17,7 @@ import { LookPreview } from './look-preview';
 import { PressScale } from './press-scale';
 import { COVER_SAMPLES } from '@/constants/samples';
 import { Colors, CoverStep as T, Motion, Spacing } from '@/constants/theme';
+import { t } from '@/i18n';
 import type { CoverChoice } from '@/lib/event-cover';
 import type { FilmLook } from '@/lib/events';
 import { canImport, pickOnePhoto } from '@/lib/import-photos';
@@ -61,8 +62,8 @@ export function CoverPicker({ look, choice, onChange, own, onOwnPicked }: CoverP
         accessibilityRole="image"
         accessibilityLabel={
           choice.kind === 'upload'
-            ? 'Your photo, in your film’s look'
-            : 'A stock picture, in your film’s look'
+            ? t('onboarding.coverPreviewOwnA11y')
+            : t('onboarding.coverPreviewStockA11y')
         }>
         {/* Keyed so a new pick starts a fresh decode instead of showing the last one. */}
         <LookPreview
@@ -83,7 +84,7 @@ export function CoverPicker({ look, choice, onChange, own, onOwnPicked }: CoverP
         <PressScale
           accessibilityRole="radio"
           accessibilityState={{ selected: choice.kind === 'upload' }}
-          accessibilityLabel={own ? 'Your photo' : 'Choose from your photos'}
+          accessibilityLabel={own ? t('onboarding.coverOwnA11y') : t('onboarding.coverChooseA11y')}
           onPress={() => {
             if (own && choice.kind !== 'upload') select({ kind: 'upload', uri: own });
             else void chooseOwn();
@@ -103,7 +104,9 @@ export function CoverPicker({ look, choice, onChange, own, onOwnPicked }: CoverP
             key={sample.key}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
-            accessibilityLabel={`Stock picture ${sample.key.replace('sample-', '')}`}
+            accessibilityLabel={t('onboarding.coverStockA11y', {
+              number: sample.key.replace('sample-', ''),
+            })}
             onPress={() => select({ kind: 'sample', key: sample.key })}
             style={[styles.tile, selected && styles.selected]}>
             {/* In the film's look too (the user, 2026-11-21), so the row compares like for like. */}

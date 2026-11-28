@@ -15,6 +15,7 @@ import Animated, { Easing, useAnimatedStyle, withTiming } from 'react-native-rea
 
 import { GroupCircleState, GroupRow, Motion } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { at } from '@/lib/pair';
 import { GROUP_PRESETS } from '@/lib/roll';
 
@@ -92,7 +93,7 @@ function GroupCircle({ preset, diameter, selected, onPress }: GroupCircleProps) 
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ selected }}
-      accessibilityLabel={`Up to ${preset} people`}
+      accessibilityLabel={t('onboarding.groupUpTo', { count: preset })}
       onPress={onPress}
       // The smallest circle is 14pt across; the slot is ~46pt wide on a 390pt
       // screen, so only the vertical axis needs help reaching a 44pt target.

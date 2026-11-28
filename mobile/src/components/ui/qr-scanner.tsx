@@ -29,10 +29,12 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Body, Display, Em } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Body, Display } from '@/components/ui/typography';
 import { Glass, GlassButton } from '@/components/ui/glass';
 import { PillButton } from '@/components/ui/pill-button';
 import { Colors, JoinSheet, Radii, Spacing } from '@/constants/theme';
+import { t } from '@/i18n';
 import { parseInviteUrl } from '@/lib/invite';
 
 const T = JoinSheet.scanner;
@@ -88,16 +90,14 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
         </Animated.View>
       ) : (
         <View style={styles.prompt}>
-          <Display size="xs">
-            Let LEFT <Em>see the code.</Em>
-          </Display>
+          <Display size="xs">{em(t('guest.scanPermissionHeadline'))}</Display>
           <Body small>
             {permission?.canAskAgain === false
-              ? 'Camera is off. Turn it on in Settings.'
-              : 'Only used to read the invite code.'}
+              ? t('guest.scanCameraOff')
+              : t('guest.scanPermissionBody')}
           </Body>
           {permission?.canAskAgain !== false ? (
-            <PillButton label="Allow camera" onPress={() => void requestPermission()} />
+            <PillButton label={t('guest.scanAllow')} onPress={() => void requestPermission()} />
           ) : null}
         </View>
       )}
@@ -112,7 +112,7 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
       {permission?.granted ? (
         <View style={[styles.title, { top: insets.top + T.titleTop }]} pointerEvents="none">
           <Display size="xs" style={styles.centered}>
-            Scan the host&rsquo;s <Em>QR code.</Em>
+            {em(t('guest.scanHeadline'))}
           </Display>
         </View>
       ) : null}
@@ -121,13 +121,13 @@ export function QrScanner({ onScan, onClose }: QrScannerProps) {
         <Glass radius={T.hintRadius} weight="bar" style={styles.hint}>
           <Feather name="link" size={T.hintIcon} color={Colors.text} />
           <Body small color={Colors.text} style={styles.hintText}>
-            Got a link instead? Just tap it in your messages &mdash; it opens LEFT.
+            {t('guest.scanHint')}
           </Body>
         </Glass>
       </View>
 
       <View style={[styles.close, { top: insets.top + Spacing.sm }]}>
-        <GlassButton icon="x" accessibilityLabel="Close the scanner" onPress={onClose} />
+        <GlassButton icon="x" accessibilityLabel={t('guest.scanClose')} onPress={onClose} />
       </View>
     </View>
   );

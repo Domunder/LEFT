@@ -30,7 +30,8 @@ import { PressScale } from '@/components/ui/press-scale';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { StatusPill } from '@/components/ui/status-pill';
-import { Body, Display, Em, Label } from '@/components/ui/typography';
+import { em } from '@/components/ui/rich';
+import { Body, Display, Label } from '@/components/ui/typography';
 import { Colors, Group, MissionsEditor, Press, Spacing } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import {
@@ -42,6 +43,7 @@ import {
   type Event,
   type EventMember,
 } from '@/lib/events';
+import { t } from '@/i18n';
 
 type LoadState =
   | { kind: 'loading' }
@@ -50,7 +52,7 @@ type LoadState =
 
 /** The Missions row's status — "On · 1 per guest" or "Off". */
 function missionsStatus(perGuest: number | null): string {
-  return perGuest === null ? 'Off' : `On · ${perGuest} per guest`;
+  return perGuest === null ? t('missions.rowOff') : t('missions.rowOn', { count: perGuest });
 }
 
 export default function GroupScreen() {
@@ -157,8 +159,8 @@ export default function GroupScreen() {
     } catch (e) {
       setError(
         e instanceof Error && e.message.toLowerCase().includes('already ended')
-          ? 'This event has already ended.'
-          : "Couldn't start the event. Check your connection and try again."
+          ? t('host.alreadyEnded')
+          : t('host.startFailed')
       );
       setStarting(false);
     }
@@ -169,13 +171,11 @@ export default function GroupScreen() {
     if (!event || starting) return;
     const missions = event.missions_per_guest != null;
     Alert.alert(
-      'Start the event?',
-      missions
-        ? "Everyone can take photos from now on. The missions are handed out and can't be changed after this, and guests can no longer change their name."
-        : "Everyone can take photos from now on. This can't be undone.",
+      t('host.startTitle'),
+      missions ? t('host.startBodyMissions') : t('host.startBody'),
       [
-        { text: 'Not yet', style: 'cancel' },
-        { text: 'Start', onPress: () => void handleStart() },
+        { text: t('host.notYet'), style: 'cancel' },
+        { text: t('host.start'), onPress: () => void handleStart() },
       ]
     );
   }, [event, starting, handleStart]);
@@ -196,7 +196,7 @@ export default function GroupScreen() {
             // another 10 — the loop of QR, group, QR, group the user hit.
             <CircleIconButton
               materialIcon="qrcode"
-              accessibilityLabel="Show the invite QR code"
+              accessibilityLabel={t('host.showQr')}
               onPress={() =>
                 router.push({
                   pathname: '/(host)/invite',
@@ -208,7 +208,7 @@ export default function GroupScreen() {
         }
       />
 
-      <Label style={styles.eyebrow}>Your Group</Label>
+      <Label style={styles.eyebrow}>{t('host.groupEyebrow')}</Label>
 
       {/*
         Held back until the roster is real. Flashing "0 people have joined." and
@@ -217,9 +217,7 @@ export default function GroupScreen() {
       */}
       {event ? (
         <Display size="lg" style={styles.headline}>
-          <Em>{count}</Em>/{capacity} people
-          {'\n'}
-          {count === 1 ? 'has joined.' : 'have joined.'}
+          {em(t('host.groupHeadline', { count, capacity }))}
         </Display>
       ) : (
         <View style={styles.headlineSpacer} />
@@ -235,13 +233,13 @@ export default function GroupScreen() {
           <View style={styles.waiting}>
             <ActivityIndicator size="small" color={Colors.textMuted} />
             <Body small color={Colors.textDim}>
-              Loading your group…
+              {t('host.loadingGroup')}
             </Body>
           </View>
         ) : state.kind === 'error' ? (
           <View style={styles.waiting}>
             <Body small color={Colors.textDim} style={styles.centered}>
-              Couldn&rsquo;t load your group.{'\n'}Check your connection and try again.
+              {t('host.groupLoadFailed')}
             </Body>
           </View>
         ) : (
@@ -271,7 +269,7 @@ export default function GroupScreen() {
               <View style={styles.waiting}>
                 <ActivityIndicator size="small" color={Colors.textMuted} />
                 <Body small color={Colors.textDim}>
-                  Waiting for members…
+                  {t('host.waitingForMembers')}
                 </Body>
               </View>
             ) : null}
@@ -291,10 +289,8 @@ export default function GroupScreen() {
             <StatusPill
               label={
                 spotsLeft === 0
-                  ? 'Group is full'
-                  : spotsLeft === 1
-                    ? '1 spot left'
-                    : `${spotsLeft} spots left`
+                  ? t('host.groupFull')
+                  : t('host.spotsLeft', { count: spotsLeft })
               }
               dotColor={spotsLeft === 0 ? Colors.gold : Colors.green}
             />
@@ -310,14 +306,16 @@ export default function GroupScreen() {
       {event ? (
         <PressScale
           accessibilityRole="button"
-          accessibilityLabel={`Missions, ${missionsStatus(event.missions_per_guest)}`}
+          accessibilityLabel={t('missions.rowA11y', {
+            status: missionsStatus(event.missions_per_guest),
+          })}
           onPress={() =>
             router.push({ pathname: '/(host)/missions', params: { eventId: event.id } })
           }
           scale={Press.cardScale}
           style={styles.missions}>
           <Feather name="target" size={MissionsEditor.entry.iconSize} color={Colors.textMuted} />
-          <Text style={styles.missionsLabel}>Missions</Text>
+          <Text style={styles.missionsLabel}>{t('missions.title')}</Text>
           <Text style={styles.missionsStatus} numberOfLines={1}>
             {missionsStatus(event.missions_per_guest)}
           </Text>
@@ -336,7 +334,7 @@ export default function GroupScreen() {
       ) : null}
 
       <PillButton
-        label={starting ? 'Starting…' : 'Start the Event'}
+        label={starting ? t('host.starting') : t('host.startEvent')}
         icon="camera"
         disabled={!event || starting}
         onPress={confirmStart}

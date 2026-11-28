@@ -31,6 +31,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 
 import { Colors, Ending, Wheel as WheelToken } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import {
   daysBetween,
   labelDays,
@@ -139,7 +140,7 @@ export function DayStrip({ value, onChange, initialWidth = 0 }: DayStripProps) {
           onMomentumScrollEnd={(event) => settle(event.nativeEvent.contentOffset.x)}
           contentContainerStyle={{ paddingHorizontal: inset, gap: T.gap }}
           accessibilityRole="adjustable"
-          accessibilityLabel="Ending day">
+          accessibilityLabel={t('dates.endingDay')}>
           {days.map((day, index) => (
             <Day
               key={day.date.getTime()}
@@ -186,7 +187,7 @@ const Day = memo(function Day({ day, index, today, scrollX, reach, onPress }: Da
         accessibilityLabel={day.spoken}
         onPress={() => onPress(index)}
         style={styles.day}>
-        <Text style={styles.small}>{today ? 'Today' : day.weekday}</Text>
+        <Text style={styles.small}>{today ? t('dates.today') : day.weekday}</Text>
         <Text style={styles.numeral}>{day.date.getDate()}</Text>
         <Text style={styles.small}>{day.month}</Text>
       </Pressable>

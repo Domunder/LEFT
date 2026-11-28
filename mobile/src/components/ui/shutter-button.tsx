@@ -15,6 +15,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { Camera } from '@/constants/theme';
+import { t } from '@/i18n';
 
 const T = Camera.shutter;
 
@@ -32,7 +33,7 @@ export function ShutterButton({ onFire, disabled = false }: ShutterButtonProps) 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Take photo"
+      accessibilityLabel={t('camera.takePhoto')}
       accessibilityState={{ disabled }}
       disabled={disabled}
       // Generous: a shutter pressed at arm's length is rarely hit dead centre.

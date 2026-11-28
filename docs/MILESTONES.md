@@ -500,15 +500,17 @@ bei Schritt 5, die Form des Gästebuchs bei Schritt 9).
 
 Schritte (jeder für sich fertig, typecheck + lint sauber):
 
-1. **Fundament: Haptik, Bewegung, Übergänge.** Ein `lib/haptics.ts` (Auswahl,
+1. **Fundament: Haptik, Bewegung, Übergänge (gebaut 28.11.2026, nie auf einem Gerät).** Ein `lib/haptics.ts` (Auswahl,
    Bestätigung, Schritt) statt verstreuter Aufrufe; Haptik auf jeder Auswahl
    (Preisstufe, Rolle, Look, Schalter). `RollCounter` als Ziffernrad überall,
    wo eine Zahl sich ändert. Stack-Übergänge im Onboarding und zwischen
    Screens überarbeitet (Feder, Tiefe, reduzierte Bewegung = Überblendung).
    Nur JS.
 2. **Sprache.** i18n-Schicht, alle Texte der App herausgezogen, fünf
-   Sprachen, Einstellung „Language" auf 20. Braucht `expo-localization`
-   (neuer Build).
+   Sprachen, Einstellung „Language" auf 20. **Gebaut 28.11.2026** (543
+   Schlüssel, typecheck + lint sauber, nie auf einem Gerät): ohne
+   `expo-localization`, die Sprache des Telefons kommt aus `Intl` — kein
+   neuer Build nötig.
 3. **Einladungskarte gestalten** (ersetzt 03.1): iPhone-Mock, der zeigt, was
    der Gast auf 11 sieht (Bild, „Invited by …", Name, Dauer, Rolle), „Bild
    ändern", „Vorschau". 11 wird entsprechend zur Karte mit dem Event-Bild.

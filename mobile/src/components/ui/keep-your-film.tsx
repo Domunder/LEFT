@@ -29,6 +29,7 @@ import { AuthButton } from './auth-button';
 import { GlassPanel } from './glass-panel';
 import { Body, Caption, Label } from './typography';
 import { Colors, Films, Radii, Spacing } from '@/constants/theme';
+import { t } from '@/i18n';
 import {
   isSignInCancelled,
   linkIdentity,
@@ -62,8 +63,8 @@ export function KeepYourFilm({ onLinked, onDismiss }: KeepYourFilmProps) {
       if (!isSignInCancelled(e)) {
         setError(
           e instanceof Error && e.message.toLowerCase().includes('already')
-            ? 'That account is already in use. Try the other option.'
-            : "Couldn't sign in. Check your connection and try again."
+            ? t('errors.accountInUse')
+            : t('errors.signInFailed')
         );
       }
     } finally {
@@ -74,20 +75,19 @@ export function KeepYourFilm({ onLinked, onDismiss }: KeepYourFilmProps) {
   return (
     <GlassPanel radius={Radii.card} contentStyle={styles.content}>
       <View style={styles.headingRow}>
-        <Label small>Keep your moments</Label>
+        <Label small>{t('auth.keepPanelTitle')}</Label>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Dismiss"
+          accessibilityLabel={t('auth.dismiss')}
           onPress={onDismiss}
           hitSlop={Spacing.md}
           style={({ pressed }) => pressed && styles.pressed}>
-          <Caption color={Colors.textFaint}>Not now</Caption>
+          <Caption color={Colors.textFaint}>{t('common.notNow')}</Caption>
         </Pressable>
       </View>
 
       <Body small style={styles.copy}>
-        You&rsquo;re shooting as a guest. Sign in so your films stay yours if you lose this
-        phone.
+        {t('auth.keepPanelBody')}
       </Body>
 
       <View style={styles.buttons}>

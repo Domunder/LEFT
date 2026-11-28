@@ -21,6 +21,8 @@ import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 import { Platform } from 'react-native';
 
+import { t } from '@/i18n';
+
 import { forgetUser } from './purchases';
 import { unregisterPush } from './push';
 import { getSupabase } from './supabase';
@@ -189,7 +191,7 @@ async function acquireAppleCredential(): Promise<{
     throw e;
   }
 
-  if (!credential.identityToken) throw new Error('Apple returned no identity token');
+  if (!credential.identityToken) throw new Error(t('errors.appleNoToken'));
 
   const name = [credential.fullName?.givenName, credential.fullName?.familyName]
     .filter(Boolean)
@@ -209,7 +211,7 @@ export async function signInWithGoogle(): Promise<Session> {
     token: idToken,
   });
   if (error) throw error;
-  if (!data.session) throw new Error('Google sign-in returned no session');
+  if (!data.session) throw new Error(t('errors.googleNoSession'));
 
   return data.session;
 }
@@ -223,7 +225,7 @@ export async function signInWithApple(): Promise<Session> {
     nonce: apple.rawNonce,
   });
   if (error) throw error;
-  if (!data.session) throw new Error('Apple sign-in returned no session');
+  if (!data.session) throw new Error(t('errors.appleNoSession'));
 
   /*
     Apple sends `fullName` on the *first* sign-in for this Apple ID and app pair,
@@ -272,7 +274,7 @@ export function resolveDisplayName(user: User): string | null {
 export async function setDisplayName(name: string): Promise<void> {
   const trimmed = name.trim();
   if (trimmed.length < 1 || trimmed.length > MAX_NAME_LENGTH) {
-    throw new Error(`Name must be between 1 and ${MAX_NAME_LENGTH} characters`);
+    throw new Error(t('errors.nameLength', { max: MAX_NAME_LENGTH }));
   }
 
   const { error } = await getSupabase().auth.updateUser({ data: { name: trimmed } });
@@ -306,7 +308,7 @@ export async function signInAnonymously(): Promise<Session> {
 
   const { data, error } = await getSupabase().auth.signInAnonymously();
   if (error) throw error;
-  if (!data.session) throw new Error('Anonymous sign-in returned no session');
+  if (!data.session) throw new Error(t('errors.anonymousNoSession'));
 
   return data.session;
 }
@@ -349,7 +351,7 @@ export async function linkIdentity(provider: 'google' | 'apple'): Promise<void> 
   const auth = getSupabase().auth;
 
   const before = (await getSession())?.user.id;
-  if (!before) throw new Error('There is no session to link');
+  if (!before) throw new Error(t('errors.noSessionToLink'));
 
   let appleName = '';
   let result;
@@ -387,7 +389,7 @@ export async function linkIdentity(provider: 'google' | 'apple'): Promise<void> 
   }
 
   if (!user || user.id !== before || user.is_anonymous) {
-    throw new Error('Linking did not complete');
+    throw new Error(t('errors.linkIncomplete'));
   }
 
   // The link stands whether or not the name could be written.

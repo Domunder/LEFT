@@ -21,11 +21,13 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { PillButton } from '@/components/ui/pill-button';
+import { em } from '@/components/ui/rich';
 import { Sheet } from '@/components/ui/sheet';
 import { useToast } from '@/components/ui/toast-host';
-import { Body, Display, Em } from '@/components/ui/typography';
+import { Body, Display } from '@/components/ui/typography';
 import { Colors, DeleteAccount as DA, Radii } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t, type TKey } from '@/i18n';
 import { signOut } from '@/lib/auth';
 import { deleteAccount } from '@/lib/events';
 
@@ -36,10 +38,10 @@ import { deleteAccount } from '@/lib/events';
  * middle one especially, since "delete my account" is normally taken to mean the
  * footage goes too. See supabase/functions/delete-account for why it does not.
  */
-const CONSEQUENCES = [
-  'Events you started are deleted for everyone, with all photos.',
-  "Photos you took in other events stay, but not linked to you.",
-  'Purchases are not refunded.',
+const CONSEQUENCES: TKey[] = [
+  'auth.deleteEvents',
+  'auth.deletePhotos',
+  'auth.deletePurchases',
 ];
 
 export default function DeleteAccountScreen() {
@@ -65,13 +67,13 @@ export default function DeleteAccountScreen() {
       }
 
       router.replace('/');
-      toast.show({ initials: '✓', title: 'Your account has been deleted.' });
+      toast.show({ initials: '✓', title: t('auth.deleted') });
     } catch {
       setBusy(false);
       toast.show({
         initials: '!',
-        title: "Couldn't delete your account.",
-        message: 'Check your connection and try again.',
+        title: t('auth.deleteFailed'),
+        message: t('common.checkConnection'),
       });
     }
   }, [router, toast]);
@@ -81,7 +83,7 @@ export default function DeleteAccountScreen() {
     <Sheet locked={busy}>
       <View style={styles.body}>
         <Display size="xs" style={styles.headline}>
-          Delete your <Em>account?</Em>
+          {em(t('auth.deleteHeadline'))}
         </Display>
 
         <View style={styles.list}>
@@ -89,7 +91,7 @@ export default function DeleteAccountScreen() {
             <View key={line} style={styles.bullet}>
               <Text style={styles.glyph}>•</Text>
               <Body small color={Colors.textMuted} style={styles.bulletText}>
-                {line}
+                {t(line)}
               </Body>
             </View>
           ))}
@@ -98,7 +100,7 @@ export default function DeleteAccountScreen() {
         <View style={styles.actions}>
           {/* Destructive first in reading order, but visually the quieter of the two. */}
           <PillButton
-            label={busy ? 'Deleting…' : 'Delete Account'}
+            label={busy ? t('auth.deleting') : t('auth.deleteConfirm')}
             variant="glass"
             labelColor={Colors.destructive}
             disabled={busy}
@@ -106,7 +108,7 @@ export default function DeleteAccountScreen() {
             style={styles.destructive}
           />
           <PillButton
-            label="Cancel"
+            label={t('common.cancel')}
             disabled={busy}
             onPress={() => router.back()}
           />

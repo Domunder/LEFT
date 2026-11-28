@@ -23,6 +23,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { Wheel as WheelToken } from '@/constants/theme';
+import { t } from '@/i18n';
 import {
   hourOptions,
   minuteOptions,
@@ -65,7 +66,7 @@ export function TimeWheel({ value, onChange }: TimeWheelProps) {
           index={Math.max(0, hours.indexOf(parts.hour))}
           onIndexChange={(i) => setClock(hours[i], parts.minute, parts.isPm)}
           loop
-          accessibilityLabel="Hour"
+          accessibilityLabel={t('dates.hour')}
         />
 
         <Wheel
@@ -73,7 +74,7 @@ export function TimeWheel({ value, onChange }: TimeWheelProps) {
           index={Math.max(0, minutes.indexOf(parts.minute))}
           onIndexChange={(i) => setClock(parts.hour, minutes[i], parts.isPm)}
           loop
-          accessibilityLabel="Minute"
+          accessibilityLabel={t('dates.minute')}
         />
 
         {/*
@@ -84,12 +85,12 @@ export function TimeWheel({ value, onChange }: TimeWheelProps) {
         {!hour24 && (
           <Wheel
             items={[
-              { key: 'am', label: 'AM' },
-              { key: 'pm', label: 'PM' },
+              { key: 'am', label: t('dates.am') },
+              { key: 'pm', label: t('dates.pm') },
             ]}
             index={parts.isPm ? 1 : 0}
             onIndexChange={(i) => setClock(parts.hour, parts.minute, i === 1)}
-            accessibilityLabel="AM or PM"
+            accessibilityLabel={t('dates.amOrPm')}
           />
         )}
       </View>

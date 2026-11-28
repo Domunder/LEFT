@@ -20,6 +20,7 @@ import type { LookOption } from '@/constants/looks';
 import { LookPreview } from '@/components/ui/look-preview';
 import { LookCard as Tokens, LookCardState, Motion } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import { at } from '@/lib/pair';
 
 const TIMING = {
@@ -69,7 +70,7 @@ export function LookCard({ look, selected, onPress, style }: LookCardProps) {
     <AnimatedPressable
       accessibilityRole="radio"
       accessibilityState={{ selected }}
-      accessibilityLabel={`${look.name}. ${look.blurb}`}
+      accessibilityLabel={`${look.name}. ${t(look.blurbKey)}`}
       onPress={onPress}
       onPressIn={() => setPressed(true)}
       onPressOut={() => setPressed(false)}
@@ -85,7 +86,7 @@ export function LookCard({ look, selected, onPress, style }: LookCardProps) {
 
       <View style={styles.text}>
         <Animated.Text style={[styles.name, name]}>{look.name}</Animated.Text>
-        <Animated.Text style={[styles.blurb, blurb]}>{look.blurb}</Animated.Text>
+        <Animated.Text style={[styles.blurb, blurb]}>{t(look.blurbKey)}</Animated.Text>
       </View>
     </AnimatedPressable>
   );

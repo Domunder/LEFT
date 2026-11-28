@@ -72,6 +72,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Body, Display, Label } from '@/components/ui/typography';
 import { samplesFor } from '@/constants/samples';
 import { Colors, Films, Glass, ScrollEdge as Edge } from '@/constants/theme';
+import { locale, t } from '@/i18n';
 import { getSession, isAnonymous } from '@/lib/auth';
 import { loadCovers, STACK_SIZE, type FilmCover } from '@/lib/covers';
 import { countdownParts } from '@/lib/event-end';
@@ -107,7 +108,7 @@ type ListItem =
 /** "October", or "October 2025" for another year — when a developed moment was. */
 function monthOf(iso: string, now: Date): string {
   const date = new Date(iso);
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString(locale(), {
     month: 'long',
     year: date.getFullYear() === now.getFullYear() ? undefined : 'numeric',
   });
@@ -311,7 +312,7 @@ export default function FilmsScreen() {
     if (showsPrompt) list.push({ kind: 'prompt' });
     open.forEach((event, i) => list.push({ kind: 'row', event, divided: i > 0 }));
     if (developed.length > 0) {
-      list.push({ kind: 'label', text: 'Developed' });
+      list.push({ kind: 'label', text: t('library.sectionDeveloped') });
       developed.forEach((event, i) => list.push({ kind: 'row', event, divided: i > 0 }));
     }
     return list;
@@ -383,17 +384,22 @@ export default function FilmsScreen() {
           return (
             <MomentHero
               {...common}
-              status="Not started"
+              status={t('library.statusNotStarted')}
               live={false}
               primary={{
                 value: event.roll_size === null ? '∞' : String(event.roll_size),
-                label: event.roll_size === null ? 'unlimited roll' : 'photos each',
+                label:
+                  event.roll_size === null
+                    ? t('library.heroUnlimitedRoll')
+                    : t('library.heroPhotosEach'),
               }}
               secondary={{
                 value: String(event.memberCount),
-                label: 'joined',
+                label: t('library.heroJoined'),
               }}
-              actionLabel={event.host_id === user?.id ? 'Invite & start' : 'Open'}
+              actionLabel={
+                event.host_id === user?.id ? t('library.inviteAndStart') : t('library.open')
+              }
               onAction={open}
             />
           );
@@ -404,14 +410,17 @@ export default function FilmsScreen() {
           return (
             <MomentHero
               {...common}
-              status="Developed"
+              status={t('library.statusDeveloped')}
               live={false}
-              primary={{ value: String(photos), label: photos === 1 ? 'photo' : 'photos' }}
+              primary={{
+                value: String(photos),
+                label: t('library.heroPhotos', { count: photos }),
+              }}
               secondary={{
                 value: String(event.memberCount),
-                label: event.memberCount === 1 ? 'person' : 'people',
+                label: t('library.heroPeople', { count: event.memberCount }),
               }}
-              actionLabel="Open album"
+              actionLabel={t('library.openAlbum')}
               onAction={() => router.push(album)}
               quiet
             />
@@ -421,7 +430,7 @@ export default function FilmsScreen() {
         return (
           <MomentHero
             {...common}
-            status="Live now"
+            status={t('library.statusLive')}
             live
             primary={{
               // Frames left on the viewer's roll, once their own count is known.
@@ -431,16 +440,21 @@ export default function FilmsScreen() {
                   : event.roll_size === null
                     ? '∞'
                     : String(Math.max(0, event.roll_size - own)),
-              label: event.roll_size === null ? 'unlimited roll' : 'shots left',
+              label:
+                event.roll_size === null
+                  ? t('library.heroUnlimitedRoll')
+                  : t('library.heroShotsLeft', { count: Math.max(0, event.roll_size - own) }),
             }}
             secondary={{
               value: countdownOf(event, now),
-              label: 'until it develops',
+              label: t('library.heroUntilDevelops'),
               // The way to the developing state and the host's "develop now".
               onPress: () => router.push(album),
-              accessibilityLabel: `${countdownOf(event, now)} until it develops. See how the film is doing`,
+              accessibilityLabel: t('library.heroUntilDevelopsA11y', {
+                time: countdownOf(event, now),
+              }),
             }}
-            actionLabel={rollEmpty ? 'See your film' : 'Open camera'}
+            actionLabel={rollEmpty ? t('library.seeYourFilm') : t('library.openCamera')}
             onAction={open}
           />
         );
@@ -511,15 +525,15 @@ export default function FilmsScreen() {
       <View
         style={[styles.header, { paddingTop: insets.top }]}
         onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
-        <Display size="md">Moments</Display>
+        <Display size="md">{t('library.title')}</Display>
 
         <View style={styles.headerButtons}>
           <GlassButton
             icon="settings"
-            accessibilityLabel="Settings"
+            accessibilityLabel={t('library.settings')}
             onPress={() => router.push('/settings')}
           />
-          <GlassButton icon="users" accessibilityLabel="Join a group" onPress={joinEvent} />
+          <GlassButton icon="users" accessibilityLabel={t('library.joinGroup')} onPress={joinEvent} />
           {/* Creating is the primary action here: the one light control. */}
           <CircleIconButton
             icon="plus"
@@ -527,7 +541,7 @@ export default function FilmsScreen() {
             size={Glass.buttonSize}
             iconSize={Films.header.plusIconSize}
             iconColor={Colors.onLight}
-            accessibilityLabel="Start a moment"
+            accessibilityLabel={t('library.startMoment')}
             onPress={startNewEvent}
           />
         </View>
@@ -545,10 +559,10 @@ export default function FilmsScreen() {
       ) : state.kind === 'error' ? (
         <View style={styles.centered}>
           <Body small color={Colors.textDim} style={styles.errorCopy}>
-            Couldn&rsquo;t load your moments.{'\n'}Check your connection and try again.
+            {t('library.loadFailed')}
           </Body>
           <PillButton
-            label="Try again"
+            label={t('common.tryAgain')}
             variant="secondary"
             onPress={() => {
               setState({ kind: 'loading' });

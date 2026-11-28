@@ -22,6 +22,7 @@ import { EventCoverImage } from './event-cover-image';
 import { LookPreview } from './look-preview';
 import { Colors, MiniCamera as T } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { t } from '@/i18n';
 import type { Event, FilmLook } from '@/lib/events';
 
 type MiniCameraProps = {
@@ -37,7 +38,7 @@ type MiniCameraProps = {
 };
 
 export function MiniCamera({ look, rollSize, mission, width = T.width, cover }: MiniCameraProps) {
-  const counter = rollSize === null ? '∞' : `${rollSize} left`;
+  const counter = rollSize === null ? '∞' : t('guest.miniCounter', { count: rollSize });
   const height = Math.round(width * T.aspect);
   const outer = width * T.cornerRatio;
 
@@ -46,7 +47,15 @@ export function MiniCamera({ look, rollSize, mission, width = T.width, cover }: 
       style={[styles.phone, { width, height, borderRadius: outer }]}
       accessible
       accessibilityRole="image"
-      accessibilityLabel={`LEFT's camera on a phone: ${rollSize === null ? 'an unlimited roll' : `${rollSize} photos left`}${mission ? `, and a mission for the next photo: ${mission}` : ''}.`}>
+      accessibilityLabel={
+        rollSize === null
+          ? mission
+            ? t('guest.miniA11yUnlimitedMission', { mission })
+            : t('guest.miniA11yUnlimited')
+          : mission
+            ? t('guest.miniA11yMission', { count: rollSize, mission })
+            : t('guest.miniA11y', { count: rollSize })
+      }>
       <View style={[styles.screen, { borderRadius: outer - T.bezel }]}>
         <View style={styles.viewfinder}>
           {cover ? <EventCoverImage event={cover} /> : <LookPreview look={look} />}
@@ -63,7 +72,7 @@ export function MiniCamera({ look, rollSize, mission, width = T.width, cover }: 
               <View style={styles.note}>
                 <Feather name="target" size={T.noteIcon} color={Colors.text} />
                 <Text style={styles.noteText} numberOfLines={2}>
-                  Next photo: {mission}
+                  {t('guest.miniNextPhoto', { mission })}
                 </Text>
               </View>
             ) : null}

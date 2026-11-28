@@ -83,6 +83,12 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   desktop browser; the App Clip half (with its new album) **never compiled**,
   the app's `(guest)/demo` never run. **Not on the hosted project yet.** See
   "The demo" below.
+- **In progress (2026-11-28), branch `feature/1.3.0`: version 1.3.0** — the
+  plan is "Version 1.3.0" in `docs/MILESTONES.md` (from an analysis of
+  once.film; similar features in LEFT's own form, not a copy). Built, **never
+  run on a device**: step 1 (`lib/haptics.ts` is the only importer of
+  `expo-haptics`; onboarding cross-fades, headlines arrive through `Rise`)
+  and step 2, the five languages — see "Languages" below.
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -980,6 +986,35 @@ Decided by the user — do not re-litigate:
   it, the purchase ledger could not be written at all).
 - **Real delivery is untested**: it needs APNs/FCM credentials and a device.
 
+## Languages (1.3.0, 2026-11-28)
+
+- **English, German, French, Spanish, Italian — the app only.** The web
+  camera, the App Clip, push copy, the server's mission library and the legal
+  texts are English. Translated by Claude, **read by no native speaker**.
+- **`mobile/src/i18n/`**: `en/<namespace>.ts` is the source; the other four
+  are typed against it (`Translation<typeof source>`), so a missing key does
+  not compile. `t('camera.openAlbum', { count })`: `{name}` placeholders,
+  `{ one, other }` plurals chosen by `count`. Headlines mark their italic
+  run with `*asterisks*` and are drawn with `em()` (`components/ui/rich.tsx`).
+- **Every new user-visible string goes through `t()`, in all five files.**
+  Whole sentences, never glued fragments.
+- **Never call `t()` at module scope.** Changing the language remounts the
+  root Stack (keyed on `useLanguage()` in the root layout) so that plain
+  `t()` calls suffice; a constant built at import time would keep the old
+  language. Constants store keys (`labelKey`) instead.
+  `constants/looks.ts` types its `blurbKey` as a literal union because the
+  file is copied to the website and the clip and must not import `@/i18n`.
+- **The language follows the phone** (read through `Intl`, no native module)
+  unless picked on 20 ("App language", kept in AsyncStorage). Dates and
+  numbers use `locale()`, never `undefined` or `'en-US'`; cached
+  formatters in `lib/event-end.ts` are keyed by it.
+- Informal address (du / tu / tú / tu), standard German with ß, European
+  Spanish. Look names and "LEFT" are not translated. Dev-only messages stay
+  English.
+- **Not seen on a device:** whether the user stays on Settings after
+  switching, and whether longer words fit (German "Hinzufügen", French
+  "Appareil photo", 09's two buttons, 10's Missions row).
+
 ## Analytics and legal texts
 
 - **`lib/analytics.ts`: PostHog (EU), JavaScript only, off without
@@ -1135,6 +1170,16 @@ The launch list lives in `docs/MILESTONES.md`. Things that bite during developme
 - **`.env` is optional, but data screens look broken without it.** Copy
   `mobile/.env.example` to `.env`. **On a device use the machine's LAN IP, not
   127.0.0.1.**
+
+## Environments (2026-11-24)
+
+**Production (`ervrxomceqactmrqmkeq`) holds real users only.** Test against
+the local stack or **LEFT staging** (`nxnrqqwstiydznkriidk`). `npm run
+use:local|use:staging|use:prod` rewrites the Supabase pair in `mobile/.env`
+and `web/.env`; migrations go local → `db:push:staging` → `db:push:prod`
+(typed confirm). EAS `development`/`preview`/`staging` profiles use staging,
+`production` uses prod. Never seed or create test events in production.
+Details: `docs/ENVIRONMENTS.md`.
 
 ## Three failures that look like code bugs
 

@@ -26,6 +26,7 @@ import { Colors, MissionsEditor as T, Press } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import type { EventMember } from '@/lib/events';
 import type { EventMission, HostMissions } from '@/lib/missions';
+import { t } from '@/i18n';
 
 type Person = HostMissions['people'][number];
 
@@ -57,8 +58,8 @@ const NAME_MAX = 60;
 
 function nameProblem(text: string): string | null {
   const length = text.trim().length;
-  if (length === 0) return 'Type a name first.';
-  if (length > NAME_MAX) return `At most ${NAME_MAX} characters.`;
+  if (length === 0) return t('missions.nameRequired');
+  if (length > NAME_MAX) return t('missions.tooLong', { max: NAME_MAX });
   return null;
 }
 
@@ -72,8 +73,8 @@ function NameComposer({ onSave }: { onSave: (name: string) => Promise<void> }) {
     <MissionCard>
       <MissionRow
         key="add-name"
-        addLabel="Add someone not here yet"
-        placeholder="Their name"
+        addLabel={t('missions.addSomeone')}
+        placeholder={t('missions.namePlaceholder')}
         autoCapitalize="words"
         maxLength={NAME_MAX}
         validate={nameProblem}
@@ -118,7 +119,9 @@ export function buildGuests(
 }
 
 export function guestLabel(guest: Guest, selfId: string | null): string {
-  return guest.member?.user_id === selfId ? `${guest.name} (you)` : guest.name;
+  return guest.member?.user_id === selfId
+    ? t('missions.nameYou', { name: guest.name })
+    : guest.name;
 }
 
 // ---------------------------------------------------------------------------
@@ -145,7 +148,7 @@ export function AssigneeChip({ name, locked, onPress }: ChipProps) {
     <PressScale
       accessibilityRole="button"
       accessibilityLabel={
-        name ? `For ${name}. Change who gets it` : 'For anyone. Give it to someone'
+        name ? t('missions.assignedA11y', { name }) : t('missions.unassignedA11y')
       }
       onPress={onPress}
       hitSlop={T.chip.hitSlop}
@@ -218,7 +221,7 @@ export function AssignSheet({
 
   return (
     <SheetOverlay onClose={onClose} locked={busy} listLast>
-      <Label small>Who gets this?</Label>
+      <Label small>{t('missions.whoGetsThis')}</Label>
       <Display size="xxs" numberOfLines={3}>
         {mission.body}
       </Display>
@@ -227,8 +230,8 @@ export function AssignSheet({
         <NameComposer onSave={async (name) => onAssign({ kind: 'new', name })} />
         <Option
           key="anyone"
-          label="Anyone"
-          detail="Dealt at random"
+          label={t('missions.anyone')}
+          detail={t('missions.dealtAtRandom')}
           icon="shuffle"
           checked={current === null}
           disabled={busy}
@@ -238,7 +241,7 @@ export function AssignSheet({
           <Option
             key={guest.key}
             label={guestLabel(guest, selfId)}
-            detail={guest.member ? undefined : 'Not here yet'}
+            detail={guest.member ? undefined : t('missions.notHereYet')}
             icon={guest.member ? 'user' : 'user-x'}
             checked={guest.kind === 'named' && guest.person.id === current}
             disabled={busy}
@@ -295,20 +298,22 @@ export function GuestsSheet({
   if (linking) {
     return (
       <SheetOverlay onClose={onClose} listLast>
-        <Label small>Link a name</Label>
-        <Display size="xxs">Who is {linking.name}?</Display>
+        <Label small>{t('missions.linkName')}</Label>
+        <Display size="xxs">{t('missions.whoIs', { name: linking.name })}</Display>
         <SheetList last>
           {linking.members.map((member) => (
             <Option
               key={member.user_id}
               label={
-                member.user_id === selfId ? `${member.display_name} (you)` : member.display_name
+                member.user_id === selfId
+                  ? t('missions.nameYou', { name: member.display_name })
+                  : member.display_name
               }
               icon="user"
               onPress={() => linking.onPick(member)}
             />
           ))}
-          <Option label="Cancel" icon="x" onPress={linking.onCancel} />
+          <Option label={t('common.cancel')} icon="x" onPress={linking.onCancel} />
         </SheetList>
       </SheetOverlay>
     );
@@ -318,10 +323,11 @@ export function GuestsSheet({
     <SheetOverlay onClose={onClose} listLast>
       <View style={styles.sheetHeader}>
         <View style={styles.optionText}>
-          <Display size="xxs">Guests</Display>
+          <Display size="xxs">{t('missions.guests')}</Display>
           <Text style={styles.optionDetail}>
-            {joined} joined
-            {guests.length > joined ? ` · ${guests.length - joined} not here yet` : ''}
+            {guests.length > joined
+              ? t('missions.joinedAndWaiting', { joined, waiting: guests.length - joined })
+              : t('missions.joined', { joined })}
           </Text>
         </View>
       </View>
@@ -331,7 +337,7 @@ export function GuestsSheet({
 
         {guests.length === 0 ? (
           <Text style={styles.optionDetail}>
-            Nobody has joined yet. Share the invite, or add a name above.
+            {t('missions.guestsEmpty')}
           </Text>
         ) : null}
 
@@ -340,11 +346,13 @@ export function GuestsSheet({
           const detail = [
             guest.member
               ? guest.kind === 'named' && guest.member.display_name !== guest.name
-                ? `Joined as ${guest.member.display_name}`
-                : 'Joined'
-              : 'Not here yet — picks this name when joining',
+                ? t('missions.joinedAs', { name: guest.member.display_name })
+                : t('missions.joinedStatus')
+              : t('missions.notHereYetPicks'),
             count > 0
-              ? `${count} ${count === 1 ? 'mission' : 'missions'}${count > perGuest && perGuest > 0 ? `, gets ${perGuest}` : ''}`
+              ? count > perGuest && perGuest > 0
+                ? t('missions.guestMissionsCapped', { count, limit: perGuest })
+                : t('missions.guestMissions', { count })
               : null,
           ]
             .filter(Boolean)
@@ -369,7 +377,7 @@ export function GuestsSheet({
               {guest.kind === 'named' && !locked ? (
                 <PressScale
                   accessibilityRole="button"
-                  accessibilityLabel={`Options for ${guest.name}`}
+                  accessibilityLabel={t('missions.optionsFor', { name: guest.name })}
                   onPress={() => onNameMenu(guest)}
                   scale={Press.iconScale}
                   style={styles.more}>

@@ -20,6 +20,7 @@ import { GlassButton } from './glass';
 import { Display } from './typography';
 import { Album, Colors } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { locale, t } from '@/i18n';
 import type { Event } from '@/lib/events';
 
 const T = Album.hero;
@@ -78,21 +79,32 @@ export function AlbumHero({
           {title}
         </Display>
 
-        <View style={styles.stats} accessible accessibilityLabel={`${photoCount} photos, ${memberCount} people`}>
-          <Stat value={photoCount} label={photoCount === 1 ? 'Photo' : 'Photos'} />
+        <View
+          style={styles.stats}
+          accessible
+          accessibilityLabel={t('album.statsA11y', {
+            photos: t('common.photos', { count: photoCount }),
+            people: t('common.people', { count: memberCount }),
+          })}>
+          <Stat value={photoCount} label={t('album.statPhotos', { count: photoCount })} />
           <View style={styles.divider} />
-          <Stat value={memberCount} label={memberCount === 1 ? 'Person' : 'People'} />
+          <Stat value={memberCount} label={t('album.statPeople', { count: memberCount })} />
         </View>
 
         <View style={styles.actions}>
           <GlassButton
             icon="download"
-            label="Save all"
-            accessibilityLabel={`Save all ${photoCount} photos`}
+            label={t('album.saveAll')}
+            accessibilityLabel={t('album.saveAllA11y', { count: photoCount })}
             disabled={saveDisabled}
             onPress={onSaveAll}
           />
-          <GlassButton icon="share" label="Share" accessibilityLabel="Share the album" onPress={onShare} />
+          <GlassButton
+            icon="share"
+            label={t('common.share')}
+            accessibilityLabel={t('album.shareAlbum')}
+            onPress={onShare}
+          />
         </View>
       </View>
     </View>
@@ -102,7 +114,7 @@ export function AlbumHero({
 function Stat({ value, label }: { value: number; label: string }) {
   return (
     <View style={styles.stat}>
-      <Text style={styles.statValue}>{value.toLocaleString('en-US')}</Text>
+      <Text style={styles.statValue}>{value.toLocaleString(locale())}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
