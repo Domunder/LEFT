@@ -23,6 +23,7 @@ import { PressScale } from '@/components/ui/press-scale';
 import { Body, Caption } from '@/components/ui/typography';
 import { Colors, MissionsJoin, Press, Radii } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { haptic } from '@/lib/haptics';
 import type { MissionName } from '@/lib/missions';
 
 type NamePickerProps = {
@@ -110,7 +111,10 @@ function NameRow({
       accessibilityState={add ? { disabled } : { checked: selected, disabled }}
       accessibilityLabel={add ? 'Not on the list. Add your name' : label}
       disabled={disabled}
-      onPress={onPress}
+      onPress={() => {
+        if (!selected) haptic.select();
+        onPress();
+      }}
       scale={Press.pillScale}
       // Not dimmed while the join runs: the field beside it is not either.
       style={[styles.row, selected ? styles.selected : styles.unselected]}>

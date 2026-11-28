@@ -12,11 +12,12 @@
 
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 
 import { ChoicePillButton } from '@/components/ui/choice-pill';
 import { PillButton } from '@/components/ui/pill-button';
+import { Rise } from '@/components/ui/rise';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { TextField } from '@/components/ui/text-field';
@@ -65,14 +66,16 @@ export default function EventScreen() {
           */}
           <ScreenHeader style={styles.header} backFallback="/(library)/films" />
 
-          <Label style={styles.eyebrow}>Event</Label>
+          <Rise>
+            <Label style={styles.eyebrow}>Event</Label>
 
-          <Display size="xl" style={styles.headline}>
-            What are you{'\n'}
-            <Em>capturing?</Em>
-          </Display>
+            <Display size="xl" style={styles.headline}>
+              What are you{'\n'}
+              <Em>capturing?</Em>
+            </Display>
+          </Rise>
 
-          <View style={styles.pills}>
+          <Rise index={1} style={styles.pills}>
             {EVENT_TYPES.map((option) => (
               <ChoicePillButton
                 key={option.value}
@@ -82,7 +85,7 @@ export default function EventScreen() {
                 onPress={() => setEventType(option.value)}
               />
             ))}
-          </View>
+          </Rise>
 
           {/* Fades in only once a type is picked — the design's `fade-up` keyframe. */}
           {eventType !== undefined ? (

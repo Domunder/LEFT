@@ -14,7 +14,7 @@
  * keeps the day.
  */
 
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/lib/haptics';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Animated, {
@@ -43,7 +43,7 @@ const T = Ending.day;
 const STEP = T.width + T.gap;
 
 function tick() {
-  void Haptics.selectionAsync();
+  haptic.select();
 }
 
 type DayStripProps = {

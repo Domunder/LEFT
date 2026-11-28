@@ -20,7 +20,7 @@
  * instead of stopping at the end of the list. See LOOP_TARGET_ROWS for how.
  */
 
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/lib/haptics';
 import { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
@@ -186,7 +186,7 @@ export function Wheel({
     if (selected === lastReported.current) return;
     lastReported.current = selected;
     // Web has no haptics engine; calling through is a no-op but noisy in logs.
-    void Haptics.selectionAsync();
+    haptic.select();
     onIndexChange(selected);
   }
 

@@ -17,7 +17,7 @@
  * it can travel between screens. `useGlow` just claims this screen's position.
  */
 
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/lib/haptics';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -25,6 +25,7 @@ import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 
 import { LookCard } from '@/components/ui/look-card';
 import { PillButton } from '@/components/ui/pill-button';
+import { Rise } from '@/components/ui/rise';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Display, Em, Label } from '@/components/ui/typography';
@@ -75,7 +76,7 @@ export default function LookScreen() {
   function select(next: FilmLook) {
     if (next === look) return;
     // Web has no haptics engine; calling through is a no-op but noisy in logs.
-    void Haptics.selectionAsync();
+    haptic.select();
     setLook(next);
   }
 
@@ -88,12 +89,14 @@ export default function LookScreen() {
     <Screen transparent>
       <ScreenHeader style={styles.header} />
 
-      <Label style={styles.eyebrow}>Film</Label>
+      <Rise>
+        <Label style={styles.eyebrow}>Film</Label>
 
-      <Display size="xl" style={styles.headline}>
-        Which film are{'\n'}
-        <Em>you loading?</Em>
-      </Display>
+        <Display size="xl" style={styles.headline}>
+          Which film are{'\n'}
+          <Em>you loading?</Em>
+        </Display>
+      </Rise>
 
       {/*
         Scrolls only when the cards have hit their minimum height: a small phone

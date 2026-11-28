@@ -33,7 +33,7 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/lib/haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -244,7 +244,7 @@ export default function AlbumScreen() {
     let cancelled = false;
     void hasSeenReveal(id).then((seen) => {
       if (seen || cancelled) return;
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptic.success();
       void markRevealSeen(id, photos.length);
     });
     return () => {

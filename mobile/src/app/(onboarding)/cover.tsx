@@ -17,6 +17,7 @@ import { StyleSheet } from 'react-native';
 
 import { CoverPicker } from '@/components/ui/cover-picker';
 import { PillButton } from '@/components/ui/pill-button';
+import { Rise } from '@/components/ui/rise';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Body, Display, Em, Label } from '@/components/ui/typography';
@@ -42,13 +43,15 @@ export default function CoverScreen() {
     <Screen transparent>
       <ScreenHeader style={styles.header} />
 
-      <Label style={styles.eyebrow}>Event cover</Label>
-      <Display size="xl" style={styles.headline}>
-        Choose your <Em>event cover.</Em>
-      </Display>
-      <Body small color={Colors.textDim}>
-        Your guests see it while they wait, in your film&rsquo;s look.
-      </Body>
+      <Rise>
+        <Label style={styles.eyebrow}>Event cover</Label>
+        <Display size="xl" style={styles.headline}>
+          Choose your <Em>event cover.</Em>
+        </Display>
+        <Body small color={Colors.textDim}>
+          Your guests see it while they wait, in your film&rsquo;s look.
+        </Body>
+      </Rise>
 
       <CoverPicker
         look={look}

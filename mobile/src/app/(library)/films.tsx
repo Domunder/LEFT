@@ -45,7 +45,7 @@
  */
 
 import type { Session } from '@supabase/supabase-js';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/lib/haptics';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -354,7 +354,7 @@ export default function FilmsScreen() {
       // Nothing left to shoot: the camera would only say so. Go and wait.
       const open = () => router.push(rollEmpty ? album : destinationFor(event, user?.id));
       const menu = () => {
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        haptic.press();
         acting.current = event.id;
         openMenu({
           event,

@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmbientGlow } from '@/components/ui/ambient-glow';
 import { ProgressDots } from '@/components/ui/progress-dots';
-import { Colors, StepDots } from '@/constants/theme';
+import { Colors, StepDots, Transitions } from '@/constants/theme';
 import { ONBOARDING_STEPS, useOnboarding } from '@/lib/onboarding-draft';
 
 /**
@@ -35,6 +35,10 @@ export default function OnboardingLayout() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: 'transparent' },
+          // Transparent screens: a slide would drag one screen's text through
+          // the next one's. They cross-fade; the content rises (`Rise`).
+          animation: 'fade',
+          animationDuration: Transitions.onboardingFadeMs,
         }}
       />
 

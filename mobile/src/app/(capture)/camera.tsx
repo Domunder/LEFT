@@ -60,7 +60,7 @@
 
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/lib/haptics';
 import { Image } from 'expo-image';
 import { useNetworkState } from 'expo-network';
 import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
@@ -603,7 +603,7 @@ function Viewfinder({
 
     // The last frame of a roll is the one moment that earns more than a tick.
     if (shotsLeft === 1) {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      haptic.success();
     }
 
     /*
@@ -697,7 +697,7 @@ function Viewfinder({
       // Nothing was queued, so nothing was spent. Say so; the next press is a new frame.
       if (DEV) console.warn(`[camera] shot not taken: ${e}`);
       setMissed(true);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      haptic.error();
     } finally {
       // Again, for a shot that failed before its exposure.
       if (lit) lightsOut();

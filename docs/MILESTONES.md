@@ -473,6 +473,67 @@ zu ändern — die Stelle steht jeweils dabei.
     neuen Functions kennt (habe ich nicht selbst gemacht, um deinen Stack
     nicht anzufassen). `db:reset` war nicht nötig und wurde nicht ausgeführt.
 
+## Version 1.3.0 · „Premium" (geplant 28.11.2026, noch nichts gebaut)
+
+Quelle: Analyse von 27 Screenshots der Konkurrenz-App once.film
+(`Personas - marketing/once/`). Übernommen werden Ideen und Abläufe, **nicht**
+deren Bilder, Texte oder Look — alles wird in LEFTs eigener Sprache gebaut.
+Reihenfolge: erst lokal vollständig, dann Staging, dann Produktion.
+
+Entschieden (Nutzer, 28.11.2026):
+
+- **Sprachen:** EN, DE, FR, ES, IT; Standard = Sprache des Telefons, in den
+  Einstellungen umstellbar. **Nur die App** — Web-Kamera, App Clip, Push und
+  Rechtstexte bleiben vorerst englisch.
+- **Reveal:** alle drei Modi — während des Events sichtbar · am Ende ·
+  mit Verzögerung nach dem Ende (± Stunden). Bricht „nichts sichtbar bis zum
+  Ende" als festes Versprechen: es wird zur Voreinstellung.
+- **Gästebuch** (Polaroid-Selfie + Notiz, Live-Wand per Link) kommt in diese
+  Version.
+- **Event-Bild:** nur noch ein Standardbild; der Host lädt sein eigenes hoch.
+  Die sechs Stock-Bilder entfallen als Auswahl.
+
+Nachtrag (Nutzer, 28.11.2026): **nicht 1:1 kopieren** — ähnliche Funktionen,
+und nur die, die zu LEFT passen. Was das für einen Schritt heisst, wird beim
+Schritt entschieden und gemeldet (offen v. a.: „während des Events sichtbar"
+bei Schritt 5, die Form des Gästebuchs bei Schritt 9).
+
+Schritte (jeder für sich fertig, typecheck + lint sauber):
+
+1. **Fundament: Haptik, Bewegung, Übergänge.** Ein `lib/haptics.ts` (Auswahl,
+   Bestätigung, Schritt) statt verstreuter Aufrufe; Haptik auf jeder Auswahl
+   (Preisstufe, Rolle, Look, Schalter). `RollCounter` als Ziffernrad überall,
+   wo eine Zahl sich ändert. Stack-Übergänge im Onboarding und zwischen
+   Screens überarbeitet (Feder, Tiefe, reduzierte Bewegung = Überblendung).
+   Nur JS.
+2. **Sprache.** i18n-Schicht, alle Texte der App herausgezogen, fünf
+   Sprachen, Einstellung „Language" auf 20. Braucht `expo-localization`
+   (neuer Build).
+3. **Einladungskarte gestalten** (ersetzt 03.1): iPhone-Mock, der zeigt, was
+   der Gast auf 11 sieht (Bild, „Invited by …", Name, Dauer, Rolle), „Bild
+   ändern", „Vorschau". 11 wird entsprechend zur Karte mit dem Event-Bild.
+4. **05.1 neu:** Gruppengröße als Segmentleiste mit Preis, Rolle mit
+   Mock-Kamera, deren Zähler sich dreht; danach ein „Dein Film ist
+   bereit"-Sheet mit der Karte.
+5. **Reveal-Zeitpunkt** (neuer Onboarding-Schritt mit Live-Vorschau: scharf /
+   verschwommen mit Datum). Server: `events.reveal_mode`, `reveal_delay`,
+   `is_event_developed()` und RLS angepasst, Web-Kamera und Clip lesen
+   dieselbe Funktion.
+6. **Landing neu:** die App zeigt sich selbst — geneigter Telefon-Mock mit
+   laufenden Moments, statt Diashow. Startanimation des Logos optional, zuletzt.
+7. **Event-Einstellungen** als ein Sheet für den Host: Name, Ende
+   (verlängern/verkürzen), Bild, Reveal. Ersetzt das Menü mit Rename / Change
+   image. Look bleibt nach dem Start fest (ist ins JPEG gebacken).
+8. **Kamera-Details:** Zähler als Ziffernrad, das letzte Foto fliegt in die
+   Kachel, „3 photos uploading"-Hinweis.
+9. **Gästebuch:** Tab im Album, quadratische Selfie-Kamera, Polaroid kommt aus
+   dem Schlitz, Notiz (150 Zeichen), Live-Wand unter `leftmoment.com/wall/…`.
+   Neue Tabelle + Storage-Regeln, Meldung/Löschen wie bei Fotos.
+
+Bewusst **nicht** übernommen: Videos („Tapes"), E-Mail-Login, „Original" ohne
+Look wird als fünfter Look geprüft (offen), Rabattcodes (offen, über
+RevenueCat-Angebotscodes), Link einfügen auf 08 (offen).
+
 ## Phase 2 (nach Launch)
 
 - Automatisch gelayoutete Fotobücher aus dem Album; Retro-Abzüge/Boxen.

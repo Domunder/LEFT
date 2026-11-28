@@ -27,6 +27,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { Motion, Settings } from '@/constants/theme';
+import { haptic } from '@/lib/haptics';
 
 const TIMING = {
   duration: Settings.toggle.duration,
@@ -76,7 +77,10 @@ export function ToggleSwitch({
       accessibilityState={{ checked: value, disabled: Boolean(disabled) }}
       accessibilityLabel={accessibilityLabel}
       disabled={disabled}
-      onPress={() => onValueChange(!value)}
+      onPress={() => {
+        haptic.select();
+        onValueChange(!value);
+      }}
       // 25pt tall against a 44pt target; the row's own padding is not tappable.
       hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
       style={disabled ? styles.disabled : undefined}>

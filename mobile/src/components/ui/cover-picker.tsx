@@ -9,7 +9,7 @@
  */
 
 import { Feather } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/lib/haptics';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Animated, { Easing, FadeInDown } from 'react-native-reanimated';
 
@@ -39,7 +39,7 @@ type CoverPickerProps = {
 
 export function CoverPicker({ look, choice, onChange, own, onOwnPicked }: CoverPickerProps) {
   function select(next: CoverChoice) {
-    void Haptics.selectionAsync();
+    haptic.select();
     onChange(next);
   }
 

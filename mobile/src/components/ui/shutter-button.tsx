@@ -10,7 +10,7 @@
  * not wait for a React render on the app's busiest screen.
  */
 
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/lib/haptics';
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
@@ -39,7 +39,7 @@ export function ShutterButton({ onFire, disabled = false }: ShutterButtonProps) 
       hitSlop={12}
       onPressIn={() => {
         scale.value = withSpring(T.pressedScale, T.pressSpring);
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        haptic.press();
       }}
       onPressOut={() => {
         scale.value = withSpring(1, T.pressSpring);

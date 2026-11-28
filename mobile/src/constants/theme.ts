@@ -1711,6 +1711,24 @@ export const Springs = {
 } as const;
 
 /**
+ * Moving between screens (1.3.0).
+ *
+ * Onboarding screens are transparent over the travelling glow, so a push slid
+ * one screen's text through the other's. They cross-fade instead, and the
+ * content arrives on its own (`Rise`): a short lift, block after block.
+ * Not seen on a device.
+ */
+export const Transitions = {
+  onboardingFadeMs: 260,
+  rise: {
+    /** How far a block lifts into place. */
+    travel: 16,
+    /** Wait per step of reading order. */
+    stagger: 70,
+  },
+} as const;
+
+/**
  * Touch-down feedback for anything that is not glass (`PressScale`): the
  * control gives under the finger on press-in and springs back on release.
  * Glass controls use `Glass.pressScale`.

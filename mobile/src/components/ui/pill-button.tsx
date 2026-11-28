@@ -19,6 +19,7 @@ import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-na
 
 import { Colors, PillPaddingY, Radii, Shadows } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { haptic } from '@/lib/haptics';
 import { PressScale } from './press-scale';
 
 type PillButtonProps = {
@@ -57,7 +58,11 @@ export function PillButton({
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
-      onPress={onPress}
+      onPress={() => {
+        // The filled pill is a screen's one committing action; the quiet variants stay silent.
+        if (isPrimary) haptic.tap();
+        onPress?.();
+      }}
       style={[
         styles.base,
         isPrimary && styles.primary,

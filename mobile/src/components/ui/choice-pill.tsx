@@ -17,6 +17,7 @@ import { Pressable, StyleSheet, Text, type StyleProp, type ViewStyle } from 'rea
 
 import { ChoicePill, Colors, Radii } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { haptic } from '@/lib/haptics';
 
 type ChoicePillProps = {
   label: string;
@@ -43,7 +44,11 @@ export function ChoicePillButton({
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
-      onPress={onPress}
+      onPress={() => {
+        // Only a change is a selection; tapping the lit pill again is silent.
+        if (!selected) haptic.select();
+        onPress?.();
+      }}
       style={({ pressed }) => [
         styles.base,
         selected ? styles.selected : styles.unselected,

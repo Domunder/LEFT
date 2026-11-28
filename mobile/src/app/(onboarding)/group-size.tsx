@@ -34,7 +34,7 @@
  * it can travel between screens. `useGlow` just claims this screen's position.
  */
 
-import * as Haptics from 'expo-haptics';
+import { haptic } from '@/lib/haptics';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, type ScrollViewInstance } from 'react-native';
@@ -44,6 +44,7 @@ import { GroupSizeRow } from '@/components/ui/group-size-row';
 import { MissionsSetup } from '@/components/ui/missions-setup';
 import { PillButton } from '@/components/ui/pill-button';
 import { RollChoices } from '@/components/ui/roll-choices';
+import { Rise } from '@/components/ui/rise';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { Body, Caption, Display, Em, Label } from '@/components/ui/typography';
@@ -136,19 +137,19 @@ export default function GroupSizeScreen() {
   function selectGroup(next: number) {
     if (next === groupSize) return;
     // Web has no haptics engine; calling through is a no-op but noisy in logs.
-    void Haptics.selectionAsync();
+    haptic.select();
     setGroupSize(next);
   }
 
   function selectRoll(next: RollSize) {
     if (next === rollSize) return;
-    void Haptics.selectionAsync();
+    haptic.select();
     setRollSize(next);
   }
 
   function selectMissions(next: number | null) {
     if (next === missionsPerGuest) return;
-    void Haptics.selectionAsync();
+    haptic.select();
     if (missionsPerGuest === null && next !== null) revealMissions.current = true;
     setMissionsPerGuest(next);
   }
@@ -227,14 +228,16 @@ export default function GroupSizeScreen() {
         No eyebrow label, as on 04 — the artboard goes straight from the back
         button to the headline and lets the subcopy do that work.
       */}
-      <Display size="sm" style={styles.headline}>
-        How many people{'\n'}
-        <Em>for your event?</Em>
-      </Display>
+      <Rise>
+        <Display size="sm" style={styles.headline}>
+          How many people{'\n'}
+          <Em>for your event?</Em>
+        </Display>
 
-      <Body small style={styles.subcopy}>
-        Everyone gets their own roll of film.
-      </Body>
+        <Body small style={styles.subcopy}>
+          Everyone gets their own roll of film.
+        </Body>
+      </Rise>
 
       {/*
         The densest screen in the flow, so the middle scrolls on a short device

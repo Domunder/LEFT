@@ -22,6 +22,8 @@
  */
 
 import { Pressable, StyleSheet, View } from 'react-native';
+
+import { haptic } from '@/lib/haptics';
 import Animated, {
   Easing,
   FadeIn,
@@ -114,7 +116,10 @@ function ZoomPill({
       accessibilityRole="radio"
       accessibilityState={{ selected }}
       accessibilityLabel={accessibilityLabel ?? `Zoom ${stop.label}`}
-      onPress={onPress}>
+      onPress={() => {
+        haptic.select();
+        onPress();
+      }}>
       <Animated.View style={[styles.pill, pill]}>
         <Animated.Text style={[styles.label, label]}>{stop.label}</Animated.Text>
       </Animated.View>

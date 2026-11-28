@@ -31,6 +31,7 @@ import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-n
 
 import { DayStrip } from '@/components/ui/day-strip';
 import { PillButton } from '@/components/ui/pill-button';
+import { Rise } from '@/components/ui/rise';
 import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { TimeWheel } from '@/components/ui/time-wheel';
@@ -75,10 +76,12 @@ export default function EndingScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         alwaysBounceVertical={false}>
-        <Display size="md" style={styles.headline}>
-          When does{'\n'}
-          <Em>the event end?</Em>
-        </Display>
+        <Rise>
+          <Display size="md" style={styles.headline}>
+            When does{'\n'}
+            <Em>the event end?</Em>
+          </Display>
+        </Rise>
 
         <View
           style={styles.answer}
