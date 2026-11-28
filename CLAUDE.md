@@ -105,6 +105,10 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   guest book, is built too (see "The guest book" below; migration local
   only), with the "Original" look in place of Chrome and a "Contact support"
   row on 20 (mailto `support@leftmoment.com`).
+  **All five 1.3.0 migrations are on staging since 2026-11-28** (pushed with
+  `npm run db:push:staging`, the new doors checked there over HTTP as a
+  guest; `types/database.ts` is generated from staging) — where a section
+  below says "local only", read "local and staging". **Not on production.**
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 

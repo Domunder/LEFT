@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.18"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -119,6 +124,7 @@ export type Database = {
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
+          guestbook: boolean
           host_id: string
           id: string
           invite_code: string
@@ -127,7 +133,6 @@ export type Database = {
           missions_per_guest: number | null
           name: string
           reveal_delay_hours: number | null
-          guestbook: boolean
           reveal_mode: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
@@ -139,6 +144,7 @@ export type Database = {
           developed_at?: string | null
           ends_at: string
           event_type?: Database["public"]["Enums"]["event_type"]
+          guestbook?: boolean
           host_id: string
           id?: string
           invite_code?: string
@@ -147,7 +153,6 @@ export type Database = {
           missions_per_guest?: number | null
           name: string
           reveal_delay_hours?: number | null
-          guestbook?: boolean
           reveal_mode?: string
           roll_size?: number | null
           status?: Database["public"]["Enums"]["event_status"]
@@ -159,6 +164,7 @@ export type Database = {
           developed_at?: string | null
           ends_at?: string
           event_type?: Database["public"]["Enums"]["event_type"]
+          guestbook?: boolean
           host_id?: string
           id?: string
           invite_code?: string
@@ -167,12 +173,112 @@ export type Database = {
           missions_per_guest?: number | null
           name?: string
           reveal_delay_hours?: number | null
-          guestbook?: boolean
           reveal_mode?: string
           roll_size?: number | null
           status?: Database["public"]["Enums"]["event_status"]
         }
         Relationships: []
+      }
+      guestbook_entries: {
+        Row: {
+          created_at: string
+          event_id: string
+          has_photo: boolean
+          height: number | null
+          id: string
+          note: string | null
+          status: string
+          user_id: string
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          has_photo?: boolean
+          height?: number | null
+          id: string
+          note?: string | null
+          status?: string
+          user_id: string
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          has_photo?: boolean
+          height?: number | null
+          id?: string
+          note?: string | null
+          status?: string
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guestbook_entries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guestbook_reports: {
+        Row: {
+          author_id: string | null
+          created_at: string
+          entry_id: string | null
+          event_id: string | null
+          id: string
+          note: string | null
+          reason: string
+          reporter_id: string | null
+          resolution: string | null
+          resolved_at: string | null
+          storage_path: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          created_at?: string
+          entry_id?: string | null
+          event_id?: string | null
+          id?: string
+          note?: string | null
+          reason?: string
+          reporter_id?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          storage_path?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          created_at?: string
+          entry_id?: string | null
+          event_id?: string | null
+          id?: string
+          note?: string | null
+          reason?: string
+          reporter_id?: string | null
+          resolution?: string | null
+          resolved_at?: string | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guestbook_reports_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "guestbook_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guestbook_reports_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       member_missions: {
         Row: {
@@ -289,50 +395,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "notifications_event_id_fkey"
-            columns: ["event_id"]
-            isOneToOne: false
-            referencedRelation: "events"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      guestbook_entries: {
-        Row: {
-          created_at: string
-          event_id: string
-          has_photo: boolean
-          height: number | null
-          id: string
-          note: string | null
-          status: string
-          user_id: string
-          width: number | null
-        }
-        Insert: {
-          created_at?: string
-          event_id: string
-          has_photo?: boolean
-          height?: number | null
-          id: string
-          note?: string | null
-          status?: string
-          user_id: string
-          width?: number | null
-        }
-        Update: {
-          created_at?: string
-          event_id?: string
-          has_photo?: boolean
-          height?: number | null
-          id?: string
-          note?: string | null
-          status?: string
-          user_id?: string
-          width?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "guestbook_entries_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
@@ -535,6 +597,31 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_guestbook_entry: {
+        Args: {
+          p_entry_id: string
+          p_event_id: string
+          p_has_photo?: boolean
+          p_note?: string
+        }
+        Returns: {
+          created_at: string
+          event_id: string
+          has_photo: boolean
+          height: number | null
+          id: string
+          note: string | null
+          status: string
+          user_id: string
+          width: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "guestbook_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assign_mission_person: {
         Args: { p_person_id: string; p_user_id?: string }
         Returns: undefined
@@ -588,6 +675,7 @@ export type Database = {
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
+          guestbook: boolean
           host_id: string
           id: string
           invite_code: string
@@ -595,6 +683,8 @@ export type Database = {
           max_members: number
           missions_per_guest: number | null
           name: string
+          reveal_delay_hours: number | null
+          reveal_mode: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
         }
@@ -609,6 +699,10 @@ export type Database = {
       deal_one_mission: {
         Args: { p_event_id: string; p_user_id: string }
         Returns: boolean
+      }
+      delete_guestbook_entry: {
+        Args: { p_entry_id: string }
+        Returns: undefined
       }
       demo_daily_limit: { Args: never; Returns: number }
       demo_length: { Args: never; Returns: string }
@@ -626,6 +720,7 @@ export type Database = {
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
+          guestbook: boolean
           host_id: string
           id: string
           invite_code: string
@@ -633,6 +728,8 @@ export type Database = {
           max_members: number
           missions_per_guest: number | null
           name: string
+          reveal_delay_hours: number | null
+          reveal_mode: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
         }
@@ -644,6 +741,7 @@ export type Database = {
         }
       }
       enqueue_ending_reminders: { Args: never; Returns: number }
+      enqueue_reveal_notifications: { Args: never; Returns: number }
       event_gallery: {
         Args: { p_event_id: string }
         Returns: {
@@ -676,19 +774,10 @@ export type Database = {
       general_missions: { Args: never; Returns: string[] }
       generate_invite_code: { Args: never; Returns: string }
       generate_missions: { Args: { p_event_id: string }; Returns: number }
-      invoke_edge_function: { Args: { p_name: string }; Returns: boolean }
-      is_event_developed: { Args: { p_event_id: string }; Returns: boolean }
-      is_event_due_for_purge: { Args: { p_event_id: string }; Returns: boolean }
-      is_event_host: {
-        Args: { p_event_id: string; p_user_id: string }
-        Returns: boolean
-      }
-      is_event_member: {
-        Args: { p_event_id: string; p_user_id: string }
-        Returns: boolean
-      }
-      join_event: {
-        Args: { p_display_name: string; p_invite_code: string }
+      guestbook_limit: { Args: never; Returns: number }
+      guestbook_note_max: { Args: never; Returns: number }
+      guestbook_path: {
+        Args: { p_entry_id: string; p_event_id: string }
         Returns: string
       }
       invite_preview: {
@@ -705,6 +794,42 @@ export type Database = {
           roll_size: number
           status: string
         }[]
+      }
+      invoke_edge_function: { Args: { p_name: string }; Returns: boolean }
+      is_event_developed: { Args: { p_event_id: string }; Returns: boolean }
+      is_event_due_for_purge: { Args: { p_event_id: string }; Returns: boolean }
+      is_event_host: {
+        Args: { p_event_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_event_member: {
+        Args: { p_event_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_event_revealed: { Args: { p_event_id: string }; Returns: boolean }
+      join_event: {
+        Args: { p_display_name: string; p_invite_code: string }
+        Returns: string
+      }
+      mark_guestbook_uploaded: {
+        Args: { p_entry_id: string; p_height: number; p_width: number }
+        Returns: {
+          created_at: string
+          event_id: string
+          has_photo: boolean
+          height: number | null
+          id: string
+          note: string | null
+          status: string
+          user_id: string
+          width: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "guestbook_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       mark_photo_uploaded: {
         Args: {
@@ -768,47 +893,105 @@ export type Database = {
       }
       reminder_lead: { Args: never; Returns: string }
       reminder_min_event_length: { Args: never; Returns: string }
-      add_guestbook_entry: {
-        Args: {
-          p_entry_id: string
-          p_event_id: string
-          p_has_photo?: boolean
-          p_note?: string
-        }
-        Returns: Database["public"]["Tables"]["guestbook_entries"]["Row"]
-      }
-      delete_guestbook_entry: {
-        Args: { p_entry_id: string }
-        Returns: undefined
-      }
-      mark_guestbook_uploaded: {
-        Args: { p_entry_id: string; p_height: number; p_width: number }
-        Returns: Database["public"]["Tables"]["guestbook_entries"]["Row"]
-      }
       report_guestbook_entry: {
         Args: { p_entry_id: string; p_reason?: string }
         Returns: undefined
-      }
-      set_event_guestbook: {
-        Args: { p_event_id: string; p_on: boolean }
-        Returns: Database["public"]["Tables"]["events"]["Row"]
       }
       report_photo: {
         Args: { p_photo_id: string; p_reason?: string }
         Returns: undefined
       }
       retention_period: { Args: never; Returns: string }
-      set_event_end: {
-        Args: { p_ends_at: string; p_event_id: string }
-        Returns: Database["public"]["Tables"]["events"]["Row"]
-      }
-      set_event_reveal: {
-        Args: { p_delay_hours?: number; p_event_id: string; p_mode: string }
-        Returns: Database["public"]["Tables"]["events"]["Row"]
-      }
       seed_missions: {
         Args: { p_event_id: string; p_per_guest: number }
         Returns: undefined
+      }
+      set_event_end: {
+        Args: { p_ends_at: string; p_event_id: string }
+        Returns: {
+          cover: string | null
+          created_at: string
+          demo: string | null
+          developed_at: string | null
+          ends_at: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          guestbook: boolean
+          host_id: string
+          id: string
+          invite_code: string
+          look: Database["public"]["Enums"]["film_look"]
+          max_members: number
+          missions_per_guest: number | null
+          name: string
+          reveal_delay_hours: number | null
+          reveal_mode: string
+          roll_size: number | null
+          status: Database["public"]["Enums"]["event_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_event_guestbook: {
+        Args: { p_event_id: string; p_on: boolean }
+        Returns: {
+          cover: string | null
+          created_at: string
+          demo: string | null
+          developed_at: string | null
+          ends_at: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          guestbook: boolean
+          host_id: string
+          id: string
+          invite_code: string
+          look: Database["public"]["Enums"]["film_look"]
+          max_members: number
+          missions_per_guest: number | null
+          name: string
+          reveal_delay_hours: number | null
+          reveal_mode: string
+          roll_size: number | null
+          status: Database["public"]["Enums"]["event_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_event_reveal: {
+        Args: { p_delay_hours?: number; p_event_id: string; p_mode: string }
+        Returns: {
+          cover: string | null
+          created_at: string
+          demo: string | null
+          developed_at: string | null
+          ends_at: string
+          event_type: Database["public"]["Enums"]["event_type"]
+          guestbook: boolean
+          host_id: string
+          id: string
+          invite_code: string
+          look: Database["public"]["Enums"]["film_look"]
+          max_members: number
+          missions_per_guest: number | null
+          name: string
+          reveal_delay_hours: number | null
+          reveal_mode: string
+          roll_size: number | null
+          status: Database["public"]["Enums"]["event_status"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "events"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_missions: {
         Args: { p_event_id: string; p_per_guest: number }
@@ -819,6 +1002,7 @@ export type Database = {
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
+          guestbook: boolean
           host_id: string
           id: string
           invite_code: string
@@ -826,6 +1010,8 @@ export type Database = {
           max_members: number
           missions_per_guest: number | null
           name: string
+          reveal_delay_hours: number | null
+          reveal_mode: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
         }
@@ -849,6 +1035,7 @@ export type Database = {
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
+          guestbook: boolean
           host_id: string
           id: string
           invite_code: string
@@ -856,6 +1043,8 @@ export type Database = {
           max_members: number
           missions_per_guest: number | null
           name: string
+          reveal_delay_hours: number | null
+          reveal_mode: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
         }
@@ -875,6 +1064,7 @@ export type Database = {
           developed_at: string | null
           ends_at: string
           event_type: Database["public"]["Enums"]["event_type"]
+          guestbook: boolean
           host_id: string
           id: string
           invite_code: string
@@ -882,6 +1072,8 @@ export type Database = {
           max_members: number
           missions_per_guest: number | null
           name: string
+          reveal_delay_hours: number | null
+          reveal_mode: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
         }
@@ -925,12 +1117,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -954,11 +1146,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -979,11 +1171,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1004,11 +1196,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1021,11 +1213,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1057,4 +1249,3 @@ export const Constants = {
     },
   },
 } as const
-
