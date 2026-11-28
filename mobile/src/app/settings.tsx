@@ -62,6 +62,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Body, Display } from '@/components/ui/typography';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScrollEdged } from '@/components/ui/scroll-edge';
+import { EMAIL as SUPPORT_EMAIL } from '@/constants/legal';
 import { Colors, ScrollEdge as Edge, Settings as S } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import {
@@ -428,6 +429,18 @@ export default function SettingsScreen() {
             <SettingsListRow
               label={t('settings.privacyPolicy')}
               onPress={() => router.push('/(legal)/privacy')}
+            />
+            {/* 1.3.0: opens the mail app; a phone without one is told the address. */}
+            <SettingsListRow
+              label={t('settings.contactSupport')}
+              onPress={() => {
+                Linking.openURL(`mailto:${SUPPORT_EMAIL}`).catch(() =>
+                  Alert.alert(
+                    t('settings.contactSupport'),
+                    t('settings.contactAddress', { email: SUPPORT_EMAIL })
+                  )
+                );
+              }}
             />
             {/*
               Required for any app selling in-app purchases, and genuinely needed

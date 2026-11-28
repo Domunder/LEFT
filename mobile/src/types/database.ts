@@ -127,6 +127,7 @@ export type Database = {
           missions_per_guest: number | null
           name: string
           reveal_delay_hours: number | null
+          guestbook: boolean
           reveal_mode: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
@@ -146,6 +147,7 @@ export type Database = {
           missions_per_guest?: number | null
           name: string
           reveal_delay_hours?: number | null
+          guestbook?: boolean
           reveal_mode?: string
           roll_size?: number | null
           status?: Database["public"]["Enums"]["event_status"]
@@ -165,6 +167,7 @@ export type Database = {
           missions_per_guest?: number | null
           name?: string
           reveal_delay_hours?: number | null
+          guestbook?: boolean
           reveal_mode?: string
           roll_size?: number | null
           status?: Database["public"]["Enums"]["event_status"]
@@ -286,6 +289,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      guestbook_entries: {
+        Row: {
+          created_at: string
+          event_id: string
+          has_photo: boolean
+          height: number | null
+          id: string
+          note: string | null
+          status: string
+          user_id: string
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          has_photo?: boolean
+          height?: number | null
+          id: string
+          note?: string | null
+          status?: string
+          user_id: string
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          has_photo?: boolean
+          height?: number | null
+          id?: string
+          note?: string | null
+          status?: string
+          user_id?: string
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guestbook_entries_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
@@ -721,6 +768,31 @@ export type Database = {
       }
       reminder_lead: { Args: never; Returns: string }
       reminder_min_event_length: { Args: never; Returns: string }
+      add_guestbook_entry: {
+        Args: {
+          p_entry_id: string
+          p_event_id: string
+          p_has_photo?: boolean
+          p_note?: string
+        }
+        Returns: Database["public"]["Tables"]["guestbook_entries"]["Row"]
+      }
+      delete_guestbook_entry: {
+        Args: { p_entry_id: string }
+        Returns: undefined
+      }
+      mark_guestbook_uploaded: {
+        Args: { p_entry_id: string; p_height: number; p_width: number }
+        Returns: Database["public"]["Tables"]["guestbook_entries"]["Row"]
+      }
+      report_guestbook_entry: {
+        Args: { p_entry_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      set_event_guestbook: {
+        Args: { p_event_id: string; p_on: boolean }
+        Returns: Database["public"]["Tables"]["events"]["Row"]
+      }
       report_photo: {
         Args: { p_photo_id: string; p_reason?: string }
         Returns: undefined
@@ -834,7 +906,7 @@ export type Database = {
         | "graduation"
         | "company"
         | "other"
-      film_look: "golden" | "chrome" | "faded" | "mono"
+      film_look: "golden" | "chrome" | "faded" | "mono" | "original"
       member_role: "host" | "guest"
       notification_kind: "developed" | "ending_soon"
       photo_status: "pending" | "uploaded" | "failed"
@@ -978,7 +1050,7 @@ export const Constants = {
         "company",
         "other",
       ],
-      film_look: ["golden", "chrome", "faded", "mono"],
+      film_look: ["golden", "chrome", "faded", "mono", "original"],
       member_role: ["host", "guest"],
       notification_kind: ["developed", "ending_soon"],
       photo_status: ["pending", "uploaded", "failed"],

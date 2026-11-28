@@ -36,4 +36,8 @@ export const settings: Translation<typeof source> = {
   logOutGuestBody: 'Sei un ospite, quindi non c’è un account. Perderai l’accesso ai tuoi momenti e alle tue foto.',
   logOutBody: 'Puoi accedere di nuovo in qualsiasi momento.',
   logOutFailed: 'Impossibile uscire',
+
+  // 1.3.0 · contact
+  contactSupport: 'Contatta il supporto',
+  contactAddress: 'Scrivi a {email}.',
 };

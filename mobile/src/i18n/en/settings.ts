@@ -35,4 +35,8 @@ export const settings = {
   logOutGuestBody: 'You’re a guest, so there’s no account. You’ll lose access to your moments and photos.',
   logOutBody: 'You can sign back in at any time.',
   logOutFailed: 'Could not log out',
+
+  // 1.3.0 · contact
+  contactSupport: 'Contact support',
+  contactAddress: 'Write to {email}.',
 } satisfies Namespace;

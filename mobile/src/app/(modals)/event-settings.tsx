@@ -9,6 +9,7 @@
  *  - **Invitation** — on to the designer (`(host)/cover`).
  *  - **Photos show** — the reveal mode, only before the start
  *    (`set_event_reveal()`); after it the choice is shown, not offered.
+ *  - **Guest book** — on or off, at any time (`set_event_guestbook()`).
  *
  * The look is not here: it is baked into every JPEG at capture. Deleting stays
  * in the menu, behind its own alert. Everything is enforced by the server; a
@@ -25,6 +26,7 @@ import { PressScale } from '@/components/ui/press-scale';
 import { Sheet } from '@/components/ui/sheet';
 import { Spinner } from '@/components/ui/spinner';
 import { TextField } from '@/components/ui/text-field';
+import { ToggleSwitch } from '@/components/ui/toggle-switch';
 import { Body, Caption, Display, Label } from '@/components/ui/typography';
 import { Colors, EventSettings as T } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
@@ -43,6 +45,7 @@ import {
   type RevealChoice,
   type RevealMode,
 } from '@/lib/events';
+import { setEventGuestbook } from '@/lib/guestbook';
 import { haptic } from '@/lib/haptics';
 
 const HOUR = 3_600_000;
@@ -250,6 +253,18 @@ export default function EventSettingsScreen() {
               )}
             </View>
 
+            <View style={styles.switchRow}>
+              <Text style={styles.rowLabel}>{t('host.settingsGuestbook')}</Text>
+              <ToggleSwitch
+                value={event.guestbook}
+                disabled={busy}
+                accessibilityLabel={t('host.settingsGuestbook')}
+                onValueChange={(next) =>
+                  void change((current) => setEventGuestbook(current.id, next))
+                }
+              />
+            </View>
+
             <PressScale
               accessibilityRole="button"
               onPress={() => {
@@ -303,6 +318,11 @@ const styles = StyleSheet.create({
     marginTop: T.sectionTop,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: Colors.hairlineStrong,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: T.switchTop,
   },
   rowLabel: {
     ...Typography.settingsRow,

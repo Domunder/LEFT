@@ -101,7 +101,10 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   the tile holds its old picture until the print lands), and "3 photos
   uploading" stands in the shutter bar's bottom padding in place of the cloud
   and number beside the invite tile. JS only. **The wheel's digits no longer
-  scale with large text** (the window is one fixed line high).
+  scale with large text** (the window is one fixed line high). Step 9, the
+  guest book, is built too (see "The guest book" below; migration local
+  only), with the "Original" look in place of Chrome and a "Contact support"
+  row on 20 (mailto `support@leftmoment.com`).
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -1081,6 +1084,56 @@ host. **Local only, never seen on a device.**
 - A new route needs the typed-routes file regenerated (`expo start`); I
   patched the local, gitignored `.expo/types/router.d.ts` by hand.
 
+## The guest book (1.3.0, 2026-11-28)
+
+Decided with the user: polaroids, notes, or a photo from the phone; visible
+to every member right away; three per guest, roll untouched; a host switch,
+on by default; the web wall comes later. Migration
+`20261128030000_guestbook.sql`, verified locally with SQL as guest, second
+guest, outsider and host. **Local only, never seen on a device.**
+
+- **Not part of the reveal.** `guestbook_entries` is readable by every
+  member as soon as an entry is `ready`; only the roll's photos wait.
+- **The roll's shape of doors:** `add_guestbook_entry(event, entry_id, note,
+  has_photo)` (id minted on the device, so a retry is the same entry; limit
+  `guestbook_limit()` = 3, note ≤ 150; hints `guestbook_full`,
+  `guestbook_off`, `note_too_long`, `empty`) → upload to
+  `{event}/guestbook/{entry_id}.jpg` (the bucket accepts exactly a pending
+  entry's own path) → `mark_guestbook_uploaded()`. Clients never write the
+  table. `delete_guestbook_entry()` for the author or the host,
+  `report_guestbook_entry()` → `guestbook_reports` (no client reads it;
+  **add it to the operator's daily query**, `docs/LAUNCH.md` §11),
+  `set_event_guestbook()` for the host's switch (Event settings).
+- **The picture lives under the event's folder**, so the purge and the orphan
+  sweep take it. A deleted account's entry rows cascade; its guest book files
+  in other people's events stay until that event is purged.
+- **App:** `lib/guestbook.ts`; the book is `(library)/guestbook/[id]`
+  (`Polaroid` prints two to a row, slightly askew; a tap opens one large
+  with delete or report), reached from a book button in the album's top bar
+  — **a button, not the plan's "tab in the album"** (the album is one route
+  with two states; flagged). The plus offers the square selfie camera
+  (`(capture)/polaroid`, `FilmCamera` in a square, `'use no memo'`), a photo
+  from the phone, or a note; all end in `guestbook/compose`, where the print
+  comes out of a slot (timed, 1.3 s) and the note is typed onto it. One file
+  per entry, 1080 px, square for portrait sources, in the moment's look for
+  a camera shot.
+- **A failed upload takes the entry back**, so it does not use up one of the
+  three. Re-read on focus and every 20 s; no realtime.
+- **Not built:** the live wall on the website; the guest book in the web
+  camera and the App Clip.
+
+## The "Original" look (1.3.0, 2026-11-28)
+
+The user: "drop chrome and add original". `film_look` has a fifth value
+(migration `20261128040000_look_original.sql`, local only). 03 offers Golden,
+Original, Faded, Mono (`OFFERED_LOOKS`); `LOOKS` and `LOOK_RECIPES` keep
+Chrome because events created with it keep it. Original's recipe is neutral,
+which is all a viewfinder needs; **the app's print skips the shader**
+(`developPhoto`), so no grain, vignette or fringing. The web camera and the
+clip run the neutral recipe through their shaders (a trace of lens fringing
+remains); both generated copies are regenerated. **The website still lists
+Chrome** (`web/src/site.ts`, guides, FAQ) — change it when 1.3.0 ships.
+
 ## Event settings (1.3.0, 2026-11-28)
 
 - **One sheet for the host, `(modals)/event-settings`**, opened from the
@@ -1088,7 +1141,8 @@ host. **Local only, never seen on a device.**
   gone, and with them the iOS-only `Alert.prompt`). Name (saved on blur),
   the end (1 hour earlier / later, 1 day later — each tap is saved), the
   reveal (pills before the start, text after it) and a row to the invitation
-  designer. The look is not there: it is baked into the JPEGs.
+  designer, and the guest book's switch. The look is not there: it is baked
+  into the JPEGs.
 - **`set_event_end(event, ends_at)`** (migration
   `20261128020000_set_event_end.sql`): host only, while the event is not
   over; the new end must be in the future and at most `max_event_days()`

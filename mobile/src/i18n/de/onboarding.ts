@@ -23,6 +23,7 @@ export const onboarding: Translation<typeof source> = {
   lookEyebrow: 'Film',
   lookHeadline: 'Welchen Film\n*legst du ein?*',
   lookGoldenBlurb: 'Warm und nostalgisch. Weiche, sonnige Farben.',
+  lookOriginalBlurb: 'Wie gesehen. Kein Filter, nur das Foto.',
   lookChromeBlurb: 'Kühl und ruhig. Gedämpftes Grün und Blau.',
   lookFadedBlurb: 'Verblasst und sanft, wie ein alter Abzug.',
   lookMonoBlurb: 'Klares Schwarz-Weiß. Zeitlos.',

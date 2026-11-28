@@ -36,4 +36,8 @@ export const settings: Translation<typeof source> = {
   logOutGuestBody: 'Du bist als Gast hier, es gibt also kein Konto. Du verlierst den Zugang zu deinen Momenten und Fotos.',
   logOutBody: 'Du kannst dich jederzeit wieder anmelden.',
   logOutFailed: 'Abmelden fehlgeschlagen',
+
+  // 1.3.0 · contact
+  contactSupport: 'Support kontaktieren',
+  contactAddress: 'Schreib an {email}.',
 };

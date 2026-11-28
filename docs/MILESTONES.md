@@ -563,10 +563,16 @@ Schritte (jeder für sich fertig, typecheck + lint sauber):
 9. **Gästebuch:** Tab im Album, quadratische Selfie-Kamera, Polaroid kommt aus
    dem Schlitz, Notiz (150 Zeichen), Live-Wand unter `leftmoment.com/wall/…`.
    Neue Tabelle + Storage-Regeln, Meldung/Löschen wie bei Fotos.
+   **Gebaut 2026-11-28, ohne die Web-Wand** (folgt als eigener Schritt):
+   Polaroid per Selfie-Kamera, Foto vom Handy oder nur Notiz; sofort für alle
+   sichtbar; 3 pro Gast; Host-Schalter (Standard an); eigener Screen hinter
+   einem Knopf im Album statt Tab. Dazu: Look „Original" statt Chrome und
+   „Contact support" in den Einstellungen. Lokal per SQL geprüft, nie auf
+   einem Gerät, Migrationen nur lokal.
 
 Bewusst **nicht** übernommen: Videos („Tapes"), E-Mail-Login, „Original" ohne
-Look wird als fünfter Look geprüft (offen), Rabattcodes (offen, über
-RevenueCat-Angebotscodes), Link einfügen auf 08 (offen).
+Look: gebaut (ersetzt Chrome in der Auswahl), Rabattcodes (nicht geplant —
+der Nutzer, 2026-11-28), Link einfügen auf 08 (offen).
 
 ## Phase 2 (nach Launch)
 

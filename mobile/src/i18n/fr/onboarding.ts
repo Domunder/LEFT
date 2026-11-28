@@ -23,6 +23,7 @@ export const onboarding: Translation<typeof source> = {
   lookEyebrow: 'Pellicule',
   lookHeadline: 'Quelle pellicule\n*tu charges ?*',
   lookGoldenBlurb: 'Chaud et nostalgique. Des couleurs douces et ensoleillées.',
+  lookOriginalBlurb: 'Fidèle à la réalité. Sans filtre, juste la photo.',
   lookChromeBlurb: 'Froid et calme. Des verts et des bleus atténués.',
   lookFadedBlurb: 'Délavé et doux, comme un vieux tirage.',
   lookMonoBlurb: 'Un noir et blanc net. Intemporel.',

@@ -36,4 +36,8 @@ export const settings: Translation<typeof source> = {
   logOutGuestBody: 'Eres invitado, así que no hay cuenta. Perderás el acceso a tus momentos y fotos.',
   logOutBody: 'Puedes volver a iniciar sesión cuando quieras.',
   logOutFailed: 'No se pudo cerrar sesión',
+
+  // 1.3.0 · contact
+  contactSupport: 'Contactar con soporte',
+  contactAddress: 'Escribe a {email}.',
 };

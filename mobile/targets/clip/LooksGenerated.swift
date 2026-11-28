@@ -7,6 +7,7 @@ import Foundation
 /// Mirrors the `film_look` enum.
 enum FilmLook: String, CaseIterable {
   case golden
+  case original
   case chrome
   case faded
   case mono
@@ -16,9 +17,10 @@ enum FilmLook: String, CaseIterable {
   var name: String {
     switch self {
     case .golden: return "Golden"
-    case .chrome: return "Chrome"
+    case .original: return "Original"
     case .faded: return "Faded"
     case .mono: return "Mono"
+    case .chrome: return "Chrome"
     }
   }
 }
@@ -34,6 +36,16 @@ enum Looks {
       fade: 0.045,
       grain: 0.025,
       vignette: 0.1
+    ),
+    .original: LookRecipe(
+      saturation: 1.0,
+      gain: SIMD3<Float>(1.0, 1.0, 1.0),
+      contrast: 1.0,
+      shadowTint: SIMD3<Float>(0.0, 0.0, 0.0),
+      highlightTint: SIMD3<Float>(0.0, 0.0, 0.0),
+      fade: 0.0,
+      grain: 0.0,
+      vignette: 0.0
     ),
     .chrome: LookRecipe(
       saturation: 0.86,

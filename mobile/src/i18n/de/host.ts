@@ -70,4 +70,7 @@ export const host: Translation<typeof source> = {
   settingsReveal: 'Fotos sichtbar',
   settingsRevealFixed: 'Steht fest, seit das Event läuft.',
   settingsInvitation: 'Bild der Einladung',
+
+  // 1.3.0 · the guest book switch
+  settingsGuestbook: 'Gästebuch',
 };

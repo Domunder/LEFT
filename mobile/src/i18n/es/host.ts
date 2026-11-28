@@ -68,4 +68,7 @@ export const host: Translation<typeof source> = {
   settingsReveal: 'Las fotos se ven',
   settingsRevealFixed: 'Fijado desde que empezó el evento.',
   settingsInvitation: 'Imagen de la invitación',
+
+  // 1.3.0 · the guest book switch
+  settingsGuestbook: 'Libro de firmas',
 };

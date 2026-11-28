@@ -22,7 +22,7 @@ export type LookOption = {
    * rather than typed as `TKey`: this file is copied to the website and
    * transpiled for the App Clip, so it must not import `@/i18n`.
    */
-  blurbKey: `onboarding.look${'Golden' | 'Chrome' | 'Faded' | 'Mono'}Blurb`;
+  blurbKey: `onboarding.look${'Golden' | 'Original' | 'Chrome' | 'Faded' | 'Mono'}Blurb`;
 };
 
 /*
@@ -33,10 +33,22 @@ export type LookOption = {
 */
 export const LOOKS: readonly LookOption[] = [
   { id: 'golden', name: 'Golden', blurbKey: 'onboarding.lookGoldenBlurb' },
-  { id: 'chrome', name: 'Chrome', blurbKey: 'onboarding.lookChromeBlurb' },
+  { id: 'original', name: 'Original', blurbKey: 'onboarding.lookOriginalBlurb' },
   { id: 'faded', name: 'Faded', blurbKey: 'onboarding.lookFadedBlurb' },
   { id: 'mono', name: 'Mono', blurbKey: 'onboarding.lookMonoBlurb' },
+  { id: 'chrome', name: 'Chrome', blurbKey: 'onboarding.lookChromeBlurb' },
 ] as const;
+
+/**
+ * Retired from the picker (1.3.0, the user, 2026-11-28: "drop chrome and add
+ * original"). Events created with one keep it, so its recipe and name stay.
+ */
+const RETIRED: readonly FilmLook[] = ['chrome'];
+
+/** What 03 offers a host. `LOOKS` is every look an event can have. */
+export const OFFERED_LOOKS: readonly LookOption[] = LOOKS.filter(
+  (look) => !RETIRED.includes(look.id)
+);
 
 export const DEFAULT_LOOK: FilmLook = 'golden';
 
@@ -86,7 +98,25 @@ export const LOOK_RECIPES: Record<FilmLook, LookRecipe> = {
     grain: 0.025,
     vignette: 0.1,
   },
-  // Cool: the same restraint, leaning green-blue in the shadows.
+  /*
+    Original: the photo as the phone took it. The recipe is neutral, and that
+    is all the viewfinder needs; the print skips the shader altogether
+    (`developPhoto`), so it gets no grain, vignette or lens fringing either.
+    The web camera and the App Clip run this neutral recipe through their
+    shaders, which still add the lens's trace of fringing.
+  */
+  original: {
+    saturation: 1.0,
+    gain: [1.0, 1.0, 1.0],
+    contrast: 1.0,
+    shadowTint: [0.0, 0.0, 0.0],
+    highlightTint: [0.0, 0.0, 0.0],
+    fade: 0.0,
+    grain: 0.0,
+    vignette: 0.0,
+  },
+  // Cool: the same restraint, leaning green-blue in the shadows. Retired from
+  // the picker in 1.3.0; kept for the events that have it.
   chrome: {
     saturation: 0.86,
     gain: [0.97, 1.01, 1.0],

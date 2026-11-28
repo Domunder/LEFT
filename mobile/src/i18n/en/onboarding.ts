@@ -24,6 +24,7 @@ export const onboarding = {
   lookEyebrow: 'Film',
   lookHeadline: 'Which film are\n*you loading?*',
   lookGoldenBlurb: 'Warm and nostalgic. Soft, sunny colour.',
+  lookOriginalBlurb: 'True to life. No filter, just the photo.',
   lookChromeBlurb: 'Cool and calm. Muted greens and blues.',
   lookFadedBlurb: 'Washed out and gentle, like an old print.',
   lookMonoBlurb: 'Clean black and white. Timeless.',

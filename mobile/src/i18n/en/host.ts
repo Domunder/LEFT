@@ -69,4 +69,7 @@ export const host = {
   settingsReveal: 'Photos show',
   settingsRevealFixed: 'Fixed since the event started.',
   settingsInvitation: 'Invitation image',
+
+  // 1.3.0 · the guest book switch
+  settingsGuestbook: 'Guest book',
 } satisfies Namespace;

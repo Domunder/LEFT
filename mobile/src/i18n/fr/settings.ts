@@ -36,4 +36,8 @@ export const settings: Translation<typeof source> = {
   logOutGuestBody: 'Tu es invité, il n’y a donc pas de compte. Tu perdras l’accès à tes moments et à tes photos.',
   logOutBody: 'Tu peux te reconnecter à tout moment.',
   logOutFailed: 'Déconnexion impossible',
+
+  // 1.3.0 · contact
+  contactSupport: 'Contacter le support',
+  contactAddress: 'Écris à {email}.',
 };

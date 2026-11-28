@@ -1182,6 +1182,76 @@ export const LandingShowcase = {
   glow: 'films',
 } as const;
 
+/**
+ * The guest book (1.3.0, step 9): polaroids and notes on paper — the one light
+ * surface in the app. A print's measures are fractions of its width, so the
+ * grid's small prints and the large one are the same drawing.
+ */
+export const Guestbook = {
+  paper: '#f4f1ea',
+  ink: '#1b1a18',
+  inkSoft: 'rgba(27,26,24,0.5)',
+  /** Behind a picture that is still loading. */
+  photoBg: '#d9d5cc',
+  radius: 3,
+  /** The paper border around the picture. */
+  frame: 0.06,
+  /** The bottom edge is this many borders deep. */
+  footPadding: 1.4,
+  /** The least height of the strip under the picture. */
+  foot: 0.16,
+  noteSize: 0.078,
+  noteLine: 1.28,
+  authorSize: 0.05,
+  authorMin: 8,
+  /** A print's text is part of the drawing: it does not grow with the system's text size. */
+  maxFontScale: 1,
+  /** A note without a picture: larger words on a nearly square card. */
+  textOnly: { noteSize: 0.095, minHeight: 0.8 },
+  fadeMs: 180,
+  shadow: {
+    color: '#000',
+    opacity: 0.45,
+    radius: 10,
+    offset: { width: 0, height: 6 },
+    elevation: 6,
+  },
+  /** Degrees; the grid's prints lie slightly askew, in this order. */
+  tilt: [-2.2, 1.6, 1.2, -1.8, -0.8, 2.3] as readonly number[],
+  headerGap: 20,
+  introGap: 10,
+  introBottom: 28,
+  grid: { gap: 18, paddingBottom: 80, noteLines: 4 },
+  /** Re-read while the book is open; there is no realtime. */
+  pollMs: 20_000,
+  /** An entry opened large. */
+  detail: { scrim: 'rgba(0,0,0,0.86)', inset: 36, gap: 24, actionGap: 14 },
+  /** The composer: the print comes out of a slot. */
+  compose: {
+    /** The print's width, as a fraction of the screen's. */
+    width: 0.6,
+    gap: 24,
+    slotHeight: 10,
+    /** The slot is this much wider than the print on each side. */
+    slotOverhang: 14,
+    slotColor: '#050505',
+    slotBorder: 'rgba(240,237,232,0.16)',
+    windowPad: 16,
+    /** How long the print takes to come out. Timed on purpose: nothing is touched. */
+    ejectMs: 1300,
+    fadeMs: 260,
+    countTop: 8,
+  },
+  /** The square selfie camera. */
+  camera: {
+    radius: 18,
+    gap: 16,
+    frameBg: '#0a0a0a',
+    sideWidth: 64,
+    quality: 0.92,
+  },
+} as const;
+
 /** Event settings (1.3.0) — the host's sheet: name, end, reveal, invitation. */
 export const EventSettings = {
   loadingHeight: 160,
@@ -1193,6 +1263,8 @@ export const EventSettings = {
   rowGap: 12,
   rowPaddingY: 16,
   errorHeight: 18,
+  /** The guest book's switch row. */
+  switchTop: 18,
 } as const;
 
 /** 04.2 · When the photos show (1.3.0): three prints, a caption, three choices. */

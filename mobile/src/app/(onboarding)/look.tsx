@@ -30,7 +30,7 @@ import { Screen } from '@/components/ui/screen';
 import { ScreenHeader } from '@/components/ui/screen-header';
 import { em } from '@/components/ui/rich';
 import { Display, Label } from '@/components/ui/typography';
-import { DEFAULT_LOOK, LOOKS } from '@/constants/looks';
+import { DEFAULT_LOOK, OFFERED_LOOKS } from '@/constants/looks';
 import { LookCard as Tokens, Motion, Spacing } from '@/constants/theme';
 import { t } from '@/i18n';
 import type { FilmLook } from '@/lib/events';
@@ -113,7 +113,7 @@ export default function LookScreen() {
         showsVerticalScrollIndicator={false}
         bounces={false}>
         <View style={styles.grid} accessibilityRole="radiogroup">
-          {LOOKS.map((option, index) => (
+          {OFFERED_LOOKS.map((option, index) => (
             <Animated.View key={option.id} entering={entering(index)} style={styles.cell}>
               <LookCard
                 look={option}

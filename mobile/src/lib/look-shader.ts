@@ -211,7 +211,8 @@ export function developPhoto(
 
     const paint = Skia.Paint();
     paint.setShader(
-      look === null
+      // "Original" is no look at all: the print is the photo, resized.
+      look === null || look === 'original'
         ? pixels
         : lookEffect().makeShaderWithChildren(flatUniforms(look, out.width, out.height), [pixels])
     );

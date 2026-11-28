@@ -23,6 +23,7 @@ export const onboarding: Translation<typeof source> = {
   lookEyebrow: 'Carrete',
   lookHeadline: '¿Qué carrete\n*vas a cargar?*',
   lookGoldenBlurb: 'Cálido y nostálgico. Colores suaves y soleados.',
+  lookOriginalBlurb: 'Tal cual. Sin filtro, solo la foto.',
   lookChromeBlurb: 'Frío y sereno. Verdes y azules apagados.',
   lookFadedBlurb: 'Desvaído y suave, como una copia antigua.',
   lookMonoBlurb: 'Blanco y negro limpio. Atemporal.',

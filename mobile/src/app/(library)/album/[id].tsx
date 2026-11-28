@@ -788,6 +788,19 @@ export default function AlbumScreen() {
               onPress={() => void addPhotos()}
             />
           ) : null}
+          {/* 1.3.0: the guest book — its own screen, open before and after the reveal. */}
+          {album.event.guestbook ? (
+            <GlassButton
+              icon="book-open"
+              accessibilityLabel={t('album.guestbook')}
+              onPress={() =>
+                router.push({
+                  pathname: '/(library)/guestbook/[id]',
+                  params: { id: album.event.id },
+                })
+              }
+            />
+          ) : null}
           {menu}
         </View>
       </View>

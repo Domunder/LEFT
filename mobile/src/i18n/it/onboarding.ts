@@ -23,6 +23,7 @@ export const onboarding: Translation<typeof source> = {
   lookEyebrow: 'Rullino',
   lookHeadline: 'Quale rullino\n*vuoi caricare?*',
   lookGoldenBlurb: 'Caldo e nostalgico. Colori morbidi e solari.',
+  lookOriginalBlurb: 'Fedele al vero. Nessun filtro, solo la foto.',
   lookChromeBlurb: 'Freddo e calmo. Verdi e blu tenui.',
   lookFadedBlurb: 'Sbiadito e delicato, come una vecchia stampa.',
   lookMonoBlurb: 'Bianco e nero pulito. Senza tempo.',

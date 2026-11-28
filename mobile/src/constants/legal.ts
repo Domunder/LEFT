@@ -58,7 +58,8 @@ export const LEGAL_DRAFT_NOTICE =
 export const LEGAL_UPDATED = '2026-11-16';
 
 const ENTITY = 'Dominik Rüegg';
-const EMAIL = 'support@leftmoment.com';
+/** Also Settings' "Contact support" row. */
+export const EMAIL = 'support@leftmoment.com';
 const ADDRESS = 'Speerstrasse 14, 8640 Rapperswil, Switzerland';
 
 // ---------------------------------------------------------------------------
