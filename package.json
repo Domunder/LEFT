@@ -2,15 +2,23 @@
   "name": "left",
   "version": "1.0.0",
   "private": true,
-  "description": "LEFT \u2014 disposable-camera event photo app. Backend tooling lives here; the Expo app is in mobile/.",
+  "description": "LEFT — disposable-camera event photo app. Backend tooling lives here; the Expo app is in mobile/.",
   "scripts": {
     "db:start": "supabase start",
     "db:stop": "supabase stop",
     "db:status": "supabase status",
     "db:reset": "supabase db reset",
     "db:diff": "supabase db diff",
-    "db:push": "supabase db push",
-    "db:types": "supabase gen types typescript --local > mobile/src/types/database.ts"
+    "db:types": "supabase gen types typescript --local > mobile/src/types/database.ts",
+    "use": "node scripts/target.mjs",
+    "use:local": "node scripts/target.mjs local",
+    "use:staging": "node scripts/target.mjs staging",
+    "use:prod": "node scripts/target.mjs prod",
+    "db:migrate:local": "node scripts/db-push.mjs local",
+    "db:push:staging": "node scripts/db-push.mjs staging",
+    "db:push:prod": "node scripts/db-push.mjs prod",
+    "db:seed:staging": "node scripts/db-push.mjs staging --seed",
+    "db:types:staging": "supabase gen types typescript --project-id nxnrqqwstiydznkriidk > mobile/src/types/database.ts"
   },
   "devDependencies": {
     "supabase": "^2.114.0"

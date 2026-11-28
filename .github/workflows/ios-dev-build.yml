@@ -6,6 +6,10 @@
 # then hands the .ipa to EAS for an install link — the same QR / link flow as a
 # cloud build, which matters because there is no Mac to install an .ipa from.
 #
+# The `staging` and `production` profiles build the App Store binary the same
+# way and hand it to `eas submit` (TestFlight). `staging` talks to the staging
+# Supabase project, `production` to production — docs/ENVIRONMENTS.md.
+#
 # The `production` profile builds the App Store binary the same way and hands
 # it to `eas submit`, which uploads it to App Store Connect (TestFlight). That
 # needs two things EAS must already hold, both set up once and interactively
@@ -36,6 +40,7 @@ on:
         options:
           - development
           - preview
+          - staging
           - production
   push:
     tags:
@@ -114,12 +119,12 @@ jobs:
 
       # A store binary cannot be installed from a link; it goes to TestFlight.
       - name: Submit to App Store Connect
-        if: env.PROFILE == 'production'
+        if: env.PROFILE == 'production' || env.PROFILE == 'staging'
         run: |
-          eas submit             --platform ios             --profile production             --path "$RUNNER_TEMP/left.ipa"             --non-interactive             --no-wait
+          eas submit             --platform ios             --profile "$PROFILE"             --path "$RUNNER_TEMP/left.ipa"             --non-interactive             --no-wait
 
       - name: Upload to EAS for an install link
-        if: env.PROFILE != 'production'
+        if: env.PROFILE != 'production' && env.PROFILE != 'staging'
         run: eas upload --platform ios --build-path "$RUNNER_TEMP/left.ipa" --non-interactive
 
       # Build logs only — no binary, no credentials.

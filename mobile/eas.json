@@ -6,15 +6,24 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "development"
     },
     "development-simulator": {
       "developmentClient": true,
       "distribution": "internal",
-      "ios": { "simulator": true }
+      "ios": {
+        "simulator": true
+      },
+      "environment": "development"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "environment": "preview"
+    },
+    "staging": {
+      "environment": "preview",
+      "autoIncrement": true
     },
     "production": {
       "environment": "production",
@@ -23,7 +32,14 @@
   },
   "submit": {
     "production": {
-      "ios": { "ascAppId": "6835436615" }
+      "ios": {
+        "ascAppId": "6835436615"
+      }
+    },
+    "staging": {
+      "ios": {
+        "ascAppId": "6835436615"
+      }
     }
   }
 }

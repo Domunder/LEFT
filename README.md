@@ -51,7 +51,8 @@ Studio is at http://127.0.0.1:54323.
 | `npm run db:start` / `db:stop` | boot / shut down the local stack |
 | `npm run db:reset` | drop and rebuild from migrations (destroys local data) |
 | `npm run db:diff` | generate a migration from changes made in Studio |
-| `npm run db:push` | apply migrations to the linked hosted project |
+| `npm run use:local` / `use:staging` / `use:prod` | point the app and the website at a backend |
+| `npm run db:push:staging` / `db:push:prod` | migrations + edge functions to a hosted project |
 | `npm run db:types` | regenerate `mobile/src/types/database.ts` from the schema |
 
 Rerun `db:types` after every schema change — it is what makes queries type-checked.
@@ -69,12 +70,10 @@ from Vault. `seed.sql` sets `project_url`; add the key once:
 select vault.create_secret('<service_role key from npm run db:status>', 'service_role_key');
 ```
 
-## Going hosted
+## Staging and production
 
-```bash
-npx supabase link --project-ref <your-project-ref>
-npm run db:push
-```
+Two hosted projects: staging for testing, production for real users only.
+Switching and migrating: [docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md).
 
 Migrations in `supabase/migrations/` are the source of truth and apply
 identically to local and hosted. Never change schema by clicking in the

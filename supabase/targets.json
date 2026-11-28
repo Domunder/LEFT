@@ -1,0 +1,18 @@
+{
+  "_comment": "The three backends. URLs and publishable keys are public (they ship in every app bundle). `local` reads its key from `supabase status` and finds this PC's LAN IP itself. Switch with `npm run use:<name>`; see docs/ENVIRONMENTS.md.",
+  "local": {
+    "label": "local Docker stack"
+  },
+  "staging": {
+    "label": "LEFT staging (hosted, test data)",
+    "ref": "nxnrqqwstiydznkriidk",
+    "url": "https://nxnrqqwstiydznkriidk.supabase.co",
+    "key": "sb_publishable_B0Cn3LckOsVeocyLik_JWQ_WXMj3L3n"
+  },
+  "prod": {
+    "label": "LEFT production (real users)",
+    "ref": "ervrxomceqactmrqmkeq",
+    "url": "https://ervrxomceqactmrqmkeq.supabase.co",
+    "key": "sb_publishable_Bdta87_zOkM7kYD7GXd4Fw_5WSN3Klv"
+  }
+}

@@ -29,3 +29,6 @@ yarn-error.*
 # copy outside the repo. Never commit.
 AuthKey_*.p8
 *.p8
+
+# Bride on Film: persona pictures and generated videos (not for the repo)
+/Personas - marketing/
