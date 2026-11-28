@@ -91,7 +91,8 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   step 2, the five languages — see "Languages" below — step 3, the
   invitation (see "The invitation" below; its migration is local only),
   step 4, the new 05.1 (same section), and step 5, the reveal modes (see
-  "Reveal modes" below; migration local only).
+  "Reveal modes" below; migration local only), and step 6, the new Landing
+  (see "The photo backdrop").
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -1192,7 +1193,18 @@ A large soft light that **travels and dims through onboarding**.
 
 ## The photo backdrop
 
-Landing (01) and the three auth screens sit on
+**Since 1.3.0 (2026-11-28) Landing no longer uses it:** 01 stands on the dark
+page with `AmbientGlow`, and between the logo and the copy LEFT runs inside a
+tilted, floating iPhone (`components/ui/landing-showcase.tsx`, tokens
+`LandingShowcase`): the real `CameraMock` counts a roll down 24 → 20 with a
+shutter blink, the prints sit blurred under a countdown, then clear one after
+another — a loop of about ten seconds, stepped by a JS timer, only while the
+screen is focused. Reduced motion: the developed album, still and upright.
+The phone is sized from the room between the header and the copy. No start-up
+logo animation. **Not seen on a device.** The three auth screens still use
+the slideshow described here.
+
+Landing (01, until 1.3.0) and the three auth screens sit on
 `components/ui/background-slideshow.tsx` (2026-11-16, replacing the looping
 video and its 8 MB file — the user's call: "fancy, but not a video"). Four
 photos since 2026-11-21 (`assets/images/backdrop/`, 9:16: two wedding pictures,

@@ -543,6 +543,12 @@ Schritte (jeder für sich fertig, typecheck + lint sauber):
    dieselbe Funktion.
 6. **Landing neu:** die App zeigt sich selbst — geneigter Telefon-Mock mit
    laufenden Moments, statt Diashow. Startanimation des Logos optional, zuletzt.
+   **Gebaut 28.11.2026** (typecheck + lint sauber, nie auf einem Gerät):
+   `LandingShowcase` — im geneigten, schwebenden iPhone-Rahmen läuft LEFT in
+   einer Schleife von ~10 s: Kamera (Zähler 24 → 20, Auslöser blitzt),
+   Entwicklung (verschwommene Abzüge, Countdown), Reveal (Abzüge werden
+   nacheinander scharf). Dunkle Seite mit Glow statt Diashow; die
+   Auth-Screens behalten die Diashow. Logo-Startanimation: nicht gebaut.
 7. **Event-Einstellungen** als ein Sheet für den Host: Name, Ende
    (verlängern/verkürzen), Bild, Reveal. Ersetzt das Menü mit Rename / Change
    image. Look bleibt nach dem Start fest (ist ins JPEG gebacken).

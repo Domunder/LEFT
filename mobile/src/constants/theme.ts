@@ -1146,6 +1146,42 @@ export const FilmReady = {
   ctaGap: 6,
 } as const;
 
+/**
+ * 01's showcase (1.3.0): LEFT running inside the phone — camera, developing,
+ * reveal. Sizes inside the phone are on `PhoneFrame`'s 402 pt canvas.
+ */
+export const LandingShowcase = {
+  /** The roll the camera starts on, and how many frames it takes per loop. */
+  roll: 24,
+  shots: 4,
+  /** One beat of the story. */
+  stepMs: 950,
+  /** Beats the developed album is held before the loop starts over. */
+  holdSteps: 4,
+  tiltDeg: -5,
+  floatMs: 3200,
+  floatTravel: 10,
+  flashOpacity: 0.85,
+  flashInMs: 60,
+  flashOutMs: 320,
+  columns: 3,
+  rows: 4,
+  gap: 6,
+  /** (402 - 4 gaps of 6) / 3. */
+  print: 126,
+  printRadius: 10,
+  blur: 36,
+  dim: 'rgba(16,16,16,0.45)',
+  revealMs: 520,
+  revealStaggerMs: 70,
+  header: { top: 74, paddingX: 22, bottom: 18, gap: 4, titleSize: 30, countGap: 10 },
+  /** The phone between the logo and the copy: never wider, and room around it. */
+  maxWidth: 230,
+  marginY: 18,
+  /** The glow behind the phone. */
+  glow: 'films',
+} as const;
+
 /** 04.2 · When the photos show (1.3.0): three prints, a caption, three choices. */
 export const RevealStep = {
   headerGap: 44,

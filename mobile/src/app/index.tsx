@@ -1,8 +1,15 @@
 /**
  * 01 · Landing
  *
- * App entry / marketing splash, and now the app's **only** way in. Full-bleed
- * photo slideshow under a darkening gradient, the logo header on top, and at
+ * App entry / marketing splash, and now the app's **only** way in.
+ *
+ * **Since 1.3.0 the app shows itself** (the user, replacing the full-bleed
+ * photo slideshow here): between the logo and the copy LEFT runs inside a
+ * tilted iPhone — the camera counts a roll down, the film develops, the prints
+ * clear (`LandingShowcase`) — on the dark page with the ambient glow. The
+ * auth screens keep the slideshow. A start-up logo animation was left out.
+ *
+ * The logo header on top, and at
  * the bottom the three things a new user can do: sign in with Google, sign in
  * with Apple, or join somebody else's group.
  *
@@ -24,13 +31,14 @@
  */
 
 import type { Session } from '@supabase/supabase-js';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { AuthButton } from '@/components/ui/auth-button';
-import { BackgroundSlideshow } from '@/components/ui/background-slideshow';
+import { AmbientGlow } from '@/components/ui/ambient-glow';
+import { LandingShowcase } from '@/components/ui/landing-showcase';
+import { phoneWidthFor } from '@/components/ui/phone-frame';
 import { PillButton } from '@/components/ui/pill-button';
 import { em } from '@/components/ui/rich';
 import { Screen } from '@/components/ui/screen';
@@ -40,8 +48,8 @@ import {
   Colors,
   LandingHeader,
   LandingPanel,
+  LandingShowcase as ShowcaseTokens,
   Spacing,
-  VideoOverlay,
 } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { t } from '@/i18n';
@@ -72,6 +80,22 @@ export default function LandingScreen() {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
 
   const busy = phase.kind === 'signingIn';
+
+  // Where the showcase stands: under the header, above the copy.
+  const [headerBottom, setHeaderBottom] = useState<number | null>(null);
+  const [panelTop, setPanelTop] = useState<number | null>(null);
+  const room =
+    headerBottom !== null && panelTop !== null
+      ? panelTop - headerBottom - 2 * ShowcaseTokens.marginY
+      : 0;
+  const stage =
+    headerBottom !== null && room > 0
+      ? {
+          top: headerBottom + ShowcaseTokens.marginY,
+          height: room,
+          phoneWidth: Math.floor(Math.min(ShowcaseTokens.maxWidth, phoneWidthFor(room))),
+        }
+      : null;
 
   /**
    * Everything that happens once a session exists, whichever way it was minted.
@@ -148,14 +172,7 @@ export default function LandingScreen() {
 
   return (
     <Screen padded={false} edges={[]}>
-      <BackgroundSlideshow opacity={VideoOverlay.videoOpacity} />
-
-      <LinearGradient
-        colors={[...VideoOverlay.gradientColors]}
-        locations={[...VideoOverlay.gradientLocations]}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
+      <AmbientGlow preset={ShowcaseTokens.glow} />
 
       {/*
         The design's grain overlay (feTurbulence at 3.5%) is deliberately not
@@ -168,14 +185,26 @@ export default function LandingScreen() {
         right; the providers are on the panel now, so a second route to the same
         place would only be a way to get lost.
       */}
-      <View style={styles.header}>
+      <View
+        style={styles.header}
+        onLayout={(e) => setHeaderBottom(e.nativeEvent.layout.y + e.nativeEvent.layout.height)}>
         <View style={styles.brand}>
           <Image source={LOGO} style={styles.logo} accessible={false} />
           <Text style={styles.wordmark}>LEFT</Text>
         </View>
       </View>
 
-      <View style={styles.panel}>
+      {/*
+        The phone takes the room between the header and the copy, whatever that
+        is on this device: sized once both are measured, never past its token.
+      */}
+      {stage ? (
+        <View style={[styles.stage, { top: stage.top, height: stage.height }]} pointerEvents="none">
+          <LandingShowcase width={stage.phoneWidth} />
+        </View>
+      ) : null}
+
+      <View style={styles.panel} onLayout={(e) => setPanelTop(e.nativeEvent.layout.y)}>
         <Display size="lg" style={styles.headline}>
           {em(t('landing.headline'))}
         </Display>
@@ -279,6 +308,13 @@ const styles = StyleSheet.create({
   wordmark: {
     ...Typography.wordmark,
     color: Colors.textSoft,
+  },
+  stage: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   panel: {
     position: 'absolute',
