@@ -46,6 +46,13 @@
  *     have — silently;
  *   - anything else: logged, never in the way of joining.
  *
+ * **The invitation (1.3.0).** Above the name stands what the guest was invited
+ * to — the event image in the film's look, "Invited by …", the event's name,
+ * when it develops and the roll (`InviteHeader`, the same drawing the host
+ * designs). A non-member cannot read the event, so it comes from
+ * `invite_preview()`; if that fails (an older server, no network) the screen
+ * is the one below, without a picture. Not shown when changing a name.
+ *
  * **Back from 12** (`change=1`): a guest waiting for the start can come back
  * here to switch to or from a host's name. Their current name is chosen, a
  * back button returns without changes, and Continue goes back to 12. Once the
@@ -55,26 +62,32 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  type ScrollViewInstance,
   StyleSheet,
   TextInput,
+  useWindowDimensions,
   View,
 } from 'react-native';
 
 import { CircleBackButton } from '@/components/ui/circle-back-button';
+import { InviteHeader } from '@/components/ui/invite-card';
 import { NamePicker } from '@/components/ui/name-picker';
 import { PillButton } from '@/components/ui/pill-button';
 import { em } from '@/components/ui/rich';
 import { Screen } from '@/components/ui/screen';
 import { Body, Caption, Display, Label } from '@/components/ui/typography';
-import { Colors, Guest, MissionsJoin, Radii, Spacing } from '@/constants/theme';
+import { Colors, Guest, InviteCard, MissionsJoin, Radii, Spacing } from '@/constants/theme';
 import { FontFamily } from '@/constants/typography';
 import { t } from '@/i18n';
 import { getSession, resolveDisplayName, setDisplayName, signInAnonymously } from '@/lib/auth';
 import { isDemoCode } from '@/lib/demo-code';
+import { useEventCover } from '@/lib/event-cover';
 import { joinEvent } from '@/lib/events';
+import { getInvitePreview, type InvitePreview } from '@/lib/invite-preview';
 import {
   claimName,
   listUnclaimedNames,
@@ -112,6 +125,12 @@ export default function GuestNameScreen() {
    * changed (join_event updates it), never just to retry the claim.
    */
   const joined = useRef<{ eventId: string; name: string } | null>(null);
+
+  /** What the invitation says; null until known, and for good if it cannot be read. */
+  const [invite, setInvite] = useState<InvitePreview | null>(null);
+  const cover = useEventCover(invite ? { id: invite.eventId, cover: invite.cover } : null);
+  const { height: windowHeight } = useWindowDimensions();
+  const scroll = useRef<ScrollViewInstance>(null);
 
   const hasNames = names.length > 0;
   const chosen = names.find((n) => n.id === chosenId) ?? null;
@@ -165,6 +184,19 @@ export default function GuestNameScreen() {
     const ready = signInAnonymously();
     signingIn.current = ready;
 
+    // The invitation's picture and text. Without it the screen asks for the
+    // name alone, as it always did.
+    if (!changing) {
+      ready
+        .then(() => getInvitePreview(code))
+        .then((preview) => {
+          if (!cancelled && preview) setInvite(preview);
+        })
+        .catch((e) => {
+          if (__DEV__) console.warn('[join] no invitation preview', e);
+        });
+    }
+
     async function load() {
       try {
         await ready;
@@ -200,6 +232,16 @@ export default function GuestNameScreen() {
       clearInterval(timer);
     };
   }, [code, changing]);
+
+  // Under the picture the field sits low: bring it above the keyboard.
+  const showInvite = invite !== null && cover !== null && !changing;
+  useEffect(() => {
+    if (!showInvite) return;
+    const sub = Keyboard.addListener('keyboardDidShow', () => {
+      scroll.current?.scrollToEnd({ animated: true });
+    });
+    return () => sub.remove();
+  }, [showInvite]);
 
   const handleChoose = useCallback((person: MissionName) => {
     setChosenId(person.id);
@@ -326,8 +368,9 @@ export default function GuestNameScreen() {
           the rows without first dismissing the keyboard.
         */}
         <ScrollView
-          style={styles.flex}
-          contentContainerStyle={styles.content}
+          ref={scroll}
+          style={[styles.flex, showInvite && styles.bleed]}
+          contentContainerStyle={[styles.content, showInvite && styles.bleedContent]}
           alwaysBounceVertical={false}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
@@ -337,11 +380,34 @@ export default function GuestNameScreen() {
             </View>
           ) : null}
 
-          <Label style={styles.eyebrow}>{changing ? t('guest.nameEyebrowChange') : t('guest.welcome')}</Label>
+          {showInvite ? (
+            <>
+              {/* Full-bleed, from the screen's top edge; the page begins under it. */}
+              <InviteHeader
+                look={invite.look}
+                source={cover}
+                name={invite.name}
+                hostName={invite.hostName}
+                endsAt={invite.endsAt}
+                rollSize={invite.rollSize}
+                developed={invite.developed}
+                style={[styles.invite, { height: Math.round(windowHeight * InviteCard.joinShare) }]}
+              />
+              <Display size="md" style={hasNames ? undefined : styles.inviteHeadline}>
+                {em(t('guest.nameHeadline'))}
+              </Display>
+            </>
+          ) : (
+            <>
+              <Label style={styles.eyebrow}>
+                {changing ? t('guest.nameEyebrowChange') : t('guest.welcome')}
+              </Label>
 
-          <Display size="xxl" style={hasNames ? undefined : styles.headline}>
-            {em(t('guest.nameHeadline'))}
-          </Display>
+              <Display size="xxl" style={hasNames ? undefined : styles.headline}>
+                {em(t('guest.nameHeadline'))}
+              </Display>
+            </>
+          )}
 
           {hasNames ? (
             <NamePicker
@@ -414,6 +480,22 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
+  },
+  // With the invitation the scroll view runs to the screen's top and side
+  // edges, so the picture can; the content takes the side inset back.
+  bleed: {
+    marginTop: -Guest.paddingTop,
+    marginHorizontal: -Spacing.screenX,
+  },
+  bleedContent: {
+    paddingHorizontal: Spacing.screenX,
+  },
+  invite: {
+    marginHorizontal: -Spacing.screenX,
+    marginBottom: InviteCard.join.top,
+  },
+  inviteHeadline: {
+    marginBottom: InviteCard.join.headlineGap,
   },
   eyebrow: {
     marginBottom: Guest.eyebrowGap,

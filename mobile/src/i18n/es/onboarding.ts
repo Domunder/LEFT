@@ -27,14 +27,6 @@ export const onboarding: Translation<typeof source> = {
   lookFadedBlurb: 'Desvaído y suave, como una copia antigua.',
   lookMonoBlurb: 'Blanco y negro limpio. Atemporal.',
 
-  coverEyebrow: 'Portada',
-  coverHeadline: 'Elige tu *portada.*',
-  coverBody: 'Tus invitados la ven mientras esperan, con el look de tu carrete.',
-  coverPreviewOwnA11y: 'Tu foto, con el look de tu carrete',
-  coverPreviewStockA11y: 'Una imagen de muestra, con el look de tu carrete',
-  coverOwnA11y: 'Tu foto',
-  coverChooseA11y: 'Elegir entre tus fotos',
-  coverStockA11y: 'Imagen de muestra {number}',
 
   endingHeadline: '¿Cuándo termina\n*el evento?*',
   endingA11y: 'Termina el {date} a las {time}, {until}',
@@ -64,4 +56,14 @@ export const onboarding: Translation<typeof source> = {
   errorNeedSignIn: 'Tienes que iniciar sesión para crear un evento.',
   errorGuestCannotCreate: 'Inicia sesión con Google o Apple para crear un evento.',
   errorNoTransaction: 'La compra se completó, pero no devolvió ninguna transacción.',
+
+  // 04.1 · The invitation (1.3.0)
+  inviteHeadline: 'Tu *invitación.*',
+  inviteBody: 'Esto es lo que ven tus invitados al abrir el enlace.',
+  inviteChangeImage: 'Cambiar imagen',
+  invitePreview: 'Vista previa',
+  inviteUseDefault: 'Usar la imagen por defecto',
+  invitePreviewA11y: 'Ver la invitación a pantalla completa',
+  inviteCardA11y: 'La invitación a {name}',
+  inviteNameFallback: 'Tu evento',
 };

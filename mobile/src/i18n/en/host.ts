@@ -45,8 +45,8 @@ export const host = {
 
   // Change image
   coverFailed: "Couldn't change the image",
-  coverHeadline: 'Change your *event cover.*',
-  coverBody: 'Your guests see it while they wait, in your film’s look.',
+  coverHeadline: 'Your *invitation.*',
+  coverBody: 'This is what your guests see when they open the link.',
   momentLoadFailed: 'Couldn’t load this moment.',
   saving: 'Saving…',
 

@@ -88,7 +88,8 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   once.film; similar features in LEFT's own form, not a copy). Built, **never
   run on a device**: step 1 (`lib/haptics.ts` is the only importer of
   `expo-haptics`; onboarding cross-fades, headlines arrive through `Rise`)
-  and step 2, the five languages — see "Languages" below.
+  step 2, the five languages — see "Languages" below — and step 3, the
+  invitation (see "The invitation" below; its migration is local only).
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -985,6 +986,33 @@ Decided by the user — do not re-litigate:
   (`20261115030000_service_role_grants.sql` covers the existing ones — before
   it, the purchase ledger could not be written at all).
 - **Real delivery is untested**: it needs APNs/FCM credentials and a device.
+
+## The invitation (1.3.0, 2026-11-28)
+
+- **Creation is event → look → ending → invitation → group** (the user;
+  replaces 03.1's picker and its row of six stock pictures). `(onboarding)/cover`
+  and the host's "Change image" (`(host)/cover`) both show `InviteDesigner`:
+  the invitation inside an iPhone, "Change image" (the host's own photo),
+  "Preview" (full screen) and "Use default image". One default picture
+  (`DEFAULT_COVER`); a moment created earlier with another stock picture
+  keeps it. The roll is chosen after this step, so the card omits it there.
+- **`PhoneFrame` is the website's frame** (Mockify's iPhone 17 Pro, MIT,
+  `assets/images/device/iphone-frame.png`, geometry in `PhoneFrame` tokens):
+  children are laid out on a 402 pt canvas and scaled, so the mock shows the
+  real layout. Meant for reuse (05.1's mock camera, the new landing).
+- **One drawing, two places:** `InviteHeader` (`invite-card.tsx`) is the
+  picture in the look with "Invited by …", the name, "Develops in …" and the
+  roll. 11 draws it full-bleed above the name (not when changing a name); the
+  designer draws 11 as a still (`InviteCardPreview`).
+- **A non-member reads the invitation through `invite_preview(code)`**
+  (migration `20261128000000_invite_preview.sql`, security definer,
+  signed-in callers only): event id, name, host's name, look, cover, end,
+  roll, status — nothing else. A second storage policy lets any signed-in
+  user read `{event}/cover.jpg`. **So whoever holds an invite link sees name,
+  host and image before joining** (flagged to the user). If the call fails
+  (an older server) 11 is the old screen. Verified locally with SQL; **not on
+  staging or production, never seen on a device.** The web camera and the
+  App Clip do not show the card.
 
 ## Languages (1.3.0, 2026-11-28)
 

@@ -638,6 +638,19 @@ export type Database = {
         Args: { p_display_name: string; p_invite_code: string }
         Returns: string
       }
+      invite_preview: {
+        Args: { p_invite_code: string }
+        Returns: {
+          cover: string
+          ends_at: string
+          event_id: string
+          host_name: string
+          look: string
+          name: string
+          roll_size: number
+          status: string
+        }[]
+      }
       mark_photo_uploaded: {
         Args: {
           p_blurhash?: string

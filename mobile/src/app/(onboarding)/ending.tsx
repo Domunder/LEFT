@@ -47,7 +47,7 @@ export default function EndingScreen() {
   const router = useRouter();
   const { draft, patch } = useOnboarding();
   useGlow('ending');
-  useStep(4);
+  useStep(3);
 
   // Preseeded like 02/03, so there is no empty state to explain. Returning to
   // this screen restores the earlier choice.
@@ -65,7 +65,7 @@ export default function EndingScreen() {
   function handleContinue() {
     if (!isValid) return;
     patch({ endsAt });
-    router.push('/(onboarding)/group-size');
+    router.push('/(onboarding)/cover');
   }
 
   return (

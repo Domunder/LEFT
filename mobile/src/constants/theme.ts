@@ -1027,6 +1027,68 @@ export const CoverStep = {
   badgeBg: 'rgba(16,16,16,0.6)',
 } as const;
 
+/**
+ * The iPhone the app draws around a preview (`components/ui/phone-frame.tsx`,
+ * 1.3.0): the website's own frame — Mockify's iPhone 17 Pro (MIT, from
+ * Apple's design resources), `assets/images/device/iphone-frame.png` — with
+ * the display's place in it as fractions of the picture. What is shown inside
+ * is laid out on a canvas `canvasWidth` points wide and scaled to fit, so it
+ * is the real layout, small.
+ */
+export const PhoneFrame = {
+  frameWidth: 1350,
+  frameHeight: 2760,
+  screenLeft: 0.054815,
+  screenTop: 0.025725,
+  screenWidth: 0.88963,
+  screenHeight: 0.948188,
+  /** The display's corner radius, as a share of the frame's width. */
+  screenRadius: 0.146667,
+  canvasWidth: 402,
+} as const;
+
+/**
+ * The invitation (1.3.0): what a guest sees on 11 when they open the link —
+ * the event image, who invites, the name, when it develops and the roll —
+ * and the host's designer for it (creation step 4, "Change image").
+ */
+export const InviteCard = {
+  /** The picture's share of the card's height, in the preview. */
+  imageShare: 0.66,
+  /** The picture's share of the window on 11, where the keyboard needs room. */
+  joinShare: 0.46,
+  /** The picture dissolves into the page under the text. */
+  fade: ['rgba(16,16,16,0)', 'rgba(16,16,16,0.7)', '#101010'] as const,
+  fadeLocations: [0.38, 0.78, 1] as const,
+  paddingX: 28,
+  paddingBottom: 6,
+  chip: {
+    paddingX: 12,
+    paddingY: 6,
+    gap: 6,
+    icon: 12,
+    bg: 'rgba(16,16,16,0.5)',
+    border: 'rgba(255,255,255,0.14)',
+    marginBottom: 12,
+  },
+  nameGap: 10,
+  meta: { gap: 16, itemGap: 6, icon: 13 },
+  /** The stand-in field and button under the picture in the preview. */
+  form: { paddingTop: 22, gap: 12, buttonHeight: 54 },
+  designer: {
+    /** The phone never grows past this, however tall the screen. */
+    maxPhoneWidth: 260,
+    paddingY: 16,
+    /** The row of text links under "Change image". */
+    linksHeight: 44,
+    linksGap: 28,
+    linkHitSlop: 10,
+  },
+  preview: { closeInset: 16 },
+  /** 11, under the picture: picture -> headline -> field. */
+  join: { top: 22, headlineGap: 20 },
+} as const;
+
 /** 11.5 · the guest's swipe-through intro (`(guest)/intro`, 2026-11-21). */
 export const GuestIntro = {
   headerTop: 8,

@@ -70,4 +70,9 @@ export const guest: Translation<typeof source> = {
   miniA11yUnlimited: 'Die Kamera von LEFT auf einem Telefon: ein unbegrenzter Film.',
   miniA11yUnlimitedMission:
     'Die Kamera von LEFT auf einem Telefon: ein unbegrenzter Film und eine Mission für das nächste Foto: {mission}.',
+
+  // 11 · The invitation above the name (1.3.0)
+  invitedBy: 'Eingeladen von {name}',
+  inviteDevelops: 'Entwicklung {until}',
+  inviteDeveloped: 'Entwickelt',
 };

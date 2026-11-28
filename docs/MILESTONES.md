@@ -514,6 +514,15 @@ Schritte (jeder für sich fertig, typecheck + lint sauber):
 3. **Einladungskarte gestalten** (ersetzt 03.1): iPhone-Mock, der zeigt, was
    der Gast auf 11 sieht (Bild, „Invited by …", Name, Dauer, Rolle), „Bild
    ändern", „Vorschau". 11 wird entsprechend zur Karte mit dem Event-Bild.
+   **Gebaut 28.11.2026** (typecheck + lint sauber, Server lokal per SQL
+   geprüft, nie auf einem Gerät): Reihenfolge jetzt Event → Look → Ende →
+   Einladung → Gruppe, damit die Karte das echte Ende zeigt (die Rolle fehlt
+   dort noch, sie wird erst danach gewählt). Der Rahmen ist der der Website
+   (Mockify, iPhone 17 Pro). Die sechs Stock-Bilder sind aus der Auswahl
+   verschwunden; alte Events behalten ihres. Neu auf dem Server:
+   `invite_preview()` — wer den Link hat, liest Name, Host, Bild, Ende und
+   Rolle schon vor dem Beitritt. **Noch nicht auf Staging.** Web-Kamera und
+   App Clip zeigen die Karte noch nicht.
 4. **05.1 neu:** Gruppengröße als Segmentleiste mit Preis, Rolle mit
    Mock-Kamera, deren Zähler sich dreht; danach ein „Dein Film ist
    bereit"-Sheet mit der Karte.

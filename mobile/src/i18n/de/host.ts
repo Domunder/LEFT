@@ -47,8 +47,8 @@ export const host: Translation<typeof source> = {
   startEvent: 'Event starten',
 
   coverFailed: 'Das Bild konnte nicht geändert werden',
-  coverHeadline: 'Ändere dein *Event-Cover.*',
-  coverBody: 'Deine Gäste sehen es, während sie warten — im Look deines Films.',
+  coverHeadline: 'Deine *Einladung.*',
+  coverBody: 'Das sehen deine Gäste, wenn sie den Link öffnen.',
   momentLoadFailed: 'Dieser Moment konnte nicht geladen werden.',
   saving: 'Speichert…',
 

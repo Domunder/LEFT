@@ -3,9 +3,10 @@
  * any time: before, during or after the moment. Reached from the moment's menu
  * (a long press on Moments, or the album's •••).
  *
- * The same picker as creation (03.1, `CoverPicker`), started on the current
- * image. Save applies only a real change: a new own photo is uploaded over
- * `photos/{event}/cover.jpg`, a stock picture only renames `events.cover`.
+ * The same designer as creation (`InviteDesigner`, 1.3.0): the invitation in
+ * an iPhone, started on the current image. Save applies only a real change: a
+ * new own photo is uploaded over `photos/{event}/cover.jpg`, the default
+ * picture only renames `events.cover`.
  * The server lets only the host write either.
  */
 
@@ -14,17 +15,17 @@ import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
 
 import { CircleIconButton } from '@/components/ui/circle-back-button';
-import { CoverPicker } from '@/components/ui/cover-picker';
+import { InviteDesigner } from '@/components/ui/invite-designer';
 import { PillButton } from '@/components/ui/pill-button';
 import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
 import { em } from '@/components/ui/rich';
-import { Body, Display, Label } from '@/components/ui/typography';
+import { Body, Display } from '@/components/ui/typography';
 import { coverFor } from '@/constants/samples';
 import { Colors, CoverStep as T, Spacing } from '@/constants/theme';
 import { messageFor } from '@/lib/auth-errors';
 import { applyCover, useEventCover, type CoverChoice } from '@/lib/event-cover';
-import { getEvent, type Event } from '@/lib/events';
+import { getEvent, isDeveloped, type Event } from '@/lib/events';
 import { t } from '@/i18n';
 
 /** The stock picture an event without a choice shows (the seeded fallback). */
@@ -43,7 +44,6 @@ export default function ChangeCoverScreen() {
   /** What the event shows now — Save compares against it. */
   const [initial, setInitial] = useState<CoverChoice | null>(null);
   const [choice, setChoice] = useState<CoverChoice | null>(null);
-  const [own, setOwn] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/(library)/films'));
@@ -70,7 +70,6 @@ export default function ChangeCoverScreen() {
     if (event.cover === 'upload') {
       if (typeof current === 'string') {
         start = { kind: 'upload', uri: current };
-        setOwn(current);
       }
     } else {
       start = { kind: 'sample', key: event.cover ?? seededKey(event.id) };
@@ -111,10 +110,7 @@ export default function ChangeCoverScreen() {
         <CircleIconButton icon="x" accessibilityLabel={t('common.close')} onPress={close} />
       </View>
 
-      <Label numberOfLines={1} style={styles.eyebrow}>
-        {event?.name ?? ' '}
-      </Label>
-      <Display size="xl" style={styles.headline}>
+      <Display size="md" style={styles.headline}>
         {em(t('host.coverHeadline'))}
       </Display>
       <Body small color={Colors.textDim}>
@@ -122,12 +118,14 @@ export default function ChangeCoverScreen() {
       </Body>
 
       {event && choice ? (
-        <CoverPicker
+        <InviteDesigner
           look={event.look}
+          name={event.name}
+          endsAt={new Date(event.ends_at)}
+          rollSize={event.roll_size}
+          developed={isDeveloped(event)}
           choice={choice}
           onChange={setChoice}
-          own={own}
-          onOwnPicked={setOwn}
         />
       ) : (
         <View style={styles.center}>
@@ -157,9 +155,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     marginBottom: T.headerGap,
   },
-  eyebrow: {
-    marginBottom: T.eyebrowGap,
-  },
   headline: {
     marginBottom: T.headlineGap,
   },
@@ -169,7 +164,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cta: {
-    marginTop: Spacing.lg,
     marginBottom: Spacing.screenBottom,
   },
 });

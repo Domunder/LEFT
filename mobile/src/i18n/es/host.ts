@@ -45,8 +45,8 @@ export const host: Translation<typeof source> = {
   startEvent: 'Iniciar el evento',
 
   coverFailed: 'No se pudo cambiar la imagen',
-  coverHeadline: 'Cambia la *portada del evento.*',
-  coverBody: 'Tus invitados la ven mientras esperan, con el look de tu carrete.',
+  coverHeadline: 'Tu *invitación.*',
+  coverBody: 'Esto es lo que ven tus invitados al abrir el enlace.',
   momentLoadFailed: 'No se pudo cargar este momento.',
   saving: 'Guardando…',
 

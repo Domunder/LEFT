@@ -29,14 +29,6 @@ export const onboarding = {
   lookMonoBlurb: 'Clean black and white. Timeless.',
 
   // 03.1 · Event cover
-  coverEyebrow: 'Event cover',
-  coverHeadline: 'Choose your *event cover.*',
-  coverBody: 'Your guests see it while they wait, in your film’s look.',
-  coverPreviewOwnA11y: 'Your photo, in your film’s look',
-  coverPreviewStockA11y: 'A stock picture, in your film’s look',
-  coverOwnA11y: 'Your photo',
-  coverChooseA11y: 'Choose from your photos',
-  coverStockA11y: 'Stock picture {number}',
 
   // 04 · Event end
   endingHeadline: 'When does\n*the event end?*',
@@ -68,4 +60,14 @@ export const onboarding = {
   errorNeedSignIn: 'You need to be signed in to create an event.',
   errorGuestCannotCreate: 'Sign in with Google or Apple to create an event.',
   errorNoTransaction: 'The purchase completed but returned no transaction.',
+
+  // 04.1 · The invitation (1.3.0)
+  inviteHeadline: 'Your *invitation.*',
+  inviteBody: 'This is what your guests see when they open the link.',
+  inviteChangeImage: 'Change image',
+  invitePreview: 'Preview',
+  inviteUseDefault: 'Use default image',
+  invitePreviewA11y: 'Preview the invitation full screen',
+  inviteCardA11y: 'The invitation to {name}',
+  inviteNameFallback: 'Your event',
 } satisfies Namespace;

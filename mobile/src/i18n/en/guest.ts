@@ -71,4 +71,9 @@ export const guest = {
   miniA11yUnlimited: "LEFT's camera on a phone: an unlimited roll.",
   miniA11yUnlimitedMission:
     "LEFT's camera on a phone: an unlimited roll, and a mission for the next photo: {mission}.",
+
+  // 11 · The invitation above the name (1.3.0)
+  invitedBy: 'Invited by {name}',
+  inviteDevelops: 'Develops {until}',
+  inviteDeveloped: 'Developed',
 } satisfies Namespace;

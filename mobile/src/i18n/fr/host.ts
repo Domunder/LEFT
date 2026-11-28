@@ -45,8 +45,8 @@ export const host: Translation<typeof source> = {
   startEvent: 'Démarrer l’événement',
 
   coverFailed: 'Impossible de changer l’image',
-  coverHeadline: 'Change ta *photo de couverture.*',
-  coverBody: 'Tes invités la voient en attendant, dans le look de ta pellicule.',
+  coverHeadline: 'Ton *invitation.*',
+  coverBody: 'Voilà ce que tes invités voient en ouvrant le lien.',
   momentLoadFailed: 'Impossible de charger ce moment.',
   saving: 'Enregistrement…',
 
