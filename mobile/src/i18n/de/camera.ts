@@ -70,4 +70,7 @@ export const camera: Translation<typeof source> = {
   missionsLocked: 'Der Film ist entwickelt. Die Missionen sind gesperrt.',
   missionNotYours: 'Diese Mission gehört nicht zu deinen.',
   missionSaveFailed: 'Speichern fehlgeschlagen. Versuch es noch mal.',
+
+  // 1.3.0 · the upload hint in the shutter bar
+  uploadingHint: { one: '1 Foto wird hochgeladen', other: '{count} Fotos werden hochgeladen' },
 };

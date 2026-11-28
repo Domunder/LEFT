@@ -93,7 +93,15 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   step 4, the new 05.1 (same section), and step 5, the reveal modes (see
   "Reveal modes" below; migration local only), and step 6, the new Landing
   (see "The photo backdrop"), and step 7, the host's event settings sheet
-  (see "Event settings" below; migration local only).
+  (see "Event settings" below; migration local only), and step 8, three
+  camera details: `RollCounter` is a digit wheel (a strip per place behind a
+  one-line window; reduced motion keeps the cross-fade — the landing's and
+  05.1's mock cameras get it too), the photo just taken flies from the
+  viewfinder into the "Your shots" tile (`components/ui/shot-flight.tsx`;
+  the tile holds its old picture until the print lands), and "3 photos
+  uploading" stands in the shutter bar's bottom padding in place of the cloud
+  and number beside the invite tile. JS only. **The wheel's digits no longer
+  scale with large text** (the window is one fixed line high).
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 

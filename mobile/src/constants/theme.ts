@@ -1371,6 +1371,31 @@ export const Camera = {
       /** How far a digit travels, as a fraction of the line height. */
       travel: 0.55,
     },
+    /**
+     * 1.3.0: each place is a wheel of digits behind a window, as on a film
+     * counter — it turns one step and seats with a slight overshoot. The roll
+     * above is what reduced motion keeps (as a cross-fade).
+     */
+    wheel: {
+      spring: { dampingRatio: 0.78, duration: 380 },
+      /** A wheel is this much wider than its place on each side, so a wide digit passing a narrow place is not squeezed. */
+      bleed: 12,
+    },
+  },
+
+  /** 1.3.0: the photo just taken flies from the viewfinder into the "Your shots" tile. */
+  flight: {
+    /** The print's side where it appears, as a fraction of the viewfinder's width. */
+    size: 0.42,
+    startRadius: 14,
+    appearMs: 90,
+    /** It rests this long before it leaves. */
+    holdMs: 160,
+    spring: { dampingRatio: 1, duration: 460 },
+    border: 'rgba(240,237,232,0.5)',
+    bg: '#1a1a1a',
+    /** The print stays over the tile until the tile's own picture has faded in. */
+    lingerMs: 260,
   },
 
   /** The viewfinder — full width and height down to the shutter bar, bottom corners rounded. */
@@ -1489,6 +1514,9 @@ export const Camera = {
     gap: 5,
     iconSize: 13,
     color: 'rgba(240,237,232,0.45)',
+    /** "3 photos uploading", in the shutter bar's bottom padding (1.3.0). */
+    hintBottom: 0,
+    fadeMs: 220,
   },
 
   /** The countdown to `ends_at`, bottom-left. */

@@ -71,4 +71,7 @@ export const camera: Translation<typeof source> = {
   missionsLocked: 'La pellicule est développée. Les missions sont verrouillées.',
   missionNotYours: 'Cette mission ne fait pas partie des tiennes.',
   missionSaveFailed: 'Impossible d’enregistrer. Réessaie.',
+
+  // 1.3.0 · the upload hint in the shutter bar
+  uploadingHint: { one: '1 photo en cours d’envoi', other: '{count} photos en cours d’envoi' },
 };

@@ -65,11 +65,13 @@ import { Image } from 'expo-image';
 import { useNetworkState } from 'expo-network';
 import { useIsFocused, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View, type ViewInstance } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
+  FadeIn,
+  FadeOut,
   ReduceMotion,
   useAnimatedStyle,
   useReducedMotion,
@@ -96,6 +98,7 @@ import { PillButton } from '@/components/ui/pill-button';
 import { PressScale } from '@/components/ui/press-scale';
 import { RollCounter } from '@/components/ui/roll-counter';
 import { Screen } from '@/components/ui/screen';
+import { ShotFlight, type FlightRect } from '@/components/ui/shot-flight';
 import { ShutterButton } from '@/components/ui/shutter-button';
 import { Spinner } from '@/components/ui/spinner';
 import { em } from '@/components/ui/rich';
@@ -446,11 +449,20 @@ function Viewfinder({
     The old picture stays up until the new one has resolved.
   */
   const [lastShot, setLastShot] = useState<string | null>(null);
+  /*
+    1.3.0: a new shot flies into the tile (`ShotFlight`). While it is on its
+    way the tile keeps its old picture — `holdTile` — and takes the new one
+    when the print lands. Not under reduced motion: the tile cross-fades.
+  */
+  const tile = useRef<ViewInstance>(null);
+  const holdTile = useRef(false);
+  const flightKey = useRef(0);
+  const [flight, setFlight] = useState<{ key: number; uri: string; to: FlightRect } | null>(null);
   useEffect(() => {
     let cancelled = false;
     const read = () =>
       void latestShotThumb(eventId).then((uri) => {
-        if (!cancelled && uri) setLastShot(uri);
+        if (!cancelled && uri && !holdTile.current) setLastShot(uri);
       });
     read();
     const unsubscribe = subscribeToQueue((change) => {
@@ -664,6 +676,7 @@ function Viewfinder({
         if (lit) lightsOut();
       }
 
+      holdTile.current = !reducedMotion && frame.width > 0;
       await enqueueShot({
         eventId,
         userId,
@@ -675,6 +688,23 @@ function Viewfinder({
         missionId,
         cropAspect,
       });
+      if (holdTile.current) {
+        const uri = await latestShotThumb(eventId).catch(() => null);
+        const land = (to: FlightRect | null) => {
+          if (uri && to && to.width > 0) {
+            flightKey.current += 1;
+            setFlight({ key: flightKey.current, uri, to });
+          } else {
+            holdTile.current = false;
+            if (uri) setLastShot(uri);
+          }
+        };
+        if (tile.current) {
+          tile.current.measureInWindow((x, y, width, height) => land({ x, y, width, height }));
+        } else {
+          land(null);
+        }
+      }
       // Shot for it: the mission reads as done (the queue owes its tag) and lets go.
       if (missionId) setArmedId((current) => (current === missionId ? null : current));
 
@@ -684,6 +714,7 @@ function Viewfinder({
     } catch (e) {
       // Nothing was queued, so nothing was spent. Say so; the next press is a new frame.
       if (DEV) console.warn(`[camera] shot not taken: ${e}`);
+      holdTile.current = false;
       setMissed(true);
       haptic.error();
     } finally {
@@ -705,7 +736,18 @@ function Viewfinder({
     flash,
     armedFor,
     cropAspect,
+    frame,
   ]);
+
+  /** The print reached the tile: the tile takes the picture, then the print goes. */
+  const flightLanded = useCallback((key: number, uri: string) => {
+    if (key !== flightKey.current) return;
+    holdTile.current = false;
+    setLastShot(uri);
+    setTimeout(() => {
+      setFlight((current) => (current?.key === key ? null : current));
+    }, T.flight.lingerMs);
+  }, []);
 
   // --- status -------------------------------------------------------------
 
@@ -869,6 +911,7 @@ function Viewfinder({
             hitSlop={8}
             scale={GlassTokens.pressScale}
             onPress={onOpenShots}>
+            <View ref={tile} collapsable={false}>
             <Glass radius={T.shots.radius} interactive style={styles.tile}>
               {lastShot ? (
                 <Image
@@ -881,22 +924,13 @@ function Viewfinder({
                 <Feather name="image" size={T.shots.iconSize} color={T.shots.iconColor} />
               )}
             </Glass>
+            </View>
           </PressScale>
         </View>
 
         <ShutterButton onFire={fire} disabled={!ready} />
 
         <View style={[styles.bottomSide, styles.bottomRight]}>
-          {pending > 0 ? (
-            <View
-              style={styles.queue}
-              accessible
-              accessibilityRole="text"
-              accessibilityLabel={uploadingLine(pending)}>
-              <Feather name="upload-cloud" size={T.queue.iconSize} color={T.queue.color} />
-              <Text style={styles.queueText}>{pending}</Text>
-            </View>
-          ) : null}
           <PressScale
             accessibilityRole="button"
             accessibilityLabel={t('camera.invite')}
@@ -913,7 +947,40 @@ function Viewfinder({
             </Glass>
           </PressScale>
         </View>
+
+        {/* 1.3.0: said in words, where it was a cloud and a number beside the invite tile. */}
+        {pending > 0 ? (
+          <Animated.View
+            entering={FadeIn.duration(T.queue.fadeMs)}
+            exiting={FadeOut.duration(T.queue.fadeMs)}
+            style={styles.queue}
+            pointerEvents="none"
+            accessible
+            accessibilityRole="text"
+            accessibilityLabel={uploadingLine(pending)}>
+            <Feather name="upload-cloud" size={T.queue.iconSize} color={T.queue.color} />
+            <Text style={styles.queueText} numberOfLines={1}>
+              {t('camera.uploadingHint', { count: pending })}
+            </Text>
+          </Animated.View>
+        ) : null}
       </View>
+
+      {flight ? (
+        <ShotFlight
+          key={flight.key}
+          uri={flight.uri}
+          from={{
+            x: (frame.width * (1 - T.flight.size)) / 2,
+            y: (frame.height - frame.width * T.flight.size) / 2,
+            width: frame.width * T.flight.size,
+            height: frame.width * T.flight.size,
+          }}
+          to={flight.to}
+          radius={T.shots.radius}
+          onLanded={() => flightLanded(flight.key, flight.uri)}
+        />
+      ) : null}
 
       {/* Over the whole screen: an absolute child ignores the safe area's padding. */}
       {missionSheet !== 'closed' && dealt ? (
@@ -1064,9 +1131,15 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     gap: T.invite.queueGap,
   },
+  // In the bar's bottom padding, so the viewfinder never changes size with it.
   queue: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: T.queue.hintBottom,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: T.queue.gap,
   },
   queueText: {

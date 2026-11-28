@@ -73,4 +73,7 @@ export const camera = {
   missionsLocked: 'The film is developed. Missions are locked.',
   missionNotYours: 'That mission isn’t one of yours.',
   missionSaveFailed: 'Couldn’t save. Try again.',
+
+  // 1.3.0 · the upload hint in the shutter bar
+  uploadingHint: { one: '1 photo uploading', other: '{count} photos uploading' },
 } satisfies Namespace;

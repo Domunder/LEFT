@@ -69,4 +69,7 @@ export const camera: Translation<typeof source> = {
   missionsLocked: 'El carrete está revelado. Las misiones están bloqueadas.',
   missionNotYours: 'Esa misión no es una de las tuyas.',
   missionSaveFailed: 'No se ha podido guardar. Inténtalo de nuevo.',
+
+  // 1.3.0 · the upload hint in the shutter bar
+  uploadingHint: { one: 'Subiendo 1 foto', other: 'Subiendo {count} fotos' },
 };

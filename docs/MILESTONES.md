@@ -558,6 +558,8 @@ Schritte (jeder für sich fertig, typecheck + lint sauber):
    lokal.
 8. **Kamera-Details:** Zähler als Ziffernrad, das letzte Foto fliegt in die
    Kachel, „3 photos uploading"-Hinweis.
+   **Gebaut 2026-11-28** (`roll-counter.tsx`, `shot-flight.tsx`, Kamera):
+   nur JS, nie auf einem Gerät gesehen.
 9. **Gästebuch:** Tab im Album, quadratische Selfie-Kamera, Polaroid kommt aus
    dem Schlitz, Notiz (150 Zeichen), Live-Wand unter `leftmoment.com/wall/…`.
    Neue Tabelle + Storage-Regeln, Meldung/Löschen wie bei Fotos.

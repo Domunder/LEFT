@@ -70,4 +70,7 @@ export const camera: Translation<typeof source> = {
   missionsLocked: 'Il rullino è sviluppato. Le missioni sono bloccate.',
   missionNotYours: 'Quella missione non è tra le tue.',
   missionSaveFailed: 'Impossibile salvare. Riprova.',
+
+  // 1.3.0 · the upload hint in the shutter bar
+  uploadingHint: { one: 'Caricamento di 1 foto', other: 'Caricamento di {count} foto' },
 };
