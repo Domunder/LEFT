@@ -533,6 +533,10 @@ Schritte (jeder für sich fertig, typecheck + lint sauber):
    steht neben LEFTs Kamera im iPhone-Rahmen (`CameraMock`), deren Zähler
    der echte `RollCounter` ist und zur gewählten Zahl rollt. Nach dem
    Erstellen: `FilmReadySheet` mit der Einladung, weiter zu 09.
+   *(Schritt 5 gebaut 28.11.2026, siehe „Reveal modes" in CLAUDE.md: alle
+   drei Modi, Server lokal per SQL geprüft, App typecheck + lint sauber,
+   Web-Kamera wartet auf den verzögerten Reveal, App Clip noch nicht
+   angepasst, nichts auf Staging, nie auf einem Gerät.)*
 5. **Reveal-Zeitpunkt** (neuer Onboarding-Schritt mit Live-Vorschau: scharf /
    verschwommen mit Datum). Server: `events.reveal_mode`, `reveal_delay`,
    `is_event_developed()` und RLS angepasst, Web-Kamera und Clip lesen

@@ -36,7 +36,7 @@ export default function CoverScreen() {
   const router = useRouter();
   const { draft, patch } = useOnboarding();
   useGlow('ending');
-  useStep(4);
+  useStep(5);
 
   const [choice, setChoice] = useState<CoverChoice>(draft.cover ?? DEFAULT_COVER);
   // 04 always fills this; the fallback only keeps a deep link here from crashing.
@@ -59,6 +59,7 @@ export default function CoverScreen() {
         look={draft.look ?? DEFAULT_LOOK}
         name={draft.filmName?.trim() || t('onboarding.inviteNameFallback')}
         endsAt={draft.endsAt ?? fallbackEnd}
+        reveal={draft.reveal}
         choice={choice}
         onChange={setChoice}
       />

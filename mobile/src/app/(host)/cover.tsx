@@ -25,7 +25,7 @@ import { coverFor } from '@/constants/samples';
 import { Colors, CoverStep as T, Spacing } from '@/constants/theme';
 import { messageFor } from '@/lib/auth-errors';
 import { applyCover, useEventCover, type CoverChoice } from '@/lib/event-cover';
-import { getEvent, isDeveloped, type Event } from '@/lib/events';
+import { getEvent, isDeveloped, revealModeOf, type Event } from '@/lib/events';
 import { t } from '@/i18n';
 
 /** The stock picture an event without a choice shows (the seeded fallback). */
@@ -124,6 +124,7 @@ export default function ChangeCoverScreen() {
           endsAt={new Date(event.ends_at)}
           rollSize={event.roll_size}
           developed={isDeveloped(event)}
+          reveal={{ mode: revealModeOf(event), delayHours: event.reveal_delay_hours }}
           choice={choice}
           onChange={setChoice}
         />

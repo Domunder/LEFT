@@ -75,4 +75,11 @@ export const guest: Translation<typeof source> = {
   invitedBy: 'Te invita {name}',
   inviteDevelops: 'Revelado {until}',
   inviteDeveloped: 'Revelado',
+
+  // 1.3.0 · reveal modes
+  inviteLive: 'Fotos visibles al momento',
+  introLiveHeadline: 'Todos lo ven *todo.*',
+  introLiveBody: 'Las fotos aparecen para todo el grupo en cuanto se hacen. Las cámaras se cierran a esta hora.',
+  introDelayedBody: 'Las cámaras se cierran {end}. Luego, a esta hora, todos ven todas las fotos a la vez. Te avisamos.',
+  photosLive: 'Fotos visibles al momento',
 };

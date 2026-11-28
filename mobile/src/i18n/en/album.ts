@@ -83,4 +83,8 @@ export const album = {
   report: 'Report',
   reported: 'Reported. Thank you.',
   reportFailed: 'Couldn\'t send the report.',
+
+  // 1.3.0 · reveal modes
+  showsIn: 'Everyone’s photos show in',
+  endsIn: 'The event ends in',
 } satisfies Namespace;

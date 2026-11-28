@@ -11,7 +11,7 @@
  */
 
 import { LOOKS } from '@/constants/looks';
-import type { FilmLook } from './events';
+import { revealModeOf, type FilmLook, type RevealChoice } from './events';
 import { getSupabase } from './supabase';
 
 export type InvitePreview = {
@@ -25,6 +25,7 @@ export type InvitePreview = {
   /** null is the unlimited roll. */
   rollSize: number | null;
   developed: boolean;
+  reveal: RevealChoice;
 };
 
 function asLook(value: string): FilmLook {
@@ -52,5 +53,9 @@ export async function getInvitePreview(inviteCode: string): Promise<InvitePrevie
     endsAt: new Date(row.ends_at),
     rollSize: (row.roll_size as number | null) ?? null,
     developed: row.status === 'developed',
+    reveal: {
+      mode: revealModeOf(row),
+      delayHours: (row.reveal_delay_hours as number | null) ?? null,
+    },
   };
 }

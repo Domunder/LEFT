@@ -77,4 +77,20 @@ export const onboarding = {
   readyHeadline: 'Your film is *ready.*',
   readyBody: 'This is the invitation your guests open.',
   readyCta: 'Invite your guests',
+
+  // 1.3.0 · reveal modes
+  revealHeadline: 'When do the *photos show?*',
+  revealEnd: 'When it ends',
+  revealEndBody: 'Everyone sees every photo at once. The classic.',
+  revealDelayed: 'Later',
+  revealDelayedBody: 'Some time after the end — the morning after, for example.',
+  revealLive: 'During the event',
+  revealLiveBody: 'Everyone sees every photo as it’s taken. Nothing is hidden.',
+  revealDelay12: '12 hours',
+  revealDelay24: '1 day',
+  revealDelay72: '3 days',
+  revealDelay168: '1 week',
+  revealCaptionEnd: 'Hidden until {date}, {time} — when the event ends.',
+  revealCaptionDelayed: 'Hidden until {date}, {time}.',
+  revealCaptionLive: 'Everyone sees every photo right away.',
 } satisfies Namespace;

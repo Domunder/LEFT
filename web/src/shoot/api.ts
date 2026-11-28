@@ -95,8 +95,29 @@ export async function listMembers(eventId: string): Promise<Member[]> {
   return data ?? [];
 }
 
-/** As `is_event_developed()` decides it: by status or by the clock. */
-export function isDeveloped(event: Pick<Event, 'status' | 'ends_at'>, now = Date.now()): boolean {
+type RevealFields = Pick<Event, 'status' | 'ends_at'> &
+  Partial<Pick<Event, 'reveal_mode' | 'reveal_delay_hours'>>;
+
+/**
+ * When the album opens here (reveal modes, 1.3.0): the end, or — for a delayed
+ * reveal — `reveal_delay_hours` after it. On a server from before the
+ * migration the fields are missing and this is the end.
+ *
+ * The web camera does not do a live reveal: others' photos stay smudges until
+ * the end, as in the default mode (`event_gallery()` hands out no paths).
+ */
+export function albumOpensAt(event: RevealFields): number {
+  const end = new Date(event.ends_at).getTime();
+  return event.reveal_mode === 'delayed' ? end + (event.reveal_delay_hours ?? 0) * 3_600_000 : end;
+}
+
+/**
+ * "The album is open" — `is_event_revealed()` for the modes this page knows.
+ * For a delayed reveal the developing state simply lasts until the photos
+ * show; the server still accepts frames after the end, so nothing is lost.
+ */
+export function isDeveloped(event: RevealFields, now = Date.now()): boolean {
+  if (event.reveal_mode === 'delayed') return albumOpensAt(event) <= now;
   return event.status === 'developed' || new Date(event.ends_at).getTime() <= now;
 }
 

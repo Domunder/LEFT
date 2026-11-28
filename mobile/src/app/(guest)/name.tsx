@@ -391,6 +391,7 @@ export default function GuestNameScreen() {
                 endsAt={invite.endsAt}
                 rollSize={invite.rollSize}
                 developed={invite.developed}
+                reveal={invite.reveal}
                 style={[styles.invite, { height: Math.round(windowHeight * InviteCard.joinShare) }]}
               />
               <Display size="md" style={hasNames ? undefined : styles.inviteHeadline}>

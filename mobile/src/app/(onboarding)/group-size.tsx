@@ -79,6 +79,7 @@ import { Typography } from '@/constants/typography';
 import { useEventCreation, type CreationPhase } from '@/hooks/use-event-creation';
 import { t } from '@/i18n';
 import { getSession, resolveDisplayName } from '@/lib/auth';
+import { setEventReveal } from '@/lib/events';
 import { applyCover, choiceSource, DEFAULT_COVER } from '@/lib/event-cover';
 import { draftToCreateEventInput, useGlow, useOnboarding, useStep } from '@/lib/onboarding-draft';
 import { DEFAULT_GROUP_SIZE, DEFAULT_ROLL_SIZE, rollWords, type RollSize } from '@/lib/roll';
@@ -130,7 +131,7 @@ export default function GroupSizeScreen() {
   const { draft, patch, reset } = useOnboarding();
   const creation = useEventCreation();
   useGlow('groupSize');
-  useStep(5);
+  useStep(6);
 
   // Preseeded like 02/03/04, so there is no empty state and the CTA is never
   // disabled. Returning to this screen restores the earlier choices.
@@ -241,6 +242,12 @@ export default function GroupSizeScreen() {
     // fallback shows instead, and the host's choice is only lost on this try.
     if (draft.cover) await applyCover(event.id, draft.cover).catch(() => undefined);
 
+    // When the photos show (1.3.0). Best effort too: if it fails the event keeps
+    // the default — hidden until the end — which never shows more than chosen.
+    if (draft.reveal && draft.reveal.mode !== 'end') {
+      await setEventReveal(event.id, draft.reveal).catch(() => undefined);
+    }
+
     // Whose invitation it is. Best effort: without a name the chip is left out.
     const hostName = await getSession()
       .then((session) => (session?.user ? resolveDisplayName(session.user) : null))
@@ -260,6 +267,7 @@ export default function GroupSizeScreen() {
         hostName,
         endsAt: new Date(event.ends_at),
         rollSize: event.roll_size,
+        reveal: draft.reveal,
       },
     });
   }

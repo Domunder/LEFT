@@ -74,4 +74,8 @@ export const album: Translation<typeof source> = {
   report: 'Segnala',
   reported: 'Segnalata. Grazie.',
   reportFailed: 'Impossibile inviare la segnalazione.',
+
+  // 1.3.0 · reveal modes
+  showsIn: 'Tutte le foto visibili tra',
+  endsIn: 'L’evento finisce tra',
 };

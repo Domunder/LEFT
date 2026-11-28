@@ -166,8 +166,12 @@ export default function AlbumScreen() {
 
   // --- before the reveal: the countdown and fresh photos ----------------------
 
-  const waiting = album !== null && !developed;
-  const endsAt = album?.event.ends_at;
+  // Reveal modes (1.3.0): "developed" is "everyone's photos are readable". A
+  // live reveal is that while the event still runs (`running`), and a delayed
+  // one is over before it is. The countdown runs to whichever comes next.
+  const running = album?.running ?? false;
+  const waiting = album !== null && (!developed || running);
+  const endsAt = album?.waitsFor ?? undefined;
   const [now, setNow] = useState(() => new Date());
   const remaining = endsAt ? new Date(endsAt).getTime() - now.getTime() : 0;
   // Seconds are on screen in the last hour; before that a slow tick is enough.
@@ -184,7 +188,7 @@ export default function AlbumScreen() {
   const countdownLabel = `${countdown[0].value}${countdown[0].unit} ${countdown[1].value}${countdown[1].unit}`;
 
   // The clock passing the end develops the film (RLS reads the clock).
-  const ended = waiting && remaining <= 0;
+  const ended = waiting && endsAt !== undefined && remaining <= 0;
   useEffect(() => {
     if (ended) void load();
   }, [ended, load]);
@@ -269,14 +273,14 @@ export default function AlbumScreen() {
   // --- actions --------------------------------------------------------------
 
   const leave = useCallback(() => {
-    if (developed && offerKeep) {
+    if (developed && !running && offerKeep) {
       router.replace('/(auth)/keep');
     } else if (router.canGoBack()) {
       router.back();
     } else {
       router.replace('/(library)/films');
     }
-  }, [developed, offerKeep, router]);
+  }, [developed, running, offerKeep, router]);
 
   const develop = useCallback(() => {
     if (!id) return;
@@ -631,21 +635,34 @@ export default function AlbumScreen() {
           // The row is not laid out yet; the viewer then closes with a fade.
         }}
         ListHeaderComponent={
-          !developed ? (
+          waiting ? (
             <DevelopingHero
               title={album.event.name}
               cover={album.event}
               countdown={countdown}
+              note={
+                running
+                  ? developed
+                    ? t('album.endsIn')
+                    : undefined
+                  : t('album.showsIn')
+              }
               shotsTaken={album.shotsTaken}
               memberCount={album.memberCount}
               scrollY={scrollY}
-              onOpenCamera={() =>
-                router.replace({
-                  pathname: '/(capture)/camera',
-                  params: { eventId: album.event.id },
-                })
+              onOpenCamera={
+                running
+                  ? () =>
+                      router.replace({
+                        pathname: '/(capture)/camera',
+                        params: { eventId: album.event.id },
+                      })
+                  : undefined
               }
-              onDevelop={album.isHost && album.event.status === 'live' ? develop : undefined}
+              // Also after the end, while a delayed reveal is still to come.
+              onDevelop={
+                album.isHost && (album.event.status === 'live' || !developed) ? develop : undefined
+              }
               developing={developing}
             />
           ) : (

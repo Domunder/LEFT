@@ -292,6 +292,58 @@ export async function startEvent(eventId: string): Promise<Event> {
 }
 
 /**
+ * When everyone's photos show (1.3.0) — `events.reveal_mode`:
+ *   'live'     during the event, as they are taken
+ *   'end'      when the event ends (the default, and LEFT's original rule)
+ *   'delayed'  `reveal_delay_hours` after the end
+ */
+export type RevealMode = 'live' | 'end' | 'delayed';
+
+export type RevealChoice = { mode: RevealMode; delayHours: number | null };
+
+export const DEFAULT_REVEAL: RevealChoice = { mode: 'end', delayHours: null };
+
+/** The delays 04.2 offers, in hours: the morning after, a day, three days, a week. */
+export const REVEAL_DELAYS = [12, 24, 72, 168] as const;
+
+type RevealFields = Pick<Event, 'status' | 'ends_at' | 'reveal_mode' | 'reveal_delay_hours'>;
+
+export function revealModeOf(event: Pick<Event, 'reveal_mode'>): RevealMode {
+  return event.reveal_mode === 'live' || event.reveal_mode === 'delayed' ? event.reveal_mode : 'end';
+}
+
+/** The moment everyone's photos show; null for a live reveal (there is none to wait for). */
+export function revealAt(event: Pick<Event, 'ends_at' | 'reveal_mode' | 'reveal_delay_hours'>): Date | null {
+  const mode = revealModeOf(event);
+  if (mode === 'live') return null;
+  const end = new Date(event.ends_at).getTime();
+  return new Date(mode === 'delayed' ? end + (event.reveal_delay_hours ?? 0) * 3_600_000 : end);
+}
+
+/**
+ * Whether members can see each other's photos — mirrors `is_event_revealed()`,
+ * which is what RLS asks. `isDeveloped()` is the other question: is the event
+ * over. For the default mode both turn true at the same moment.
+ */
+export function isRevealed(event: RevealFields, now: Date = new Date()): boolean {
+  const mode = revealModeOf(event);
+  if (mode === 'live') return event.status !== 'setup';
+  if (!isDeveloped(event, now)) return false;
+  const at = revealAt(event);
+  return at === null || at.getTime() <= now.getTime();
+}
+
+/** The host's choice, before the start only (`set_event_reveal()` refuses later). */
+export async function setEventReveal(eventId: string, choice: RevealChoice): Promise<void> {
+  const { error } = await getSupabase().rpc('set_event_reveal', {
+    p_event_id: eventId,
+    p_mode: choice.mode,
+    p_delay_hours: choice.mode === 'delayed' ? (choice.delayHours ?? undefined) : undefined,
+  });
+  if (error) throw error;
+}
+
+/**
  * Develop the film early — host only, irreversible, and it ends the event for
  * everyone. Otherwise the clock does this at `ends_at`.
  */

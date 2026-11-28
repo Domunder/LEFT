@@ -15,7 +15,7 @@ import { Platform, Share } from 'react-native';
 
 import { track } from './analytics';
 import { getSession } from './auth';
-import { getEvent, isDeveloped, listMembers, type Event } from './events';
+import { getEvent, isDeveloped, isRevealed, listMembers, revealAt, type Event } from './events';
 import { loadMyShots, type MyShot } from './my-shots';
 import { listEventGallery, listPhotos, type Photo } from './photos';
 import { signedUrls } from './storage';
@@ -47,7 +47,16 @@ export type HiddenPhoto =
 
 export type Album = {
   event: Event;
+  /**
+   * Everyone's photos are readable (`is_event_revealed()`): the grid and the
+   * viewer hold the whole album. For a live reveal this is true while the
+   * event still runs — see `running`.
+   */
   developed: boolean;
+  /** The event is not over yet: the camera is open and the end is counted down. */
+  running: boolean;
+  /** What the countdown runs to: the end while running, then a delayed reveal. Null: nothing to wait for. */
+  waitsFor: string | null;
   isHost: boolean;
   memberCount: number;
   /** Frames taken by everyone, from the roster — known before the reveal. */
@@ -77,11 +86,15 @@ export async function loadAlbum(eventId: string): Promise<Album> {
     getSession(),
   ]);
   const userId = session?.user.id;
-  const developed = isDeveloped(event);
+  const developed = isRevealed(event);
+  const running = !isDeveloped(event);
+  const reveal = revealAt(event);
 
   const base = {
     event,
     developed,
+    running,
+    waitsFor: running ? event.ends_at : !developed && reveal ? reveal.toISOString() : null,
     isHost: event.host_id === userId,
     memberCount: members.length,
     shotsTaken: members.reduce((sum, member) => sum + member.shots_taken, 0),

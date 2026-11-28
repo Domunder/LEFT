@@ -32,6 +32,7 @@ import {
   getMyMissions,
   isConfigured,
   isDemo,
+  albumOpensAt,
   isDeveloped,
   joinEvent,
   listMembers,
@@ -785,7 +786,7 @@ function showIntro() {
   }
 
   // 4 · developed together
-  const ends = new Date(event.ends_at);
+  const ends = new Date(albumOpensAt(event));
   $('intro-date').textContent = formatEndDate(ends);
   $('intro-time').textContent = formatEndTime(ends);
 
@@ -833,7 +834,7 @@ function setUpWaiting() {
 function showWaiting() {
   const event = state.event!;
   $('waiting-roll').textContent = event.roll_size === null ? 'Unlimited photos each' : `${event.roll_size} photos each`;
-  const ends = new Date(event.ends_at);
+  const ends = new Date(albumOpensAt(event));
   $('waiting-ends').textContent = `Develops ${formatEndDate(ends)} at ${formatEndTime(ends)}`;
   show('waiting');
 
@@ -880,7 +881,7 @@ function setUpDeveloping() {
 function showDeveloping(empty: boolean) {
   const event = state.event!;
   $('dev-title').textContent = empty ? 'That’s your roll · developing in' : 'Developing in';
-  const when = new Date(event.ends_at);
+  const when = new Date(albumOpensAt(event));
   const demo = isDemo(event);
   $('dev-lede').textContent = demo
     ? 'A demo with sample guests. Their photos stay hidden, like everyone’s at a real event, until the film is developed. ' +
@@ -1177,7 +1178,7 @@ function startTick() {
 }
 
 function remaining(): number {
-  return Math.max(0, new Date(state.event!.ends_at).getTime() - Date.now());
+  return Math.max(0, albumOpensAt(state.event!) - Date.now());
 }
 
 /** Days, hours, minutes; seconds only in the last hour. */

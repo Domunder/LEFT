@@ -76,4 +76,11 @@ export const guest = {
   invitedBy: 'Invited by {name}',
   inviteDevelops: 'Develops {until}',
   inviteDeveloped: 'Developed',
+
+  // 1.3.0 · reveal modes
+  inviteLive: 'Photos show live',
+  introLiveHeadline: 'Everyone sees *everything.*',
+  introLiveBody: 'Photos show up for the whole group as they’re taken. The cameras close at this time.',
+  introDelayedBody: 'The cameras close {end}. Then, at this time, everyone sees every photo at once. We’ll let you know.',
+  photosLive: 'Photos show live',
 } satisfies Namespace;

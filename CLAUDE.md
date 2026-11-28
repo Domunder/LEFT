@@ -89,8 +89,9 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   run on a device**: step 1 (`lib/haptics.ts` is the only importer of
   `expo-haptics`; onboarding cross-fades, headlines arrive through `Rise`)
   step 2, the five languages — see "Languages" below — step 3, the
-  invitation (see "The invitation" below; its migration is local only), and
-  step 4, the new 05.1 (same section).
+  invitation (see "The invitation" below; its migration is local only),
+  step 4, the new 05.1 (same section), and step 5, the reveal modes (see
+  "Reveal modes" below; migration local only).
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -1026,6 +1027,49 @@ Decided by the user — do not re-litigate:
   gesture root) shows the invitation and goes on to 09 — on its button, a
   drag or a tap on the scrim. `reset()` still runs before it; the screen
   holds what it draws in state. **Not seen on a device.**
+
+## Reveal modes (1.3.0, 2026-11-28)
+
+The host decides when everyone's photos show (the user: all three modes,
+against my advice to leave "live" out). Migration
+`20261128010000_reveal_modes.sql`; verified locally with SQL as guest and
+host. **Local only, never seen on a device.**
+
+- **`events.reveal_mode`**: `end` (default, the original rule), `delayed`
+  (`reveal_delay_hours` after the end; the app offers 12 h, 1 day, 3 days, a
+  week) or `live` (members see each other's photos as they are taken).
+- **Two predicates now — do not mix them up.** `is_event_developed()` is
+  "the event is over" (unchanged; missions lock on it). `is_event_revealed()`
+  is "members may read everyone's photos" and is what every read policy asks:
+  photos, the bucket, mission cards, `report_photo()`. For `end` they turn
+  true together, so existing events behave as before. In the app:
+  `isDeveloped()` / `isRevealed()` / `revealAt()` in `lib/events.ts`.
+- **Set once, before the start**: `set_event_reveal()` (host, `setup` only —
+  guests shoot knowing who sees what). Clients cannot write the columns.
+  Creation asks on a new step, `(onboarding)/reveal` (**six steps**: event,
+  look, end, reveal, invitation, group), and 05.1 writes it right after the
+  create, best effort — a failure leaves the default, which never shows more
+  than chosen.
+- **"Develop now" means now in every mode**: `end_event()` ends the event and
+  sets a delayed reveal's delay to 0; it also works after the end while a
+  delay still runs.
+- **The push "Your photos are developed." is sent when they can be seen**: the
+  status trigger skips a delayed event, and `enqueue_reveal_notifications()`
+  (in the `notifications-tick` cron job) queues it when the delay is over.
+- **The album** (`Album.developed` = revealed, `running`, `waitsFor`): a live
+  reveal shows the whole album under `DevelopingHero` (camera, "The event
+  ends in") while the event runs; a delayed one keeps the smudge gallery
+  after the end, counting down to the reveal, without the camera button. 11's
+  invitation, the guest intro and 12 say when the photos show.
+- **Not adapted:** the Moments list treats a delayed film as developed from
+  the end (its album then shows the countdown). **The web camera** waits for a
+  delayed reveal but has no live reveal (others stay smudges until the end).
+  **The App Clip knows neither mode**: after the end of a delayed film its
+  album shows only the guest's own photos until the reveal. Its event query
+  names its columns, so adding the two there would break the clip on a server
+  without the migration — do it together with the production migration.
+- A new route needs the typed-routes file regenerated (`expo start`); I
+  patched the local, gitignored `.expo/types/router.d.ts` by hand.
 
 ## Languages (1.3.0, 2026-11-28)
 

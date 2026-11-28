@@ -57,6 +57,7 @@ import { formatEndDate, formatEndTime } from '@/lib/event-end';
 import {
   getEvent,
   isDeveloped,
+  revealAt,
   listMembers,
   subscribeToEventStatus,
   type Event,
@@ -242,10 +243,14 @@ export default function WaitingScreen() {
                 />
                 <Fact
                   icon="clock"
-                  label={t('guest.develops', {
-                    date: formatEndDate(ends),
-                    time: formatEndTime(ends),
-                  })}
+                  label={
+                    event.reveal_mode === 'live'
+                      ? t('guest.photosLive')
+                      : t('guest.develops', {
+                          date: formatEndDate(revealAt(event) ?? ends),
+                          time: formatEndTime(revealAt(event) ?? ends),
+                        })
+                  }
                 />
               </View>
             </>

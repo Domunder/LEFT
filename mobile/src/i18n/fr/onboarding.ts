@@ -73,4 +73,20 @@ export const onboarding: Translation<typeof source> = {
   readyHeadline: 'Ta pellicule est *prête.*',
   readyBody: 'Voici l’invitation que tes invités ouvrent.',
   readyCta: 'Inviter tes invités',
+
+  // 1.3.0 · reveal modes
+  revealHeadline: 'Quand les *photos s’affichent ?*',
+  revealEnd: 'À la fin',
+  revealEndBody: 'Tout le monde voit toutes les photos d’un coup. Le classique.',
+  revealDelayed: 'Plus tard',
+  revealDelayedBody: 'Quelque temps après la fin — le lendemain matin, par exemple.',
+  revealLive: 'Pendant l’événement',
+  revealLiveBody: 'Tout le monde voit chaque photo dès qu’elle est prise. Rien n’est caché.',
+  revealDelay12: '12 heures',
+  revealDelay24: '1 jour',
+  revealDelay72: '3 jours',
+  revealDelay168: '1 semaine',
+  revealCaptionEnd: 'Cachées jusqu’au {date}, {time} — à la fin de l’événement.',
+  revealCaptionDelayed: 'Cachées jusqu’au {date}, {time}.',
+  revealCaptionLive: 'Tout le monde voit chaque photo tout de suite.',
 };

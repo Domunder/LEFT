@@ -21,7 +21,7 @@ import { Colors, Guest, InviteCard as T, Radii } from '@/constants/theme';
 import { FontFamily, Typography } from '@/constants/typography';
 import { t } from '@/i18n';
 import { formatTimeUntil } from '@/lib/event-end';
-import type { FilmLook } from '@/lib/events';
+import type { FilmLook, RevealChoice } from '@/lib/events';
 
 export type InviteContent = {
   look: FilmLook;
@@ -35,6 +35,8 @@ export type InviteContent = {
   rollSize?: number | null;
   /** Developed already: "Developed" instead of the time left. */
   developed?: boolean;
+  /** When the photos show; left out is "at the end". */
+  reveal?: RevealChoice | null;
 };
 
 type InviteHeaderProps = InviteContent & { style?: StyleProp<ViewStyle> };
@@ -47,10 +49,21 @@ export function InviteHeader({
   endsAt,
   rollSize,
   developed,
+  reveal,
   style,
 }: InviteHeaderProps) {
-  const until = developed ? null : formatTimeUntil(endsAt);
-  const develops = until !== null ? t('guest.inviteDevelops', { until }) : t('guest.inviteDeveloped');
+  // A delayed film develops later than it ends; a live one has nothing to wait for.
+  const showsAt =
+    reveal?.mode === 'delayed'
+      ? new Date(endsAt.getTime() + (reveal.delayHours ?? 0) * 3_600_000)
+      : endsAt;
+  const until = developed && reveal?.mode !== 'delayed' ? null : formatTimeUntil(showsAt);
+  const develops =
+    reveal?.mode === 'live'
+      ? t('guest.inviteLive')
+      : until !== null
+        ? t('guest.inviteDevelops', { until })
+        : t('guest.inviteDeveloped');
   const roll =
     rollSize === undefined
       ? null

@@ -73,4 +73,20 @@ export const onboarding: Translation<typeof source> = {
   readyHeadline: 'Dein Film ist *bereit.*',
   readyBody: 'Diese Einladung öffnen deine Gäste.',
   readyCta: 'Gäste einladen',
+
+  // 1.3.0 · reveal modes
+  revealHeadline: 'Wann werden die *Fotos sichtbar?*',
+  revealEnd: 'Am Ende',
+  revealEndBody: 'Alle sehen alle Fotos auf einmal. Der Klassiker.',
+  revealDelayed: 'Später',
+  revealDelayedBody: 'Einige Zeit nach dem Ende — zum Beispiel am Morgen danach.',
+  revealLive: 'Während des Events',
+  revealLiveBody: 'Alle sehen jedes Foto sofort. Nichts bleibt verborgen.',
+  revealDelay12: '12 Stunden',
+  revealDelay24: '1 Tag',
+  revealDelay72: '3 Tage',
+  revealDelay168: '1 Woche',
+  revealCaptionEnd: 'Verborgen bis {date}, {time} — wenn das Event endet.',
+  revealCaptionDelayed: 'Verborgen bis {date}, {time}.',
+  revealCaptionLive: 'Alle sehen jedes Foto sofort.',
 };

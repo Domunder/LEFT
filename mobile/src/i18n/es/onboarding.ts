@@ -73,4 +73,20 @@ export const onboarding: Translation<typeof source> = {
   readyHeadline: 'Tu carrete está *listo.*',
   readyBody: 'Esta es la invitación que abren tus invitados.',
   readyCta: 'Invitar a tus invitados',
+
+  // 1.3.0 · reveal modes
+  revealHeadline: '¿Cuándo se *ven las fotos?*',
+  revealEnd: 'Al terminar',
+  revealEndBody: 'Todos ven todas las fotos a la vez. El clásico.',
+  revealDelayed: 'Más tarde',
+  revealDelayedBody: 'Un tiempo después del final: la mañana siguiente, por ejemplo.',
+  revealLive: 'Durante el evento',
+  revealLiveBody: 'Todos ven cada foto al momento. Nada queda oculto.',
+  revealDelay12: '12 horas',
+  revealDelay24: '1 día',
+  revealDelay72: '3 días',
+  revealDelay168: '1 semana',
+  revealCaptionEnd: 'Ocultas hasta el {date}, {time}: cuando termina el evento.',
+  revealCaptionDelayed: 'Ocultas hasta el {date}, {time}.',
+  revealCaptionLive: 'Todos ven cada foto al momento.',
 };

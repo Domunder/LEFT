@@ -34,7 +34,10 @@ type DevelopingHeroProps = {
   shotsTaken: number;
   memberCount: number;
   scrollY: SharedValue<number>;
-  onOpenCamera: () => void;
+  /** Left out once the event is over (a delayed reveal still to come). */
+  onOpenCamera?: () => void;
+  /** What the countdown runs to, said above it. Left out: nothing is said. */
+  note?: string;
   /** Only the host's, only while live. */
   onDevelop?: () => void;
   developing: boolean;
@@ -48,6 +51,7 @@ export function DevelopingHero({
   memberCount,
   scrollY,
   onOpenCamera,
+  note,
   onDevelop,
   developing,
 }: DevelopingHeroProps) {
@@ -76,6 +80,12 @@ export function DevelopingHero({
           {title}
         </Display>
 
+        {note ? (
+          <Body small style={styles.stat}>
+            {note}
+          </Body>
+        ) : null}
+
         <View
           style={styles.countdown}
           accessible
@@ -99,12 +109,14 @@ export function DevelopingHero({
         </Body>
 
         <View style={styles.actions}>
-          <GlassButton
-            icon="camera"
-            label={t('album.camera')}
-            accessibilityLabel={t('album.backToCamera')}
-            onPress={onOpenCamera}
-          />
+          {onOpenCamera ? (
+            <GlassButton
+              icon="camera"
+              label={t('album.camera')}
+              accessibilityLabel={t('album.backToCamera')}
+              onPress={onOpenCamera}
+            />
+          ) : null}
           {onDevelop ? (
             <GlassButton
               icon="sunrise"

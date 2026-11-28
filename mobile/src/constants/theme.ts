@@ -1146,6 +1146,33 @@ export const FilmReady = {
   ctaGap: 6,
 } as const;
 
+/** 04.2 · When the photos show (1.3.0): three prints, a caption, three choices. */
+export const RevealStep = {
+  headerGap: 44,
+  headlineGap: 24,
+  print: { width: 96, sideWidth: 78, gap: 10, radius: 12, dim: 'rgba(16,16,16,0.45)' },
+  blur: 40,
+  tag: { inset: 6, paddingX: 7, paddingY: 3, radius: 6, bg: 'rgba(16,16,16,0.6)' },
+  captionGap: 14,
+  /** Two lines, so the choices do not move when the sentence wraps. */
+  captionMinHeight: 40,
+  optionsGap: 18,
+  option: {
+    gap: 10,
+    innerGap: 14,
+    paddingY: 14,
+    paddingX: 16,
+    radius: 18,
+    textGap: 3,
+    border: 'rgba(255,255,255,0.12)',
+    bg: 'rgba(255,255,255,0.03)',
+    selectedBg: 'rgba(255,255,255,0.07)',
+  },
+  radio: { size: 20, border: 1.5, dot: 10, top: 2, color: 'rgba(240,237,232,0.35)' },
+  delaysGap: 8,
+  delaysTop: 10,
+} as const;
+
 /** 11.5 · the guest's swipe-through intro (`(guest)/intro`, 2026-11-21). */
 export const GuestIntro = {
   headerTop: 8,

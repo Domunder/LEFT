@@ -50,7 +50,7 @@ import { Colors, GuestIntro as T, Spacing } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { t } from '@/i18n';
 import { formatEndDate, formatEndTime } from '@/lib/event-end';
-import { getEvent, isDeveloped, type Event } from '@/lib/events';
+import { getEvent, isDeveloped, revealAt, revealModeOf, type Event } from '@/lib/events';
 import { hasSeenIntro, markIntroSeen } from '@/lib/guest-intro';
 
 export default function GuestIntroScreen() {
@@ -114,7 +114,8 @@ export default function GuestIntroScreen() {
   const missions = event.missions_per_guest;
   const pages = [
     <RollPage key="roll" event={event} />,
-    <HiddenPage key="hidden" event={event} />,
+    // A live reveal hides nothing: the page would be a lie.
+    ...(revealModeOf(event) === 'live' ? [] : [<HiddenPage key="hidden" event={event} />]),
     ...(missions != null ? [<MissionsPage key="missions" count={missions} />] : []),
     <DevelopPage key="develop" event={event} />,
   ];
@@ -276,7 +277,10 @@ function MissionsPage({ count }: { count: number }) {
 }
 
 function DevelopPage({ event }: { event: Event }) {
-  const ends = new Date(event.ends_at);
+  const mode = revealModeOf(event);
+  const closes = new Date(event.ends_at);
+  // The date written large is when the photos show — later than the end when delayed.
+  const ends = (mode === 'delayed' ? revealAt(event) : null) ?? closes;
   return (
     <>
       <View style={styles.visual}>
@@ -285,10 +289,16 @@ function DevelopPage({ event }: { event: Event }) {
       </View>
       <View style={styles.text}>
         <Display size="md" style={styles.centered}>
-          {em(t('guest.introDevelopHeadline'))}
+          {em(t(mode === 'live' ? 'guest.introLiveHeadline' : 'guest.introDevelopHeadline'))}
         </Display>
         <Body small color={Colors.textDim} style={styles.centered}>
-          {t('guest.introDevelopBody')}
+          {mode === 'live'
+            ? t('guest.introLiveBody')
+            : mode === 'delayed'
+              ? t('guest.introDelayedBody', {
+                  end: `${formatEndDate(closes)}, ${formatEndTime(closes)}`,
+                })
+              : t('guest.introDevelopBody')}
         </Body>
       </View>
     </>

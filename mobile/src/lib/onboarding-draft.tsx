@@ -32,7 +32,7 @@ import {
 
 import type { GlowPresetName } from '@/constants/theme';
 import type { CoverChoice } from '@/lib/event-cover';
-import type { CreateEventInput, EventType, FilmLook } from './events';
+import type { CreateEventInput, EventType, FilmLook, RevealChoice } from './events';
 import { DEFAULT_ROLL_SIZE, type RollSize } from './roll';
 
 /** Mirrors CreateEventInput, but every field is optional until its screen fills it. */
@@ -47,6 +47,8 @@ export type OnboardingDraft = {
   cover?: CoverChoice;
   /** 04 · Event End */
   endsAt?: Date;
+  /** 04.2 · When the photos show (1.3.0). Undefined is the default: at the end. */
+  reveal?: RevealChoice;
   /**
    * 05.1 · The group, as the host estimates it — 4, 10, 25, 50, 100, 150 or 200.
    *
@@ -145,11 +147,11 @@ type OnboardingContextValue = {
 /**
  * Steps in the host onboarding flow — the `total` on every indicator.
  *
- * Five since the event image (2026-11-21): event, look, image, end, group.
+ * Six since 1.3.0: event, look, end, reveal, invitation, group.
  * Sign-in is the app's entry screen, not a step; 05.1 is the last step and the
  * one that spends the draft.
  */
-export const ONBOARDING_STEPS = 5;
+export const ONBOARDING_STEPS = 6;
 
 const OnboardingContext = createContext<OnboardingContextValue | null>(null);
 

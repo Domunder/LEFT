@@ -65,7 +65,7 @@ export default function EndingScreen() {
   function handleContinue() {
     if (!isValid) return;
     patch({ endsAt });
-    router.push('/(onboarding)/cover');
+    router.push('/(onboarding)/reveal');
   }
 
   return (

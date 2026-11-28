@@ -25,7 +25,7 @@ import { Colors, InviteCard as T, Motion } from '@/constants/theme';
 import { t } from '@/i18n';
 import { getSession, resolveDisplayName } from '@/lib/auth';
 import { choiceSource, DEFAULT_COVER, type CoverChoice } from '@/lib/event-cover';
-import type { FilmLook } from '@/lib/events';
+import type { FilmLook, RevealChoice } from '@/lib/events';
 import { haptic } from '@/lib/haptics';
 import { canImport, pickOnePhoto } from '@/lib/import-photos';
 
@@ -42,6 +42,7 @@ type InviteDesignerProps = {
   /** Left out while the roll is not chosen yet (creation asks for it later). */
   rollSize?: number | null;
   developed?: boolean;
+  reveal?: RevealChoice | null;
   choice: CoverChoice;
   onChange: (next: CoverChoice) => void;
 };
@@ -52,6 +53,7 @@ export function InviteDesigner({
   endsAt,
   rollSize,
   developed,
+  reveal,
   choice,
   onChange,
 }: InviteDesignerProps) {
@@ -82,6 +84,7 @@ export function InviteDesigner({
     endsAt,
     rollSize,
     developed,
+    reveal,
   };
 
   // As large as the room allows, never wider than the token.

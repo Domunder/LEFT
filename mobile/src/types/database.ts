@@ -126,6 +126,8 @@ export type Database = {
           max_members: number
           missions_per_guest: number | null
           name: string
+          reveal_delay_hours: number | null
+          reveal_mode: string
           roll_size: number | null
           status: Database["public"]["Enums"]["event_status"]
         }
@@ -143,6 +145,8 @@ export type Database = {
           max_members: number
           missions_per_guest?: number | null
           name: string
+          reveal_delay_hours?: number | null
+          reveal_mode?: string
           roll_size?: number | null
           status?: Database["public"]["Enums"]["event_status"]
         }
@@ -160,6 +164,8 @@ export type Database = {
           max_members?: number
           missions_per_guest?: number | null
           name?: string
+          reveal_delay_hours?: number | null
+          reveal_mode?: string
           roll_size?: number | null
           status?: Database["public"]["Enums"]["event_status"]
         }
@@ -647,6 +653,8 @@ export type Database = {
           host_name: string
           look: string
           name: string
+          reveal_delay_hours: number
+          reveal_mode: string
           roll_size: number
           status: string
         }[]
@@ -718,6 +726,10 @@ export type Database = {
         Returns: undefined
       }
       retention_period: { Args: never; Returns: string }
+      set_event_reveal: {
+        Args: { p_delay_hours?: number; p_event_id: string; p_mode: string }
+        Returns: Database["public"]["Tables"]["events"]["Row"]
+      }
       seed_missions: {
         Args: { p_event_id: string; p_per_guest: number }
         Returns: undefined
