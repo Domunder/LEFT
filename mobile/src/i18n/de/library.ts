@@ -38,12 +38,8 @@ export const library: Translation<typeof source> = {
   rowA11y: '{title}. {when}. {photos}, {people}.',
   rowSampleA11y: '{title}. {when}. {photos}, {people}. Es werden Beispielbilder gezeigt.',
 
-  menuRename: 'Umbenennen',
-  menuChangeImage: 'Bild ändern',
   menuDelete: 'Moment löschen',
   menuRemove: 'Aus Momente entfernen',
-  renameTitle: 'Moment umbenennen',
-  renameFailed: 'Der Moment konnte nicht umbenannt werden',
   deleteTitle: '„{name}“ löschen?',
   deletePhotosForYou: {
     one: '{count} Foto wird für dich gelöscht.',
@@ -65,4 +61,7 @@ export const library: Translation<typeof source> = {
 
   goBack: 'Zurück',
   dismissNotification: 'Mitteilung schließen',
+
+  // 1.3.0 · event settings
+  menuSettings: 'Event-Einstellungen',
 };

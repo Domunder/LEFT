@@ -44,12 +44,8 @@ export const library = {
   rowSampleA11y: '{title}. {when}. {photos}, {people}. Showing sample pictures.',
 
   // --- rename / delete / remove ---
-  menuRename: 'Rename',
-  menuChangeImage: 'Change image',
   menuDelete: 'Delete moment',
   menuRemove: 'Remove from Moments',
-  renameTitle: 'Rename moment',
-  renameFailed: 'Couldn\'t rename the moment',
   deleteTitle: 'Delete “{name}”?',
   /** Chosen by the number of photos. */
   deletePhotosForYou: {
@@ -74,4 +70,7 @@ export const library = {
   // --- shared chrome ---
   goBack: 'Go back',
   dismissNotification: 'Dismiss notification',
+
+  // 1.3.0 · event settings
+  menuSettings: 'Event settings',
 } satisfies Namespace;

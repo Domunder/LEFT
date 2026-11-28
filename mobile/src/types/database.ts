@@ -726,6 +726,10 @@ export type Database = {
         Returns: undefined
       }
       retention_period: { Args: never; Returns: string }
+      set_event_end: {
+        Args: { p_ends_at: string; p_event_id: string }
+        Returns: Database["public"]["Tables"]["events"]["Row"]
+      }
       set_event_reveal: {
         Args: { p_delay_hours?: number; p_event_id: string; p_mode: string }
         Returns: Database["public"]["Tables"]["events"]["Row"]

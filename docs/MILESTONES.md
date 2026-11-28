@@ -552,6 +552,10 @@ Schritte (jeder für sich fertig, typecheck + lint sauber):
 7. **Event-Einstellungen** als ein Sheet für den Host: Name, Ende
    (verlängern/verkürzen), Bild, Reveal. Ersetzt das Menü mit Rename / Change
    image. Look bleibt nach dem Start fest (ist ins JPEG gebacken).
+   **Gebaut 2026-11-28** (`(modals)/event-settings`, `set_event_end()`):
+   Ende in Schritten (−1 h, +1 h, +1 Tag) statt Rädern; Reveal nur vor dem
+   Start änderbar. Lokal per SQL geprüft, nie auf einem Gerät, Migration nur
+   lokal.
 8. **Kamera-Details:** Zähler als Ziffernrad, das letzte Foto fliegt in die
    Kachel, „3 photos uploading"-Hinweis.
 9. **Gästebuch:** Tab im Album, quadratische Selfie-Kamera, Polaroid kommt aus

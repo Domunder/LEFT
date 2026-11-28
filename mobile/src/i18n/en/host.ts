@@ -57,4 +57,16 @@ export const host = {
   nameLength: 'A name is 1 to {max} characters.',
   onlyHostRename: 'Only the host can rename this moment.',
   onlyHostDelete: 'Only the host can delete this moment.',
+
+  // 1.3.0 · event settings
+  settingsTitle: 'Event settings',
+  settingsName: 'Name',
+  settingsEnds: 'Ends',
+  settingsEndOver: 'The event is over.',
+  settingsEndMinusHour: '1 hour earlier',
+  settingsEndPlusHour: '1 hour later',
+  settingsEndPlusDay: '1 day later',
+  settingsReveal: 'Photos show',
+  settingsRevealFixed: 'Fixed since the event started.',
+  settingsInvitation: 'Invitation image',
 } satisfies Namespace;

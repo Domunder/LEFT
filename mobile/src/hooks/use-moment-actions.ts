@@ -1,17 +1,17 @@
 /**
- * Rename, delete and remove a moment (2026-11-21, the user) — one menu, opened
- * by a long press on a Moments card and by the album's ••• button.
+ * A moment's menu (2026-11-21, the user) — opened by a long press on a
+ * Moments card and by the album's ••• button.
  *
- *  - The host: Rename, Change image (`(host)/cover`, 2026-11-21), Delete. Delete is for everyone and asks first, naming
+ *  - The host: **Event settings** (1.3.0: one sheet, `(modals)/event-settings`,
+ *    for name, end, reveal and the invitation image — it replaces "Rename"
+ *    and "Change image", and with them the iOS-only `Alert.prompt`) and
+ *    Delete. Delete is for everyone and asks first, naming
  *    what goes ("All 142 photos are deleted for all 18 people."); a paid
  *    moment adds that the purchase is not refunded.
  *  - A guest: Remove from Moments — hidden on this phone only
  *    (`lib/hidden-moments.ts`); the invite link brings it back.
  *
- * System UI on purpose: an action sheet for the menu and, on iOS, the alert
- * with a text field for the name — the way Photos renames an album.
- * **`Alert.prompt` is iOS only**: on Android the menu leaves Rename out until
- * that build exists and gets its own field.
+ * System UI on purpose for the menu and its alerts.
  */
 
 import { useRouter } from 'expo-router';
@@ -19,7 +19,7 @@ import { useCallback } from 'react';
 import { ActionSheetIOS, Alert, Platform } from 'react-native';
 
 import { t } from '@/i18n';
-import { deleteEvent, renameEvent, type Event } from '@/lib/events';
+import { deleteEvent, type Event } from '@/lib/events';
 import { messageFor } from '@/lib/auth-errors';
 import { hideMoment } from '@/lib/hidden-moments';
 import type { RollSize } from '@/lib/roll';
@@ -34,8 +34,11 @@ export type MomentActionsTarget = {
 };
 
 type Handlers = {
-  /** After a rename: the new name, already saved. */
-  onRenamed: (name: string) => void;
+  /**
+   * Unused since 1.3.0: the name is changed in the settings sheet, and the
+   * screens re-read the event when they regain focus. Kept so callers compile.
+   */
+  onRenamed?: (name: string) => void;
   /** After a delete or a remove: the moment is gone from this user's list. */
   onGone: () => void;
 };
@@ -45,34 +48,8 @@ function wasPaid(event: MomentActionsTarget['event']): boolean {
   return tierFor(event.max_members, event.roll_size as RollSize) !== null;
 }
 
-export function useMomentActions({ onRenamed, onGone }: Handlers) {
+export function useMomentActions({ onGone }: Handlers) {
   const router = useRouter();
-  const rename = useCallback(
-    (target: MomentActionsTarget) => {
-      Alert.prompt(
-        t('library.renameTitle'),
-        undefined,
-        [
-          { text: t('common.cancel'), style: 'cancel' },
-          {
-            text: t('common.save'),
-            isPreferred: true,
-            onPress: (value?: string) => {
-              const name = (value ?? '').trim();
-              if (name.length === 0 || name === target.event.name) return;
-              renameEvent(target.event.id, name)
-                .then(() => onRenamed(name))
-                .catch((e) => Alert.alert(t('library.renameFailed'), messageFor(e)));
-            },
-          },
-        ],
-        'plain-text',
-        target.event.name
-      );
-    },
-    [onRenamed]
-  );
-
   const confirmDelete = useCallback(
     (target: MomentActionsTarget) => {
       const alone = target.memberCount === 1;
@@ -131,13 +108,13 @@ export function useMomentActions({ onRenamed, onGone }: Handlers) {
       type Item = { label: string; destructive?: boolean; run: () => void };
       const items: Item[] = target.isHost
         ? [
-            ...(Platform.OS === 'ios'
-              ? [{ label: t('library.menuRename'), run: () => rename(target) }]
-              : []),
             {
-              label: t('library.menuChangeImage'),
+              label: t('library.menuSettings'),
               run: () =>
-                router.push({ pathname: '/(host)/cover', params: { eventId: target.event.id } }),
+                router.push({
+                  pathname: '/(modals)/event-settings',
+                  params: { eventId: target.event.id },
+                }),
             },
             { label: t('library.menuDelete'), destructive: true, run: () => confirmDelete(target) },
           ]
@@ -167,6 +144,6 @@ export function useMomentActions({ onRenamed, onGone }: Handlers) {
         { text: t('common.cancel'), style: 'cancel' as const },
       ]);
     },
-    [confirmDelete, confirmRemove, rename, router]
+    [confirmDelete, confirmRemove, router]
   );
 }

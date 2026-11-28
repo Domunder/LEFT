@@ -58,4 +58,16 @@ export const host: Translation<typeof source> = {
   nameLength: 'Ein Name hat 1 bis {max} Zeichen.',
   onlyHostRename: 'Nur der Gastgeber kann diesen Moment umbenennen.',
   onlyHostDelete: 'Nur der Gastgeber kann diesen Moment löschen.',
+
+  // 1.3.0 · event settings
+  settingsTitle: 'Event-Einstellungen',
+  settingsName: 'Name',
+  settingsEnds: 'Endet',
+  settingsEndOver: 'Das Event ist vorbei.',
+  settingsEndMinusHour: '1 Stunde früher',
+  settingsEndPlusHour: '1 Stunde später',
+  settingsEndPlusDay: '1 Tag später',
+  settingsReveal: 'Fotos sichtbar',
+  settingsRevealFixed: 'Steht fest, seit das Event läuft.',
+  settingsInvitation: 'Bild der Einladung',
 };

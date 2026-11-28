@@ -37,12 +37,8 @@ export const library: Translation<typeof source> = {
   rowA11y: '{title}. {when}. {photos}, {people}.',
   rowSampleA11y: '{title}. {when}. {photos}, {people}. Se muestran imágenes de ejemplo.',
 
-  menuRename: 'Renombrar',
-  menuChangeImage: 'Cambiar imagen',
   menuDelete: 'Eliminar momento',
   menuRemove: 'Quitar de Momentos',
-  renameTitle: 'Renombrar momento',
-  renameFailed: 'No se ha podido renombrar el momento',
   deleteTitle: '¿Eliminar «{name}»?',
   deletePhotosForYou: {
     one: 'Se elimina {count} foto para ti.',
@@ -64,4 +60,7 @@ export const library: Translation<typeof source> = {
 
   goBack: 'Atrás',
   dismissNotification: 'Cerrar notificación',
+
+  // 1.3.0 · event settings
+  menuSettings: 'Ajustes del evento',
 };

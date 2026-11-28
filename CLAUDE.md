@@ -92,7 +92,8 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   invitation (see "The invitation" below; its migration is local only),
   step 4, the new 05.1 (same section), and step 5, the reveal modes (see
   "Reveal modes" below; migration local only), and step 6, the new Landing
-  (see "The photo backdrop").
+  (see "The photo backdrop"), and step 7, the host's event settings sheet
+  (see "Event settings" below; migration local only).
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -449,8 +450,8 @@ event ends by being **developed**. "Film" in file names (`film-poster`,
   messages, opens LEFT. No sheet, no slideshow behind it. Not seen on a device.
 - **Rename and delete (2026-11-21, the user):** a long press on a Moments
   card or the album's ••• opens one menu (`hooks/use-moment-actions.ts`).
-  The host renames in any state (iOS `Alert.prompt` — Android has no Rename
-  yet) and deletes for everyone after a system alert; the row goes by RLS
+  The host opens "Event settings" (1.3.0, see that section; it replaced
+  Rename and "Change image") and deletes for everyone after a system alert; the row goes by RLS
   ("host can delete"), cascades take the rest, a purchase stays consumed, and
   the files are left to the daily orphan sweep. A guest only gets "Remove
   from Moments", hidden on that phone (`lib/hidden-moments.ts`) until they
@@ -1071,6 +1072,26 @@ host. **Local only, never seen on a device.**
   without the migration — do it together with the production migration.
 - A new route needs the typed-routes file regenerated (`expo start`); I
   patched the local, gitignored `.expo/types/router.d.ts` by hand.
+
+## Event settings (1.3.0, 2026-11-28)
+
+- **One sheet for the host, `(modals)/event-settings`**, opened from the
+  moment's menu ("Event settings" + Delete; "Rename" and "Change image" are
+  gone, and with them the iOS-only `Alert.prompt`). Name (saved on blur),
+  the end (1 hour earlier / later, 1 day later — each tap is saved), the
+  reveal (pills before the start, text after it) and a row to the invitation
+  designer. The look is not there: it is baked into the JPEGs.
+- **`set_event_end(event, ends_at)`** (migration
+  `20261128020000_set_event_end.sql`): host only, while the event is not
+  over; the new end must be in the future and at most `max_event_days()`
+  ahead (hints `event_closed`, `past`, `too_far`). It drops a queued
+  `ending_soon` reminder when the end moves beyond `reminder_lead()`.
+  Verified locally with SQL. **Local only, never seen on a device.**
+- **Steps instead of the wheels** (my call, flagged): 04's wheels in a sheet
+  would be a second full screen; say so if a free date is wanted.
+- Moments and the album re-read the event on focus, so they follow a change.
+  **An open camera on another phone keeps its old countdown** until its next
+  re-read. The web camera and the clip poll every 15 s.
 
 ## Languages (1.3.0, 2026-11-28)
 

@@ -1182,6 +1182,19 @@ export const LandingShowcase = {
   glow: 'films',
 } as const;
 
+/** Event settings (1.3.0) — the host's sheet: name, end, reveal, invitation. */
+export const EventSettings = {
+  loadingHeight: 160,
+  sectionTop: 10,
+  sectionGap: 4,
+  pillGap: 8,
+  pillTop: 8,
+  rowIcon: 17,
+  rowGap: 12,
+  rowPaddingY: 16,
+  errorHeight: 18,
+} as const;
+
 /** 04.2 · When the photos show (1.3.0): three prints, a caption, three choices. */
 export const RevealStep = {
   headerGap: 44,

@@ -344,6 +344,19 @@ export async function setEventReveal(eventId: string, choice: RevealChoice): Pro
 }
 
 /**
+ * Move the end of an event that is not over yet — host only
+ * (`set_event_end()`: in the future, at most `max_event_days()` ahead).
+ */
+export async function setEventEnd(eventId: string, endsAt: Date): Promise<Event> {
+  const { data, error } = await getSupabase().rpc('set_event_end', {
+    p_event_id: eventId,
+    p_ends_at: endsAt.toISOString(),
+  });
+  if (error) throw error;
+  return data as unknown as Event;
+}
+
+/**
  * Develop the film early — host only, irreversible, and it ends the event for
  * everyone. Otherwise the clock does this at `ends_at`.
  */
