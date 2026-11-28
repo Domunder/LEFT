@@ -14,7 +14,7 @@
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
-import { LengthChoiceState, Motion, RollChoice } from '@/constants/theme';
+import { LengthChoiceState, Motion, RollChoice, RollSetup } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
 import { at } from '@/lib/pair';
 import { ROLL_SIZES, rollNumeral, rollWords, type RollSize } from '@/lib/roll';
@@ -27,17 +27,20 @@ const TIMING = {
 type RollChoicesProps = {
   value: RollSize;
   onChange: (roll: RollSize) => void;
+  /** Three to a row instead of six in one — beside 05.1's mock camera. */
+  wrap?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
-export function RollChoices({ value, onChange, style }: RollChoicesProps) {
+export function RollChoices({ value, onChange, wrap = false, style }: RollChoicesProps) {
   return (
-    <View accessibilityRole="radiogroup" style={[styles.row, style]}>
+    <View accessibilityRole="radiogroup" style={[styles.row, wrap && styles.wrap, style]}>
       {ROLL_SIZES.map((roll) => (
         <RollCard
           key={roll ?? 'unlimited'}
           roll={roll}
           selected={roll === value}
+          wrap={wrap}
           onPress={() => onChange(roll)}
         />
       ))}
@@ -48,10 +51,11 @@ export function RollChoices({ value, onChange, style }: RollChoicesProps) {
 type RollCardProps = {
   roll: RollSize;
   selected: boolean;
+  wrap: boolean;
   onPress: () => void;
 };
 
-function RollCard({ roll, selected, onPress }: RollCardProps) {
+function RollCard({ roll, selected, wrap, onPress }: RollCardProps) {
   /*
     Animated by returning `withTiming(...)` from the style body. The dependency
     array is required: `selected` is a plain prop read inside a worklet closure.
@@ -75,7 +79,7 @@ function RollCard({ roll, selected, onPress }: RollCardProps) {
       accessibilityState={{ selected }}
       accessibilityLabel={rollWords(roll)}
       onPress={onPress}
-      style={[styles.card, shell]}>
+      style={[styles.card, wrap && styles.cardWrapped, shell]}>
       <Animated.Text style={[styles.numeral, numeral]}>{rollNumeral(roll)}</Animated.Text>
     </AnimatedPressable>
   );
@@ -87,6 +91,13 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: RollChoice.gap,
+  },
+  wrap: {
+    flexWrap: 'wrap',
+  },
+  // Under a third, so the gaps fit; `flexGrow` takes up the rest.
+  cardWrapped: {
+    flexBasis: RollSetup.cardBasis,
   },
   card: {
     flex: 1,

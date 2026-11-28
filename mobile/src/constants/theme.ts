@@ -1089,6 +1089,63 @@ export const InviteCard = {
   join: { top: 22, headlineGap: 20 },
 } as const;
 
+/**
+ * 05.1's group picker (1.3.0): one bar, seven segments, a light thumb that
+ * slides to the choice on a spring. Replaces the row of growing circles.
+ */
+export const GroupSegments = {
+  height: 44,
+  padding: 3,
+  bg: 'rgba(255,255,255,0.06)',
+  border: 'rgba(255,255,255,0.1)',
+  fontSize: 14,
+  /** [unselected, selected] — the selected numeral stands on the light thumb. */
+  label: ['rgba(240,237,232,0.55)', '#0b0b0c'] as const,
+  /** "Up to 25 people" + price -> the bar. */
+  headingGap: 14,
+  priceSize: 19,
+} as const;
+
+/**
+ * LEFT's camera as a still inside `PhoneFrame` (1.3.0) — laid out on the
+ * frame's 402 pt canvas, so the values are real-screen sizes. On 05.1 its
+ * counter rolls to the roll the host picks.
+ */
+export const CameraMock = {
+  viewfinderRadius: 32,
+  /** Under the Dynamic Island. */
+  top: 74,
+  nameGap: 6,
+  topFade: ['rgba(10,10,11,0.6)', 'rgba(10,10,11,0)'] as const,
+  topFadeHeight: 240,
+  bar: { paddingX: 40, paddingTop: 26, paddingBottom: 52 },
+  tile: 52,
+  tileRadius: 14,
+  tileIcon: 20,
+  shutter: 78,
+  shutterRing: 4,
+  shutterGap: 4,
+} as const;
+
+/** 05.1's roll section (1.3.0): the mock camera beside the roll cards, three to a row. */
+export const RollSetup = {
+  phoneWidth: 124,
+  gap: 20,
+  /** Share of the row one card takes when three stand side by side. */
+  cardBasis: '28%',
+  summaryGap: 12,
+  footnoteGap: 4,
+} as const;
+
+/** "Your film is ready" — the sheet after an event was created (1.3.0). */
+export const FilmReady = {
+  cardHeight: 250,
+  cardRadius: 22,
+  cardBorder: 'rgba(255,255,255,0.1)',
+  textGap: 6,
+  ctaGap: 6,
+} as const;
+
 /** 11.5 · the guest's swipe-through intro (`(guest)/intro`, 2026-11-21). */
 export const GuestIntro = {
   headerTop: 8,

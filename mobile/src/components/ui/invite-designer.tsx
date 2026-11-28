@@ -21,19 +21,13 @@ import { PhoneFrame, phoneWidthFor } from './phone-frame';
 import { PillButton } from './pill-button';
 import { PressScale } from './press-scale';
 import { Body } from './typography';
-import { COVER_SAMPLES } from '@/constants/samples';
 import { Colors, InviteCard as T, Motion } from '@/constants/theme';
 import { t } from '@/i18n';
 import { getSession, resolveDisplayName } from '@/lib/auth';
-import { DEFAULT_COVER, type CoverChoice } from '@/lib/event-cover';
+import { choiceSource, DEFAULT_COVER, type CoverChoice } from '@/lib/event-cover';
 import type { FilmLook } from '@/lib/events';
 import { haptic } from '@/lib/haptics';
 import { canImport, pickOnePhoto } from '@/lib/import-photos';
-
-function sourceOf(choice: CoverChoice): number | string {
-  if (choice.kind === 'upload') return choice.uri;
-  return (COVER_SAMPLES.find((s) => s.key === choice.key) ?? COVER_SAMPLES[0]).source;
-}
 
 function isDefault(choice: CoverChoice): boolean {
   return (
@@ -82,7 +76,7 @@ export function InviteDesigner({
 
   const content: InviteContent = {
     look,
-    source: sourceOf(choice),
+    source: choiceSource(choice),
     name,
     hostName,
     endsAt,

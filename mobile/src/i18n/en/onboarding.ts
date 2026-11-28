@@ -70,4 +70,11 @@ export const onboarding = {
   invitePreviewA11y: 'Preview the invitation full screen',
   inviteCardA11y: 'The invitation to {name}',
   inviteNameFallback: 'Your event',
+
+  // 05.1 · 1.3.0: the price beside the group, the mock camera, "film is ready"
+  priceFree: 'Free',
+  cameraMockA11y: 'The camera your guests get: {roll}',
+  readyHeadline: 'Your film is *ready.*',
+  readyBody: 'This is the invitation your guests open.',
+  readyCta: 'Invite your guests',
 } satisfies Namespace;

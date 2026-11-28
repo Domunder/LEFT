@@ -88,6 +88,12 @@ export async function applyCover(eventId: string, choice: CoverChoice): Promise<
   if (error) throw error;
 }
 
+/** What to draw for a choice that is not saved yet: the stock picture or the local file. */
+export function choiceSource(choice: CoverChoice): number | string {
+  if (choice.kind === 'upload') return choice.uri;
+  return (COVER_SAMPLES.find((s) => s.key === choice.key) ?? COVER_SAMPLES[0]).source;
+}
+
 /** The first stock picture — the creation step's preselection. */
 export const DEFAULT_COVER: CoverChoice = {
   kind: 'sample',

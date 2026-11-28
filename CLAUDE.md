@@ -88,8 +88,9 @@ It is being reframed. **Read `docs/MILESTONES.md` first** — it is the plan.
   once.film; similar features in LEFT's own form, not a copy). Built, **never
   run on a device**: step 1 (`lib/haptics.ts` is the only importer of
   `expo-haptics`; onboarding cross-fades, headlines arrive through `Rise`)
-  step 2, the five languages — see "Languages" below — and step 3, the
-  invitation (see "The invitation" below; its migration is local only).
+  step 2, the five languages — see "Languages" below — step 3, the
+  invitation (see "The invitation" below; its migration is local only), and
+  step 4, the new 05.1 (same section).
 - **Next:** the user's items in `docs/LAUNCH.md`; in code: "Report photo"
   (Apple 1.2), a CAPTCHA token for anonymous sign-in, the first Android build.
 
@@ -1013,6 +1014,18 @@ Decided by the user — do not re-litigate:
   (an older server) 11 is the old screen. Verified locally with SQL; **not on
   staging or production, never seen on a device.** The web camera and the
   App Clip do not show the card.
+
+- **05.1, rebuilt (step 4, 2026-11-28):** the group is `GroupSegments` (one
+  bar, a thumb sliding on `Springs.settle`; the growing circles and
+  `group-size-row.tsx` are gone) with "Free" or the tier's price beside "Up
+  to N people" — **the price is now in two places**, against "on the button
+  only" of 2026-11-15 (the 1.3.0 plan; flagged). The roll cards stand three
+  to a row beside `PhoneFrame` + `CameraMock`, whose counter is 13's own
+  `RollCounter` and rolls to the picked number. After the create,
+  `FilmReadySheet` (a `Sheet` in a transparent `Modal` with its own
+  gesture root) shows the invitation and goes on to 09 — on its button, a
+  drag or a tap on the scrim. `reset()` still runs before it; the screen
+  holds what it draws in state. **Not seen on a device.**
 
 ## Languages (1.3.0, 2026-11-28)
 

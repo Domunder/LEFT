@@ -66,4 +66,11 @@ export const onboarding: Translation<typeof source> = {
   invitePreviewA11y: 'Guarda l’invito a schermo intero',
   inviteCardA11y: 'L’invito a {name}',
   inviteNameFallback: 'Il tuo evento',
+
+  // 05.1 · 1.3.0: the price beside the group, the mock camera, "film is ready"
+  priceFree: 'Gratis',
+  cameraMockA11y: 'La fotocamera dei tuoi ospiti: {roll}',
+  readyHeadline: 'Il tuo rullino è *pronto.*',
+  readyBody: 'Questo è l’invito che aprono i tuoi ospiti.',
+  readyCta: 'Invita i tuoi ospiti',
 };

@@ -526,6 +526,13 @@ Schritte (jeder für sich fertig, typecheck + lint sauber):
 4. **05.1 neu:** Gruppengröße als Segmentleiste mit Preis, Rolle mit
    Mock-Kamera, deren Zähler sich dreht; danach ein „Dein Film ist
    bereit"-Sheet mit der Karte.
+   **Gebaut 28.11.2026** (typecheck + lint sauber, nie auf einem Gerät):
+   `GroupSegments` (ein Balken, der helle Daumen gleitet per Feder), daneben
+   „Free" bzw. der Preis der Stufe — der Preis steht damit an zwei Stellen
+   (auch auf dem Button), entgegen der Entscheidung vom 15.11. Die Rolle
+   steht neben LEFTs Kamera im iPhone-Rahmen (`CameraMock`), deren Zähler
+   der echte `RollCounter` ist und zur gewählten Zahl rollt. Nach dem
+   Erstellen: `FilmReadySheet` mit der Einladung, weiter zu 09.
 5. **Reveal-Zeitpunkt** (neuer Onboarding-Schritt mit Live-Vorschau: scharf /
    verschwommen mit Datum). Server: `events.reveal_mode`, `reveal_delay`,
    `is_event_developed()` und RLS angepasst, Web-Kamera und Clip lesen
